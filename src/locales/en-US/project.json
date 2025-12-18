@@ -1,0 +1,37 @@
+{
+  "project": {
+    "new": "New Project",
+    "edit": "Edit",
+    "delete": {
+      "title": "Delete",
+      "confirm": "Are you sure you want to delete project '{name}'? This operation cannot be undone."
+    },
+    "name": "Project Name",
+    "description": "Project Description",
+    "namePlaceholder": "Please enter project name",
+    "descriptionPlaceholder": "Please enter project description (optional)",
+    "list": {
+      "title": "Recent Projects",
+      "refresh": "Refresh Projects"
+    },
+    "view": {
+      "grid": "Grid View",
+      "list": "List View"
+    },
+    "loading": "Loading Projects...",
+    "empty": {
+      "title": "No Projects Found",
+      "description": "Create your first project to get started with video editing"
+    },
+    "noDescription": "No Description",
+    "progress": {
+      "startContent": "Starting to load project content...",
+      "contentData": "Loading project content data...",
+      "mediaManager": "Initializing media manager...",
+      "rebuildMedia": "Rebuilding media items...",
+      "restoreTracks": "Restoring track data...",
+      "restoreTimeline": "Restoring timeline items...",
+      "contentComplete": "Project content loading complete"
+    }
+  }
+}

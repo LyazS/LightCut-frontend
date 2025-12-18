@@ -1,0 +1,37 @@
+{
+  "project": {
+    "new": "新建项目",
+    "edit": "编辑",
+    "delete": {
+      "title": "删除",
+      "confirm": "确定要删除项目 '{name}' 吗？此操作无法撤销。"
+    },
+    "name": "项目名称",
+    "description": "项目描述",
+    "namePlaceholder": "请输入项目名称",
+    "descriptionPlaceholder": "请输入项目描述（可选）",
+    "list": {
+      "title": "最近项目",
+      "refresh": "刷新项目"
+    },
+    "view": {
+      "grid": "网格视图",
+      "list": "列表视图"
+    },
+    "loading": "正在加载项目...",
+    "empty": {
+      "title": "未找到项目",
+      "description": "创建您的第一个项目开始视频编辑之旅"
+    },
+    "noDescription": "暂无描述",
+    "progress": {
+      "startContent": "开始加载项目内容...",
+      "contentData": "加载项目内容数据...",
+      "mediaManager": "初始化媒体管理器...",
+      "rebuildMedia": "重建媒体项目...",
+      "restoreTracks": "恢复轨道数据...",
+      "restoreTimeline": "恢复时间轴项目...",
+      "contentComplete": "项目内容加载完成"
+    }
+  }
+}

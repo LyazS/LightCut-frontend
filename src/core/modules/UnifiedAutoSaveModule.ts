@@ -1,0 +1,427 @@
+import { ref, watch, type Ref, computed } from 'vue'
+import { debounce, throttle } from 'lodash'
+import type { ModuleRegistry } from './ModuleRegistry'
+import { MODULE_NAMES } from './ModuleRegistry'
+import type { UnifiedProjectModule } from './UnifiedProjectModule'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedTrackModule } from './UnifiedTrackModule'
+import type { UnifiedMediaModule } from './UnifiedMediaModule'
+import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
+
+/**
+ * 自动保存配置
+ */
+interface AutoSaveConfig {
+  debounceTime: number // 防抖时间（毫秒）
+  throttleTime: number // 节流时间（毫秒）
+  maxRetries: number // 最大重试次数
+  enabled: boolean // 是否启用自动保存
+}
+
+/**
+ * 自动保存状态
+ */
+interface AutoSaveState {
+  isEnabled: boolean
+  lastSaveTime: Date | null
+  saveCount: number
+  errorCount: number
+  // 🔥 标记累积字段
+  configChanged: boolean
+  contentChanged: boolean
+  directoryChanged: boolean
+}
+
+/**
+ * 统一自动保存模块
+ * 提供防抖+节流的自动保存策略，适配新架构的模块化设计
+ */
+export function createUnifiedAutoSaveModule(
+  registry: ModuleRegistry,
+  config: Partial<AutoSaveConfig> = {},
+) {
+  // 通过注册中心获取依赖模块
+  const projectModule = registry.get<UnifiedProjectModule>(MODULE_NAMES.PROJECT)
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+  const directoryModule = registry.get<UnifiedDirectoryModule>(MODULE_NAMES.DIRECTORY)
+
+  // 数据监听器配置
+  const dataWatchers = {
+    timelineItems: timelineModule.timelineItems,
+    tracks: trackModule.tracks,
+    mediaItems: mediaModule.mediaItems,
+    projectConfig: computed(() => ({
+      videoResolution: configModule.videoResolution.value,
+      frameRate: configModule.frameRate.value,
+      timelineDurationFrames: configModule.timelineDurationFrames.value,
+    })),
+    // 🆕 添加目录配置监听
+    directoryConfig: computed(() => ({
+      directories: directoryModule.directories.value,
+      openTabs: directoryModule.openTabs.value,
+      activeTabId: directoryModule.activeTabId.value,
+      viewMode: directoryModule.viewMode.value,
+      sortBy: directoryModule.sortBy.value,
+      sortOrder: directoryModule.sortOrder.value,
+    })),
+  }
+
+  // ==================== 配置管理 ====================
+
+  // 默认配置
+  const defaultConfig: AutoSaveConfig = {
+    debounceTime: 2000, // 2秒防抖
+    throttleTime: 30000, // 30秒强制保存
+    maxRetries: 3,
+    enabled: true,
+  }
+
+  const finalConfig = { ...defaultConfig, ...config }
+
+  // ==================== 状态管理 ====================
+
+  // 自动保存状态
+  const autoSaveState = ref<AutoSaveState>({
+    isEnabled: finalConfig.enabled,
+    lastSaveTime: null,
+    saveCount: 0,
+    errorCount: 0,
+    // 🔥 初始化标记累积字段
+    configChanged: false,
+    contentChanged: false,
+    directoryChanged: false,
+  })
+
+  // lodash 节流防抖函数引用
+  let debouncedSave: ReturnType<typeof debounce> | null = null
+  let throttledSave: ReturnType<typeof throttle> | null = null
+  let retryCount = 0
+
+  // 监听器清理函数数组
+  const unwatchFunctions: (() => void)[] = []
+
+  // ==================== 内部方法 ====================
+
+  /**
+   * 初始化节流防抖函数
+   * 🔥 改进：不再接收 options 参数，使用累积的标记
+   */
+  function initializeDebounceThrottle() {
+    // 清除现有的函数
+    clearTimers()
+
+    // 创建新的防抖函数（不再接收参数）
+    debouncedSave = debounce(() => {
+      performSave()
+    }, finalConfig.debounceTime)
+
+    // 创建新的节流函数（不再接收参数）
+    throttledSave = throttle(
+      () => {
+        // 检查是否有任何待保存的变化
+        if (
+          autoSaveState.value.configChanged ||
+          autoSaveState.value.contentChanged ||
+          autoSaveState.value.directoryChanged
+        ) {
+          console.log('⏰ [AutoSave] 节流触发强制保存')
+          performSave()
+        }
+      },
+      finalConfig.throttleTime,
+      { leading: false, trailing: true },
+    )
+  }
+
+  /**
+   * 清除所有定时器
+   */
+  function clearTimers() {
+    debouncedSave?.cancel()
+    throttledSave?.cancel()
+    debouncedSave = null
+    throttledSave = null
+  }
+
+  /**
+   * 执行保存操作
+   * 🔥 改进：使用累积的标记，保存后清空标记
+   */
+  async function performSave(): Promise<boolean> {
+    if (projectModule.isSaving.value) {
+      console.log('🔄 [AutoSave] 正在保存中，跳过此次自动保存')
+      return false
+    }
+
+    try {
+      // 🔥 核心改进：读取累积的标记
+      const saveOptions = {
+        configChanged: autoSaveState.value.configChanged,
+        contentChanged: autoSaveState.value.contentChanged,
+        directoryChanged: autoSaveState.value.directoryChanged,
+      }
+
+      console.log('💾 [AutoSave] 开始自动保存...', saveOptions)
+
+      await projectModule.saveCurrentProject(saveOptions)
+
+      // 更新状态
+      autoSaveState.value.lastSaveTime = new Date()
+      autoSaveState.value.saveCount++
+      retryCount = 0
+
+      // 🔥 核心改进：清空累积的标记
+      autoSaveState.value.configChanged = false
+      autoSaveState.value.contentChanged = false
+      autoSaveState.value.directoryChanged = false
+
+      console.log('✅ [AutoSave] 自动保存成功')
+
+      return true
+    } catch (error) {
+      console.error('❌ [AutoSave] 自动保存失败:', error)
+      autoSaveState.value.errorCount++
+
+      // 重试机制（保持标记不清空，下次重试时继续使用）
+      if (retryCount < finalConfig.maxRetries) {
+        retryCount++
+        console.log(`🔄 [AutoSave] 准备重试 (${retryCount}/${finalConfig.maxRetries})`)
+
+        // 延迟重试
+        setTimeout(() => {
+          performSave() // 递归重试，标记保持不变
+        }, 5000 * retryCount) // 递增延迟
+      } else {
+        console.error('❌ [AutoSave] 达到最大重试次数，停止自动保存')
+        retryCount = 0
+        // 重试失败后也清空标记，避免一直积累
+        autoSaveState.value.configChanged = false
+        autoSaveState.value.contentChanged = false
+        autoSaveState.value.directoryChanged = false
+      }
+
+      return false
+    }
+  }
+
+  /**
+   * 触发自动保存（防抖+节流）
+   * 🔥 改进：使用标记累积机制，确保所有变化类型都被记录
+   * @param options 保存选项，用于区分保存配置还是内容
+   */
+  function triggerAutoSave(options?: {
+    configChanged?: boolean
+    contentChanged?: boolean
+    directoryChanged?: boolean
+  }) {
+    if (!autoSaveState.value.isEnabled) {
+      return
+    }
+
+    // 🔥 核心改进：累积变化标记（使用 OR 逻辑）
+    if (options?.configChanged) {
+      autoSaveState.value.configChanged = true
+    }
+    if (options?.contentChanged) {
+      autoSaveState.value.contentChanged = true
+    }
+    if (options?.directoryChanged) {
+      autoSaveState.value.directoryChanged = true
+    }
+
+    console.log('📝 [AutoSave] 累积变化标记:', {
+      configChanged: autoSaveState.value.configChanged,
+      contentChanged: autoSaveState.value.contentChanged,
+      directoryChanged: autoSaveState.value.directoryChanged,
+    })
+
+    // 触发防抖和节流（不传递参数）
+    debouncedSave?.()
+    throttledSave?.()
+  }
+
+  // ==================== 公共方法 ====================
+
+  /**
+   * 启用自动保存
+   */
+  function enableAutoSave() {
+    autoSaveState.value.isEnabled = true
+    initializeDebounceThrottle() // 重新初始化节流防抖函数
+    setupWatchers() // 重新设置监听器
+    console.log('✅ [AutoSave] 自动保存已启用')
+  }
+
+  /**
+   * 禁用自动保存
+   */
+  function disableAutoSave() {
+    autoSaveState.value.isEnabled = false
+    clearTimers()
+    clearWatchers() // 清除监听器
+    console.log('⏸️ [AutoSave] 自动保存已禁用')
+  }
+
+  /**
+   * 手动触发保存
+   * 🔥 改进：手动保存前设置所有标记为true
+   */
+  async function manualSave(): Promise<boolean> {
+    clearTimers() // 清除自动保存定时器
+    // 手动保存时，标记所有类型的变化
+    autoSaveState.value.configChanged = true
+    autoSaveState.value.contentChanged = true
+    autoSaveState.value.directoryChanged = true
+    return await performSave()
+  }
+
+  /**
+   * 重置自动保存状态
+   * 🔥 改进：重置标记累积字段
+   */
+  function resetAutoSaveState() {
+    autoSaveState.value = {
+      isEnabled: finalConfig.enabled,
+      lastSaveTime: null,
+      saveCount: 0,
+      errorCount: 0,
+      // 🔥 重置标记
+      configChanged: false,
+      contentChanged: false,
+      directoryChanged: false,
+    }
+    retryCount = 0
+    clearTimers()
+  }
+
+  /**
+   * 销毁模块，清理所有资源
+   */
+  function destroy() {
+    clearTimers()
+    clearWatchers()
+    console.log('🧹 [AutoSave] 模块已销毁')
+  }
+
+  // ==================== 数据监听设置 ====================
+
+  /**
+   * 设置数据监听器
+   */
+  function setupWatchers() {
+    if (!finalConfig.enabled || !autoSaveState.value.isEnabled) {
+      return
+    }
+
+    // 清除现有监听器
+    clearWatchers()
+
+    // 监听时间轴项目变化 - 内容变化
+    const unwatchTimelineItems = watch(
+      () => dataWatchers.timelineItems.value,
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          // console.log('🔄 [AutoSave] 检测到时间轴项目变化')
+          triggerAutoSave({ configChanged: true, contentChanged: true })
+        }
+      },
+      { deep: true },
+    )
+    unwatchFunctions.push(unwatchTimelineItems)
+
+    // 监听轨道变化 - 内容变化
+    const unwatchTracks = watch(
+      () => dataWatchers.tracks.value,
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          // console.log('🔄 [AutoSave] 检测到轨道变化')
+          triggerAutoSave({ contentChanged: true })
+        }
+      },
+      { deep: true },
+    )
+    unwatchFunctions.push(unwatchTracks)
+
+    // 监听媒体项目变化 - 内容变化
+    const unwatchMediaItems = watch(
+      () => dataWatchers.mediaItems.value,
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          // console.log('🔄 [AutoSave] 检测到媒体项目变化')
+          triggerAutoSave({ contentChanged: true })
+        }
+      },
+      { deep: true },
+    )
+    unwatchFunctions.push(unwatchMediaItems)
+
+    // 监听项目配置变化 - 配置变化
+    const unwatchProjectConfig = watch(
+      () => dataWatchers.projectConfig.value,
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          // console.log('🔄 [AutoSave] 检测到项目配置变化')
+          triggerAutoSave({ configChanged: true })
+        }
+      },
+      { deep: true },
+    )
+    unwatchFunctions.push(unwatchProjectConfig)
+
+    // 🆕 监听目录配置变化 - 目录变化
+    const unwatchDirectoryConfig = watch(
+      () => dataWatchers.directoryConfig.value,
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          // console.log('🔄 [AutoSave] 检测到目录配置变化')
+          triggerAutoSave({ directoryChanged: true })
+        }
+      },
+      { deep: true },
+    )
+    unwatchFunctions.push(unwatchDirectoryConfig)
+  }
+
+  /**
+   * 清除所有监听器
+   */
+  function clearWatchers() {
+    unwatchFunctions.forEach((unwatch) => unwatch())
+    unwatchFunctions.length = 0
+  }
+
+  // ==================== 初始化 ====================
+
+  // 初始化节流防抖函数
+  initializeDebounceThrottle()
+
+  // 只有在启用状态下才设置监听器
+  if (finalConfig.enabled && autoSaveState.value.isEnabled) {
+    setupWatchers()
+  }
+
+  // ==================== 导出接口 ====================
+
+  return {
+    // 状态
+    autoSaveState,
+
+    // 配置
+    config: finalConfig,
+
+    // 方法
+    enableAutoSave,
+    disableAutoSave,
+    manualSave,
+    triggerAutoSave,
+    resetAutoSaveState,
+    destroy,
+  }
+}
+
+// 导出类型定义
+export type UnifiedAutoSaveModule = ReturnType<typeof createUnifiedAutoSaveModule>

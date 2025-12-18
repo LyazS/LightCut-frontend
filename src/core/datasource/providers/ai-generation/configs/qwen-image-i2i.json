@@ -1,0 +1,83 @@
+{
+  "id": "qwen-image-i2i",
+  "name": {
+    "en": "Qwen Image-to-Image",
+    "zh": "Qwen 图生图"
+  },
+  "description": {
+    "en": "Generate images based on reference image",
+    "zh": "基于参考图生成图片"
+  },
+  "contentType": "image",
+  "aiTaskType": "bizyair_generate_media",
+  "aiConfig": {
+    "prompt": "",
+    "reference_image": null,
+    "strength": 0.8,
+    "width": 1024,
+    "height": 960
+  },
+  "uiConfig": [
+    {
+      "type": "file-input",
+      "label": {
+        "en": "Reference Image",
+        "zh": "参考图片"
+      },
+      "path": "aiConfig.reference_image",
+      "accept": ["image"],
+      "placeholder": {
+        "en": "Drag an image here or from timeline",
+        "zh": "拖拽图片素材或时间轴片段到此处"
+      }
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Enter your image generation prompt...",
+        "zh": "输入图片生成提示词..."
+      }
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Strength",
+        "zh": "强度"
+      },
+      "path": "aiConfig.strength",
+      "min": 0,
+      "max": 1,
+      "step": 0.1,
+      "precision": 1
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Width",
+        "zh": "宽度"
+      },
+      "path": "aiConfig.width",
+      "min": 512,
+      "max": 2048,
+      "step": 64,
+      "precision": 0
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Height",
+        "zh": "高度"
+      },
+      "path": "aiConfig.height",
+      "min": 512,
+      "max": 2048,
+      "step": 64,
+      "precision": 0
+    }
+  ]
+}

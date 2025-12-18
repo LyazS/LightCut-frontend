@@ -1,0 +1,13 @@
+{
+  "workspace": {
+    "change": "点击更改工作目录",
+    "setup": {
+      "title": "点击设置目录",
+      "description": "为了管理您的视频编辑项目，请选择一个本地文件夹作为项目工作目录。所有项目文件将保存在此文件夹中。"
+    },
+    "error": {
+      "unsupported": "当前浏览器不支持本地文件访问功能，请使用Chrome、Edge或其他支持File System Access API的现代浏览器。",
+      "permission": "工作目录权限已丢失或目录不存在，请重新选择工作目录。"
+    }
+  }
+}

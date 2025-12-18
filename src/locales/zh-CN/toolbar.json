@@ -1,0 +1,46 @@
+{
+  "toolbar": {
+    "history": {
+      "undo": "撤销",
+      "undoTooltip": "撤销上一个操作 (Ctrl+Z)",
+      "redo": "重做",
+      "redoTooltip": "重做下一个操作 (Ctrl+Y)"
+    },
+    "clip": {
+      "split": "裁剪",
+      "splitTooltip": "在当前时间位置裁剪选中的片段",
+      "delete": "删除",
+      "deleteTooltip": "删除选中的片段",
+      "overlapping": "⚠️ {count} 个重叠"
+    },
+    "snap": {
+      "snap": "吸附",
+      "enabledTooltip": "吸附功能已开启 - 片段会自动对齐到相邻片段边缘和时间轴起点",
+      "disabledTooltip": "吸附功能已关闭 - 点击开启吸附功能，拖拽时将自动对齐片段"
+    },
+    "feedback": {
+      "snapToggled": "吸附功能{status}",
+      "splitNotSelected": "请先选择一个片段",
+      "splitClipNotExist": "片段不存在",
+      "splitMediaNotExist": "媒体素材不存在",
+      "splitMediaPending": "媒体等待处理中，无法裁剪",
+      "splitMediaAsyncProcessing": "媒体异步处理中，无法裁剪",
+      "splitMediaDecoding": "媒体解码中，无法裁剪",
+      "splitMediaError": "媒体加载错误，无法裁剪",
+      "splitMediaCancelled": "处理已取消，无法裁剪",
+      "splitMediaMissing": "媒体文件缺失，无法裁剪",
+      "splitMediaUnknownStatus": "未知状态，无法裁剪",
+      "splitTextUnsupported": "文本类型不支持裁剪功能",
+      "splitImageUnsupported": "图片类型不支持裁剪功能",
+      "splitVideoSupported": "在当前时间位置裁剪选中的片段",
+      "splitAudioSupported": "在当前时间位置裁剪选中的片段",
+      "splitTypeUnsupported": "该类型不支持裁剪功能"
+    },
+    "debug": {
+      "undoSuccess": "撤销操作成功",
+      "undoFailed": "没有可撤销的操作",
+      "redoSuccess": "重做操作成功",
+      "redoFailed": "没有可重做的操作"
+    }
+  }
+}

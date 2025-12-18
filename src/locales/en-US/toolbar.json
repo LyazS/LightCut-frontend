@@ -1,0 +1,46 @@
+{
+  "toolbar": {
+    "history": {
+      "undo": "Undo",
+      "undoTooltip": "Undo last operation (Ctrl+Z)",
+      "redo": "Redo",
+      "redoTooltip": "Redo next operation (Ctrl+Y)"
+    },
+    "clip": {
+      "split": "Split",
+      "splitTooltip": "Split selected clip at current time position",
+      "delete": "Delete",
+      "deleteTooltip": "Delete selected clip",
+      "overlapping": "{count} overlaps"
+    },
+    "snap": {
+      "snap": "Snap",
+      "enabledTooltip": "Snap enabled - Clips will automatically align to adjacent clip edges and timeline start",
+      "disabledTooltip": "Snap disabled - Click to enable snap function for automatic clip alignment during drag"
+    },
+    "feedback": {
+      "snapToggled": "Snap function {status}",
+      "splitNotSelected": "Please select a clip first",
+      "splitClipNotExist": "Clip does not exist",
+      "splitMediaNotExist": "Media asset does not exist",
+      "splitMediaPending": "Media pending processing, cannot split",
+      "splitMediaAsyncProcessing": "Media async processing, cannot split",
+      "splitMediaDecoding": "Media decoding, cannot split",
+      "splitMediaError": "Media loading error, cannot split",
+      "splitMediaCancelled": "Processing cancelled, cannot split",
+      "splitMediaMissing": "Media file missing, cannot split",
+      "splitMediaUnknownStatus": "Unknown status, cannot split",
+      "splitTextUnsupported": "Text type does not support split function",
+      "splitImageUnsupported": "Image type does not support split function",
+      "splitVideoSupported": "Split selected clip at current time position",
+      "splitAudioSupported": "Split selected clip at current time position",
+      "splitTypeUnsupported": "This type does not support split function"
+    },
+    "debug": {
+      "undoSuccess": "Undo operation successful",
+      "undoFailed": "No operations to undo",
+      "redoSuccess": "Redo operation successful",
+      "redoFailed": "No operations to redo"
+    }
+  }
+}

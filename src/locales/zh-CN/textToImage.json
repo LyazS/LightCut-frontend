@@ -1,0 +1,16 @@
+{
+  "textToImage": {
+    "title": "文生图",
+    "description": "描述图片内容",
+    "descriptionPlaceholder": "请描述你想要生成的图片...",
+    "size": "图片尺寸",
+    "size_16_9": "800 × 450 (16:9)",
+    "size_1_1": "1024 × 1024 (1:1)",
+    "size_9_16": "450 × 800 (9:16)",
+    "estimatedCost": "预估成本",
+    "credits": "积分",
+    "generating": "生成中...",
+    "generate": "生成图片",
+    "required": "*"
+  }
+}

@@ -1,0 +1,131 @@
+/* CSS变量定义 - 基础设计系统变量 */
+
+:root {
+  /* 颜色变量 */
+  --color-bg-primary: #1a1a1a;
+  --color-bg-secondary: #2a2a2a;
+  --color-bg-tertiary: #333;
+  --color-bg-quaternary: #444;
+  --color-bg-hover: #3a3a3a;
+  --color-bg-active: #555;
+
+  --color-border-primary: #555;
+  --color-border-secondary: #666;
+  --color-border-hover: #777;
+  --color-border-focus: #4caf50;
+  --color-border-light: #444;
+
+  --color-text-primary: #fff;
+  --color-text-secondary: #ccc;
+  --color-text-tertiary: #aaa;
+  --color-text-muted: #888;
+  --color-text-hint: #999;
+
+  --color-accent-primary: #4caf50;
+  --color-accent-primary-hover: #45a049;
+  --color-accent-primary-alpha: #4caf5033;
+  --color-accent-secondary: #2196f3;
+  --color-accent-warning: #ff6b6b;
+  --color-accent-error: #f44336;
+  --color-accent-error-hover: #d32f2f;
+
+  /* 主色调变量 */
+  --color-primary: #4caf50;
+  --color-primary-hover: #45a049;
+
+  /* 状态颜色变量 */
+  --color-status-pending: #f39c12; /* 等待状态 - 橙色 */
+  --color-status-processing: #506386; /* 处理中状态 - 蓝色 */
+  --color-status-completed: #27ae60; /* 完成状态 - 绿色 */
+  --color-status-error: #b94047; /* 错误状态 - 红色 */
+
+  /* 状态颜色渐变变量 */
+  --color-status-pending-gradient: linear-gradient(135deg, #f39c12, #e67e22);
+  --color-status-processing-gradient: linear-gradient(135deg, #3498db, #2980b9);
+  --color-status-completed-gradient: linear-gradient(135deg, #27ae60, #229954);
+  --color-status-error-gradient: linear-gradient(135deg, #e74c3c, #c0392b);
+
+  /* 进度条背景色 */
+  --color-progress-background: #2c3e50; /* 进度条背景色 - 深蓝灰色 */
+
+  /* 视频片段颜色 */
+  --color-clip-primary: #4a90e2;
+  --color-clip-primary-dark: #357abd;
+  --color-clip-selected: #ae7c4f;
+  --color-clip-selected-dark: #ae7c58;
+  --color-clip-overlapping: #e74c3c;
+  --color-clip-overlapping-dark: #c0392b;
+  --color-clip-hidden: #666;
+  --color-clip-hidden-dark: #555;
+  --color-clip-hidden-selected: #cc5529;
+  --color-clip-hidden-selected-dark: #c4741a;
+
+  /* 关键帧颜色 */
+  --color-keyframe-primary: #00ff88;
+  --color-keyframe-hover: #00cc6a;
+  --color-keyframe-active: #00aa55;
+
+  /* 特殊颜色 */
+  --color-speed-indicator: #ffd700;
+
+  /* 拖拽预览颜色 */
+  --color-drag-preview-normal: rgba(128, 128, 128, 0.6);
+  --color-drag-preview-conflict: rgba(255, 68, 68, 0.6);
+  --color-drag-border-normal: #888888;
+  --color-drag-border-conflict: #ff4444;
+
+  /* 尺寸变量 */
+  --border-radius-small: 3px;
+  --border-radius-medium: 4px;
+  --border-radius-large: 6px;
+  --border-radius-xlarge: 8px;
+
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+  --spacing-xxl: 24px;
+
+  /* 字体变量 */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-base: 12px;
+  --font-size-md: 13px;
+  --font-size-lg: 14px;
+  --font-size-xl: 16px;
+  --font-size-xxl: 18px;
+
+  /* 阴影变量 */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  /* 过渡变量 */
+  --transition-fast: 0.2s;
+  --transition-medium: 0.3s;
+  /* 状态颜色系统 - 通知和状态指示器 */
+  --color-success: #27ae60;
+  --color-error: #e74c3c;
+  --color-warning: #f39c12;
+  --color-info: #3498db;
+
+  /* 状态颜色半透明版本 */
+  --color-success-alpha: rgba(39, 174, 96, 0.2);
+  --color-error-alpha: rgba(231, 76, 60, 0.2);
+  --color-warning-alpha: rgba(243, 156, 18, 0.2);
+  --color-info-alpha: rgba(52, 152, 219, 0.2);
+
+  /* 状态指示器颜色 */
+  --color-status-indicator: #4caf50;
+  --color-status-ready: #27ae60;
+  --color-status-loading: #f39c12;
+
+  /* 表面颜色 */
+  --color-surface: #2a2a2a;
+  --color-surface-variant: #333;
+
+  /* 轨道控制宽度 */
+  --track-control-width: 150px;
+}

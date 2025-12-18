@@ -1,0 +1,25 @@
+/* 时间码输入框样式 */
+.timecode-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-medium);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-family: 'Courier New', monospace;
+  font-size: var(--font-size-lg);
+  text-align: center;
+  transition: border-color 0.2s ease;
+  min-height: 30px;
+}
+
+.timecode-input:focus {
+  outline: none;
+  border-color: var(--color-accent-secondary);
+  box-shadow: 0 0 0 2px rgba(192, 192, 192, 0.2);
+}
+
+.timecode-input::placeholder {
+  color: var(--color-text-hint);
+  font-style: italic;
+}

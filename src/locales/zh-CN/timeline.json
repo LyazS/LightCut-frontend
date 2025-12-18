@@ -1,0 +1,65 @@
+{
+  "timeline": {
+    "clip": {
+      "keyframeTooltip": "关键帧 - 帧 {frame} (点击跳转)",
+      "multiSelectDragWarning": "多选状态下禁止拖拽操作",
+      "dragStartReason": "时间轴项目拖拽",
+      "resizeStartReason": "片段大小调整",
+      "resizeSuccess": "时间范围调整成功",
+      "resizeFailed": "时间范围调整失败",
+      "keyframeJumpReason": "关键帧跳转"
+    },
+    "status": {
+      "pending": "等待处理中",
+      "asyncProcessing": "异步处理中",
+      "webavDecoding": "解码中",
+      "error": "媒体加载错误",
+      "cancelled": "处理已取消",
+      "missing": "媒体文件缺失"
+    },
+    "hideTrack": "隐藏轨道",
+    "clips": "片段",
+    "textTrack": "文本轨道",
+    "audioTrack": "音频轨道",
+    "videoTrack": "视频轨道",
+    "effectTrack": "特效轨道",
+    "subtitleTrack": "字幕轨道",
+    "tracks": "轨道",
+    "addNewTrack": "添加新轨道",
+    "muteTrack": "静音/取消静音轨道",
+    "unmuteTrack": "取消静音轨道",
+    "trackHidden": "轨道已隐藏",
+    "showTrack": "显示轨道",
+    "contextMenu": {
+      "emptyArea": {
+        "addVideoTrack": "添加视频轨道",
+        "addAudioTrack": "添加音频轨道",
+        "addTextTrack": "添加文本轨道"
+      },
+      "clip": {
+        "duplicateClip": "复制片段",
+        "regenerateThumbnail": "重新生成缩略图",
+        "deleteClip": "删除片段",
+        "exportClip": "导出片段"
+      },
+      "track": {
+        "addText": "添加文本",
+        "autoArrangeClips": "自动排列片段",
+        "autoArrangeClipsEmpty": "自动排列片段（无片段）",
+        "renameTrack": "重命名轨道",
+        "hideTrack": "隐藏轨道",
+        "showTrack": "显示轨道",
+        "muteTrack": "静音轨道",
+        "unmuteTrack": "取消静音轨道",
+        "addNewTrack": "添加新轨道",
+        "addVideoTrack": "视频轨道",
+        "addAudioTrack": "音频轨道",
+        "addTextTrack": "文本轨道",
+        "deleteTrack": "删除轨道"
+      }
+    }
+  },
+"exportStarted": "开始导出片段 {id}...",
+"exportSuccess": "片段 {id} 导出成功",
+"exportFailed": "片段 {id} 导出失败: {error}"
+}

@@ -1,0 +1,51 @@
+
+/* 属性面板通用样式 */
+
+/* 属性项样式 */
+.property-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.property-item label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+/* 属性分组样式 */
+.property-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.property-section h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-bg-quaternary);
+  padding-bottom: var(--spacing-xs);
+}
+
+/* 属性输入框样式 - 用于属性面板 */
+.property-input {
+  background: var(--color-bg-quaternary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--border-radius-small);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  flex: 1;
+  min-width: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.property-input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+}

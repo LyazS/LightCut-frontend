@@ -1,0 +1,287 @@
+/* 统一Clip样式 - 全局基础样式
+ * 内容样式已迁移到对应组件的scoped样式中
+ */
+
+/* ==================== CSS变量定义 ==================== */
+:root {
+  /* 统一Loading状态颜色 - 使用统一状态颜色变量 */
+  --clip-color-loading-bg: var(--color-status-processing);
+  --clip-color-loading-border: var(--color-status-processing);
+  --clip-color-loading-text: #ffffff;
+  --clip-color-loading-progress: #ffffff;
+
+  /* 统一错误状态颜色 - 使用统一状态颜色变量 */
+  --clip-color-error-border: var(--color-status-error);
+  --clip-color-error-text: #ffffff;
+  --clip-color-error-bg: var(--color-status-error);
+
+  /* Clip基础尺寸变量 */
+  --clip-border-width: 1px; /* 统一为1px */
+  --clip-border-radius: var(--border-radius-medium);
+  --clip-padding: var(--spacing-md) var(--spacing-lg);
+
+  /* Clip基础颜色变量 */
+  --clip-bg-primary: #fafafa;
+  --clip-bg-media-type: linear-gradient(135deg, #666666, #555555);
+  --clip-border-default: transparent;
+  --clip-border-selected: #ffffff; /* 统一为白色 */
+  --clip-border-hover: #ffffff; /* 统一为白色 */
+  --clip-border-resizing: #ffffff; /* 统一为白色 */
+  --clip-shadow: var(--shadow-sm);
+
+  /* Clip动画变量 */
+  --clip-transition-duration: var(--transition-fast);
+
+  /* 关键帧颜色 - 合并自尾部root块 */
+  --color-keyframe-primary: #4caf50;
+  --color-keyframe-hover: #66bb6a;
+  --color-keyframe-active: #388e3c;
+}
+
+/* ==================== 基础样式 ==================== */
+
+/* Clip基础样式 - 主容器样式 */
+.unified-timeline-clip {
+  position: absolute;
+  border-radius: var(--clip-border-radius);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--clip-transition-duration) ease;
+  z-index: 10;
+  width: auto;
+  height: auto;
+  display: block;
+  max-height: 100%;
+
+  /* 基础边框和背景 */
+  border: var(--clip-border-width) solid var(--clip-border-default);
+  background: var(--clip-bg-primary);
+  box-shadow: var(--clip-shadow);
+  color: white;
+}
+
+/* 内容区域 - 基础布局，具体内容样式在组件中 */
+.clip-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ==================== 状态样式 ==================== */
+
+/* 悬停状态 */
+.unified-timeline-clip:hover,
+.unified-timeline-clip .resize-handle:hover {
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+}
+
+/* 选中状态 */
+.unified-timeline-clip.selected {
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+}
+
+/* 拖拽状态 */
+.unified-timeline-clip.dragging {
+  opacity: 0.5;
+  z-index: 1000;
+  transition: none !important;
+}
+
+/* 调整大小状态 */
+.unified-timeline-clip.resizing {
+  cursor: col-resize;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+  transition: none !important;
+}
+
+/* 媒体类型特定样式 */
+.unified-timeline-clip.media-type-video,
+.unified-timeline-clip.media-type-image,
+.unified-timeline-clip.media-type-audio,
+.unified-timeline-clip.media-type-text,
+.unified-timeline-clip.media-type-unknown {
+  background: var(--clip-bg-media-type);
+}
+
+/* 重叠状态 */
+.unified-timeline-clip.overlapping {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-overlapping),
+    var(--color-clip-overlapping-dark)
+  ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+}
+
+/* 隐藏轨道状态 */
+.unified-timeline-clip.track-hidden {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden),
+    var(--color-clip-hidden-dark)
+  ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+}
+
+/* 隐藏轨道选中状态 */
+.unified-timeline-clip.track-hidden.selected {
+  background: linear-gradient(
+    135deg,
+    var(--color-clip-hidden-selected),
+    var(--color-clip-hidden-selected-dark)
+  ) !important;
+  border: var(--clip-border-width) solid var(--clip-border-selected);
+}
+
+/* 隐藏轨道上的clip内容透明度调整 */
+.unified-timeline-clip.track-hidden .clip-content {
+  opacity: 0.8;
+}
+
+/* Loading状态 */
+.unified-timeline-clip.status-loading {
+  background: var(--clip-color-loading-bg) !important;
+  animation: loading-pulse var(--clip-loading-animation-duration) infinite;
+}
+
+/* 错误状态 */
+.unified-timeline-clip.status-error {
+  background: var(--clip-color-error-bg) !important;
+}
+
+/* ==================== 子元素样式 ==================== */
+
+/* 调整把手 */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background var(--clip-transition-duration) ease;
+}
+
+.resize-handle:hover {
+  background: #eeeeee;
+}
+
+.resize-handle-left {
+  left: -1px;
+  border-top-left-radius: var(--border-radius-medium);
+  border-bottom-left-radius: var(--border-radius-medium);
+}
+
+.resize-handle-right {
+  right: -1px;
+  border-top-right-radius: var(--border-radius-medium);
+  border-bottom-right-radius: var(--border-radius-medium);
+}
+
+/* 进度条容器 */
+.progress-bar-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 5;
+}
+
+/* ==================== 动画定义 ==================== */
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ==================== 关键帧标记样式 ==================== */
+
+/* 关键帧容器 */
+.keyframes-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* 关键帧标记 */
+.keyframe-marker {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  z-index: 16;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* 关键帧菱形图标 */
+.keyframe-diamond {
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-keyframe-primary);
+  border: 2px solid var(--color-text-primary);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+/* 关键帧悬停状态 */
+.keyframe-marker:hover .keyframe-diamond {
+  background-color: var(--color-keyframe-hover);
+  transform: rotate(45deg) scale(1.3);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  border-color: var(--color-text-primary);
+}
+
+/* 关键帧激活状态 */
+.keyframe-marker:active .keyframe-diamond {
+  background-color: var(--color-keyframe-active);
+  transform: rotate(45deg) scale(1.1);
+}
+
+/* ==================== 素材名称覆盖层样式 ==================== */
+
+/* 素材名称基础样式 - 统一渲染器组件使用 */
+.clip-name-overlay {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  color: white;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  z-index: 10;
+  max-width: 80%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  line-height: 1;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 小尺寸时隐藏素材名称 */
+@media (max-width: 100px) {
+  .clip-name-overlay {
+    display: none;
+  }
+}

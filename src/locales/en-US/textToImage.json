@@ -1,0 +1,16 @@
+{
+  "textToImage": {
+    "title": "Text to Image",
+    "description": "Image Description",
+    "descriptionPlaceholder": "Describe the image you want to generate...",
+    "size": "Image Size",
+    "size_16_9": "800 × 450 (16:9)",
+    "size_1_1": "1024 × 1024 (1:1)",
+    "size_9_16": "450 × 800 (9:16)",
+    "estimatedCost": "Estimated Cost",
+    "credits": "Credits",
+    "generating": "Generating...",
+    "generate": "Generate Image",
+    "required": "*"
+  }
+}

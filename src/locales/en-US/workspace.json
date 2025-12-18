@@ -1,0 +1,13 @@
+{
+  "workspace": {
+    "change": "Click to change workspace directory",
+    "setup": {
+      "title": "Click to Set Directory",
+      "description": "To manage your video editing projects, please select a local folder as the project workspace. All project files will be saved in this folder."
+    },
+    "error": {
+      "unsupported": "The current browser does not support local file access functionality. Please use Chrome, Edge, or other modern browsers that support the File System Access API.",
+      "permission": "Workspace directory permission is lost or the directory does not exist. Please select a workspace directory again."
+    }
+  }
+}

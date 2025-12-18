@@ -1,0 +1,13 @@
+{
+  "notification": {
+    "executeFailed": "Failed to execute operation: {description}. {error}",
+    "undoFailed": "Undo failed: an error occurred during undo operation. {error}",
+    "redoFailed": "Redo failed: an error occurred during redo operation. {error}",
+    "batchFailed": "Batch operation failed: {description} execution failed. {error}",
+    "cannotUndo": "Cannot undo: no operations to undo",
+    "cannotRedo": "Cannot redo: no operations to redo",
+    "undoSuccess": "Undo: {description}",
+    "redoSuccess": "Redo: {description}",
+    "batchSuccess": "Batch operation completed: {summary}"
+  }
+}

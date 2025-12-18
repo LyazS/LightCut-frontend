@@ -1,0 +1,65 @@
+{
+  "timeline": {
+    "clip": {
+      "keyframeTooltip": "Keyframe - Frame {frame} (Click to jump)",
+      "multiSelectDragWarning": "Drag operation disabled in multi-select mode",
+      "dragStartReason": "Timeline item drag",
+      "resizeStartReason": "Clip resize",
+      "resizeSuccess": "Time range adjustment successful",
+      "resizeFailed": "Time range adjustment failed",
+      "keyframeJumpReason": "Keyframe jump"
+    },
+    "status": {
+      "pending": "Pending",
+      "asyncProcessing": "Async processing",
+      "webavDecoding": "Decoding",
+      "error": "Media loading error",
+      "cancelled": "Processing cancelled",
+      "missing": "Media file missing"
+    },
+    "hideTrack": "Hide Track",
+    "clips": "Clips",
+    "textTrack": "Text Track",
+    "audioTrack": "Audio Track",
+    "videoTrack": "Video Track",
+    "effectTrack": "Effect Track",
+    "subtitleTrack": "Subtitle Track",
+    "tracks": "Tracks",
+    "addNewTrack": "Add new track",
+    "muteTrack": "Mute/unmute track",
+    "unmuteTrack": "Unmute track",
+    "trackHidden": "Track hidden",
+    "showTrack": "Show track",
+    "contextMenu": {
+      "emptyArea": {
+        "addVideoTrack": "Add Video Track",
+        "addAudioTrack": "Add Audio Track",
+        "addTextTrack": "Add Text Track"
+      },
+      "clip": {
+        "duplicateClip": "Duplicate Clip",
+        "regenerateThumbnail": "Regenerate Thumbnail",
+        "deleteClip": "Delete Clip",
+        "exportClip": "Export Clip"
+      },
+      "track": {
+        "addText": "Add Text",
+        "autoArrangeClips": "Auto Arrange Clips",
+        "autoArrangeClipsEmpty": "Auto Arrange Clips (No Clips)",
+        "renameTrack": "Rename Track",
+        "hideTrack": "Hide Track",
+        "showTrack": "Show Track",
+        "muteTrack": "Mute Track",
+        "unmuteTrack": "Unmute Track",
+        "addNewTrack": "Add New Track",
+        "addVideoTrack": "Video Track",
+        "addAudioTrack": "Audio Track",
+        "addTextTrack": "Text Track",
+        "deleteTrack": "Delete Track"
+      }
+    }
+  },
+"exportStarted": "Starting export of clip {id}...",
+"exportSuccess": "Clip {id} exported successfully",
+"exportFailed": "Clip {id} export failed: {error}"
+}
