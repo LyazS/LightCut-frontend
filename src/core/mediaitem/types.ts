@@ -7,7 +7,7 @@ import { reactive } from 'vue'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
-
+import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 // ==================== 类型定义 ====================
 
 /**
@@ -45,6 +45,13 @@ export interface WebAVObjects {
   originalHeight?: number // 原始高度（视频和图片）
 }
 
+export interface BunnyObjects {
+  bunnyClip?: Raw<BunnyClip>
+  thumbnailUrl?: string
+  originalWidth?: number // 原始宽度（视频和图片）
+  originalHeight?: number // 原始高度（视频和图片）
+}
+
 /**
  * 统一的媒体项目数据接口 - 纯响应式状态对象
  */
@@ -64,11 +71,13 @@ export interface UnifiedMediaItemData {
   // ==================== 运行时对象（状态相关） ====================
   runtime: {
     webav?: WebAVObjects
+    bunny?: BunnyObjects
     refCount?: number // 引用计数：有多少个文件夹引用了这个素材
   }
 
   // ==================== 元数据（状态相关） ====================
   duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
+  durationN?: bigint // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
 }
 
 // ==================== 专门的状态类型定义 ====================
