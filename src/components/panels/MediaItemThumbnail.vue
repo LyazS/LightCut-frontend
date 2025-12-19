@@ -86,8 +86,8 @@
           </div>
           <!-- WebAV生成的缩略图 -->
           <img
-            v-else-if="item.runtime.webav?.thumbnailUrl"
-            :src="item.runtime.webav.thumbnailUrl"
+            v-else-if="item.runtime.bunny?.thumbnailUrl"
+            :src="item.runtime.bunny.thumbnailUrl"
             class="thumbnail-image"
             alt="缩略图"
           />

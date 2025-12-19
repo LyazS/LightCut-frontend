@@ -113,7 +113,11 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       // 1. 清理缩略图URL
       if (mediaItem.runtime.webav?.thumbnailUrl) {
         URL.revokeObjectURL(mediaItem.runtime.webav.thumbnailUrl)
-        console.log(`🧹 [UnifiedMediaModule] 缩略图URL已清理: ${mediaItem.name}`)
+        console.log(`🧹 [UnifiedMediaModule] webav缩略图URL已清理: ${mediaItem.name}`)
+      }
+      if (mediaItem.runtime.bunny?.thumbnailUrl) {
+        URL.revokeObjectURL(mediaItem.runtime.bunny.thumbnailUrl)
+        console.log(`🧹 [UnifiedMediaModule] bunny缩略图URL已清理: ${mediaItem.name}`)
       }
 
       // 2. 清理相关的时间轴项目

@@ -1,10 +1,8 @@
 import pLimit from 'p-limit'
-import type { UnifiedMediaItemData, MediaType, BunnyObjects } from '@/core/mediaitem/types'
-import { microsecondsToFrames, secondsToFrames } from '@/core/utils/timeUtils'
-import { generateThumbnailForUnifiedMediaItem } from '@/core/utils/thumbnailGenerator'
+import type { UnifiedMediaItemData, BunnyObjects } from '@/core/mediaitem/types'
+import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thumbGenerator'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { BUNNY_CONCURRENCY } from '@/constants/ConcurrencyConstants'
-import { createMP4Clip, createImgClip, createAudioClip } from '@/core/utils/webavClipUtils'
 import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import { fileToImageBitmap } from '@/core/bunnyUtils/ToBitmap'
 import { markRaw } from 'vue'
@@ -92,7 +90,9 @@ export class BunnyProcessor {
       default:
         throw new Error(`不支持的媒体类型: ${mediaItem.mediaType}`)
     }
-
+    // 预先设置给 generateThumbnailForUnifiedMediaItemBunny 使用
+    mediaItem.runtime.bunny = bunnyObjects
+    // 生成缩略图
     if (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image') {
       // 5. 计算缩略图尺寸（最长边使用常量，保持宽高比）
       const maxEdge = THUMBNAIL_CONSTANTS.MEDIA_ITEM_MAX_EDGE
@@ -111,7 +111,7 @@ export class BunnyProcessor {
       }
 
       // 6. 使用统一的缩略图生成函数
-      const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
+      const thumbnailUrl = await generateThumbnailForUnifiedMediaItemBunny(
         mediaItem,
         undefined, // 使用默认中间位置
         thumbnailWidth,
@@ -120,6 +120,16 @@ export class BunnyProcessor {
       )
 
       // 7. 将 thumbnailUrl 添加到 webavObjects
+      bunnyObjects.thumbnailUrl = thumbnailUrl
+    } else if (mediaItem.mediaType === 'audio') {
+      const maxEdge = THUMBNAIL_CONSTANTS.MEDIA_ITEM_MAX_EDGE
+      const thumbnailUrl = await generateThumbnailForUnifiedMediaItemBunny(
+        mediaItem,
+        undefined, // 使用默认中间位置
+        maxEdge,
+        maxEdge,
+        ThumbnailMode.FIT,
+      )
       bunnyObjects.thumbnailUrl = thumbnailUrl
     }
 

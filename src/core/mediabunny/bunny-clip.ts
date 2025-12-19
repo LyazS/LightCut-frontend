@@ -6,6 +6,8 @@ import {
   ALL_FORMATS,
   VideoSample,
   AudioSample,
+  type MetadataTags,
+  type AttachedImage,
 } from 'mediabunny'
 import {
   RENDERER_FPS,
@@ -71,14 +73,6 @@ export class BunnyClip implements IClip {
         source: new BlobSource(file),
         formats: ALL_FORMATS,
       })
-      this.duration = await this.input.computeDuration()
-      this.durationN = BigInt(Math.ceil(this.duration * RENDERER_FPS))
-      this.setTimeRange({
-        clipStart: 0n,
-        clipEnd: this.durationN,
-        timelineStart: 0n,
-        timelineEnd: this.durationN,
-      })
 
       // 获取视频和音频轨道
       const videoTrack = await this.input.getPrimaryVideoTrack()
@@ -89,6 +83,7 @@ export class BunnyClip implements IClip {
       )
 
       // 初始化视频轨道
+      let videoDuration: number | null = null
       if (videoTrack) {
         console.log(`🎬 视频轨道信息:`, {
           codec: videoTrack.codec,
@@ -100,6 +95,7 @@ export class BunnyClip implements IClip {
         this.width = videoTrack.displayWidth
         this.height = videoTrack.displayHeight
         this.videoSink = new VideoSampleSink(videoTrack)
+        videoDuration = await videoTrack.computeDuration()
       }
 
       // 初始化音频轨道
@@ -112,6 +108,19 @@ export class BunnyClip implements IClip {
 
         this.audioSink = new AudioSampleSink(audioTrack)
       }
+      if (!videoTrack && !audioTrack) {
+        throw new Error('该文件没有视频和音频轨道')
+      }
+
+      this.duration = videoDuration || (await this.input.computeDuration())
+      this.durationN = BigInt(Math.ceil(this.duration * RENDERER_FPS))
+      this.setTimeRange({
+        clipStart: 0n,
+        clipEnd: this.durationN,
+        timelineStart: 0n,
+        timelineEnd: this.durationN,
+      })
+
       console.log(`✅ 文件加载完成，总时长: ${this.duration.toFixed(2)}s`)
     } catch (error) {
       console.error('❌ 文件加载失败:', error)
@@ -306,6 +315,11 @@ export class BunnyClip implements IClip {
   }
 
   // ==================== 公共接口 ====================
+  async getMetadataTags(): Promise<MetadataTags | null> {
+    // 获取元数据
+    await this.ready
+    return (await this.input?.getMetadataTags()) ?? null
+  }
   setTimeRange(timeRange: {
     clipStart?: bigint
     clipEnd?: bigint
@@ -429,6 +443,9 @@ export class BunnyClip implements IClip {
       throw new Error('❌ 无法克隆 BunnyClip：原始文件不存在')
     }
     const newClip = new BunnyClip(this.originalFile)
+    await newClip.ready
+    newClip.setTimeRange(this.timeRange)
+    newClip.setPreviewRate(this.previewRate)
     return newClip
   }
 

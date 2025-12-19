@@ -30,7 +30,7 @@ export const UnifiedMediaItemQueries = {
   },
 
   isReady(item: UnifiedMediaItemData): item is ReadyMediaItem {
-    return item.mediaStatus === 'ready' && !!item.duration
+    return item.mediaStatus === 'ready' && !!item.duration && !!item.durationN
   },
 
   isProcessing(item: UnifiedMediaItemData): item is ProcessingMediaItem {
