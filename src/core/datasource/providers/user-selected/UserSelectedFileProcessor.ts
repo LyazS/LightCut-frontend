@@ -114,14 +114,17 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
       }
 
       // 3. 设置为WebAV解析状态
-      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+      this.transitionMediaStatus(mediaItem, 'decoding')
 
       // 4. WebAV处理器负责具体处理
       const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
+      const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
 
       // 5. 直接设置元数据
-      UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavResult.webavObjects)
-      UnifiedMediaItemActions.setDuration(mediaItem, webavResult.duration)
+      mediaItem.runtime.webav = webavResult.webavObjects
+      mediaItem.duration = webavResult.duration
+      mediaItem.runtime.bunny = bunnyResult.bunnyObjects
+      mediaItem.durationN = bunnyResult.durationN
       console.log(`🔧 [UserSelectedFileProcessor] 元数据设置完成: ${mediaItem.name}`)
 
       // 6. 🌟 使用统一的保存逻辑判断
@@ -174,10 +177,10 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
         if (!source.selectedFile) {
           throw new Error('USER_CREATE 场景下 selectedFile 不能为 null')
         }
-        
+
         file = source.selectedFile
         console.log(`📁 [USER_CREATE] 使用用户选择的文件: ${file.name}`)
-        
+
         // ✅ 使用完毕后立即清除引用
         source.selectedFile = null
         console.log(`🧹 [USER_CREATE] 已清除 selectedFile 引用`)

@@ -64,7 +64,7 @@ export class TimelineStatusDisplayUtils {
           return `获取中... ${progress.toFixed(2)}%`
         }
         return '解析中...'
-      case 'webavdecoding':
+      case 'decoding':
         return '解析中...'
       case 'ready':
         return '就绪'
@@ -97,7 +97,7 @@ export class TimelineStatusDisplayUtils {
           }
         }
         return { hasProgress: true, percent: 50 } // 解析阶段显示50%
-      case 'webavdecoding':
+      case 'decoding':
         return { hasProgress: true, percent: 75 } // WebAV解析阶段显示75%
       default:
         return { hasProgress: false, percent: 0 }

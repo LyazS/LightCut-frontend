@@ -46,7 +46,9 @@ export class MediaItemLoader {
               console.warn(`⚠️ [MediaItemLoader] 媒体文件缺失: ${metaData.name}`)
             }
           } else {
-            console.log(`📋 [MediaItemLoader] 媒体项目加载（状态: ${mediaItem.mediaStatus}）: ${metaData.name}`)
+            console.log(
+              `📋 [MediaItemLoader] 媒体项目加载（状态: ${mediaItem.mediaStatus}）: ${metaData.name}`,
+            )
           }
           mediaItems.push(mediaItem)
         } catch (error) {
@@ -98,6 +100,7 @@ export class MediaItemLoader {
         createdAt: metaData.createdAt,
         mediaType: metaData.mediaType,
         duration: metaData.duration,
+        durationN: metaData.durationN ? BigInt(metaData.durationN) : undefined,
         mediaStatus: metaData.mediaStatus || 'pending', // 🌟 如果 meta 文件中有终态状态，使用它；否则默认为 pending
       },
     )

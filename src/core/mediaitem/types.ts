@@ -16,7 +16,7 @@ import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 export type MediaStatus =
   | 'pending' // 等待开始处理
   | 'asyncprocessing' // 异步获取中（抽象状态，对应各种数据源的获取阶段）
-  | 'webavdecoding' // WebAV解析中
+  | 'decoding' // WebAV解析中
   | 'ready' // 就绪
   | 'error' // 错误
   | 'cancelled' // 取消
@@ -47,6 +47,7 @@ export interface WebAVObjects {
 
 export interface BunnyObjects {
   bunnyClip?: Raw<BunnyClip>
+  imageClip?: ImageBitmap
   thumbnailUrl?: string
   originalWidth?: number // 原始宽度（视频和图片）
   originalHeight?: number // 原始高度（视频和图片）
@@ -89,6 +90,7 @@ export interface UnifiedMediaItemData {
 export type ReadyMediaItem = UnifiedMediaItemData & {
   mediaStatus: 'ready'
   duration: number
+  durationN: bigint
 }
 
 /**
@@ -96,7 +98,7 @@ export type ReadyMediaItem = UnifiedMediaItemData & {
  * 当媒体项目处于处理中状态时，保证 mediaStatus 为处理中的状态之一
  */
 export type ProcessingMediaItem = UnifiedMediaItemData & {
-  mediaStatus: 'asyncprocessing' | 'webavdecoding'
+  mediaStatus: 'asyncprocessing' | 'decoding'
 }
 
 /**

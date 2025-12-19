@@ -25,7 +25,6 @@ import type { IClip } from './IClip'
 export class BunnyClip implements IClip {
   private originalFile: File | null = null
   private input: Input | null = null
-  public readonly ready: Promise<void>
 
   private needResetVideo: boolean = false
   private needResetAudio: boolean = false
@@ -41,7 +40,8 @@ export class BunnyClip implements IClip {
   private audioIterator: AsyncGenerator<AudioSample, void, unknown> | null = null
   private audioInTime: number = 0
 
-  // 时间相关
+  // 公开属性
+  public readonly ready: Promise<void>
   public timeRange: TimeRange = {
     clipStart: 0n,
     clipEnd: 0n,
@@ -51,6 +51,8 @@ export class BunnyClip implements IClip {
   public previewRate: number = 1.0 // 预览倍速
   public duration: number = 0
   public durationN: bigint = 0n
+  public width: number = 0
+  public height: number = 0
 
   constructor(file: File) {
     this.ready = this.loadFile(file)
@@ -95,6 +97,8 @@ export class BunnyClip implements IClip {
           rotation: videoTrack.rotation,
         })
 
+        this.width = videoTrack.displayWidth
+        this.height = videoTrack.displayHeight
         this.videoSink = new VideoSampleSink(videoTrack)
       }
 
@@ -301,122 +305,6 @@ export class BunnyClip implements IClip {
     this.audioIterator = null
   }
 
-  /**
-   * 对AudioSample应用播放速率变化
-   * @param buf 原始AudioSample
-   * @param rate 播放速率
-   * @param clipStart clip起始帧数
-   * @returns 处理后的AudioSample数组
-   */
-  private applyPlaybackRateToAudioSample(
-    buf: AudioSample,
-    rate: number,
-    clipStart: number,
-  ): AudioSample[] {
-    const channels = buf.numberOfChannels
-    const sourceSampleRate = buf.sampleRate
-    const targetSampleRate = AUDIO_DEFAULT_SAMPLE_RATE // 48000Hz
-    const frameCount = buf.numberOfFrames
-
-    // 为每个声道应用重采样（同时处理倍速和采样率转换）
-    const resampledChannels: Float32Array[] = []
-    for (let ch = 0; ch < channels; ch++) {
-      // 提取单声道数据
-      const channelData = new Float32Array(frameCount)
-      buf.copyTo(channelData, {
-        planeIndex: ch,
-        format: 'f32-planar',
-      })
-
-      // ✨ 一次性完成倍速和采样率转换
-      const resampled = this.resampleWithRateAndSpeed(
-        channelData,
-        sourceSampleRate,
-        targetSampleRate,
-        rate,
-      )
-      resampledChannels.push(resampled)
-    }
-
-    // 计算新的时间戳（倍速影响）
-    const newTimestamp =
-      (buf.timestamp - clipStart / RENDERER_FPS) / rate +
-      Number(this.timeRange.timelineStart) / RENDERER_FPS
-
-    // 创建AudioBuffer，使用目标采样率
-    const audioBuffer = new AudioBuffer({
-      length: resampledChannels[0]?.length ?? 0,
-      numberOfChannels: channels,
-      sampleRate: targetSampleRate, // ✅ 使用48000Hz
-    })
-
-    // 复制重采样后的数据
-    for (let ch = 0; ch < channels; ch++) {
-      const channelData = resampledChannels[ch]
-      if (channelData) {
-        const buffer = audioBuffer.getChannelData(ch)
-        buffer.set(channelData)
-      }
-    }
-
-    // 创建AudioSample数组
-    const newSamples = AudioSample.fromAudioBuffer(audioBuffer, newTimestamp)
-
-    return newSamples
-  }
-
-  /**
-   * 同时处理倍速和采样率转换的重采样
-   * @param pcmData 原始PCM数据
-   * @param sourceSampleRate 原始采样率
-   * @param targetSampleRate 目标采样率（48000Hz）
-   * @param playbackRate 播放速率
-   * @returns 重采样后的PCM数据
-   */
-  private resampleWithRateAndSpeed(
-    pcmData: Float32Array,
-    sourceSampleRate: number,
-    targetSampleRate: number,
-    playbackRate: number,
-  ): Float32Array {
-    // 参数验证
-    if (sourceSampleRate <= 0 || targetSampleRate <= 0) {
-      throw new Error('采样率必须大于0')
-    }
-    if (playbackRate <= 0) {
-      throw new Error('播放速率必须大于0')
-    }
-    if (pcmData.length === 0) {
-      return new Float32Array(0)
-    }
-
-    // 计算综合重采样比率
-    const resampleRatio = (sourceSampleRate / targetSampleRate) * playbackRate
-
-    // 计算输出样本数
-    const outputLength = Math.floor(pcmData.length / resampleRatio)
-    const output = new Float32Array(outputLength)
-
-    // 线性插值重采样
-    for (let i = 0; i < outputLength; i++) {
-      // 在原始数据中的位置
-      const sourceIndex = i * resampleRatio
-      const intIndex = Math.floor(sourceIndex)
-      const frac = sourceIndex - intIndex
-
-      // 边界检查和插值
-      if (intIndex + 1 < pcmData.length) {
-        const sample1 = pcmData[intIndex]!
-        const sample2 = pcmData[intIndex + 1]!
-        output[i] = sample1 * (1 - frac) + sample2 * frac
-      } else if (intIndex < pcmData.length) {
-        output[i] = pcmData[intIndex]!
-      }
-    }
-
-    return output
-  }
-
   // ==================== 公共接口 ====================
   setTimeRange(timeRange: {
     clipStart?: bigint
@@ -473,9 +361,13 @@ export class BunnyClip implements IClip {
     this.previewRate = rate
   }
 
-  tickInterceptor: <T>(time: number | bigint, result: T) => Promise<T> =
-    async (_, result) => result
+  tickInterceptor: <T>(time: number | bigint, result: T) => Promise<T> = async (_, result) => result
 
+  /**
+   * 播放时获取指定时间点的音视频帧
+   * @param timeN 时间轴上的帧位置
+   * @returns 包含音频样本数组、视频帧和状态
+   */
   async tickN(
     timeN: bigint,
   ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
@@ -491,6 +383,45 @@ export class BunnyClip implements IClip {
       this.videoSink ? this.findVideoFrameN(timeN) : null,
     ])
     return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+  }
+
+  /**
+   * Seek 时获取指定时间点的视频帧（仅视频，不含音频）
+   * @param timeN 时间轴上的帧位置
+   * @returns 包含视频帧和状态，音频数组始终为空
+   */
+  async getSampleN(
+    timeN: bigint,
+  ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
+    if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
+      return this.tickInterceptor(timeN, {
+        audio: [],
+        video: null,
+        state: 'outofrange',
+      })
+    }
+    const video = (await this.videoSink?.getSample(Number(timeN) / RENDERER_FPS)) ?? null
+    return await this.tickInterceptor(timeN, { audio: [], video, state: 'success' })
+  }
+
+  /**
+   * 批量生成缩略图的异步迭代器，用于时间轴缩略图显示
+   * @param timeNs 时间点数组（帧位置）
+   * @yields 每次返回 { frame: VideoFrame | null, state: boolean }
+   */
+  async *thumbnailIter(
+    timeNs: bigint[],
+  ): AsyncGenerator<{ frame: VideoFrame | null; state: boolean }, void, unknown> {
+    if (this.videoSink) {
+      const timeIter = timeNs.map((n) => Number(n) / RENDERER_FPS)[Symbol.iterator]()
+      for await (const sample of this.videoSink.samplesAtTimestamps(timeIter)) {
+        const frame = sample?.toVideoFrame() ?? null
+        sample?.close()
+        yield { frame, state: true }
+      }
+    } else {
+      yield { frame: null, state: false }
+    }
   }
 
   async clone(): Promise<IClip> {

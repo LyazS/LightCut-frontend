@@ -42,7 +42,7 @@ import {
   calculateThumbnailLayout,
   filterThumbnailVisible,
   calculateClipWidthPixels,
-} from '@/core/utils/thumbnailAlgorithms'
+} from '@/core/utils/thumbnailLayout'
 import type { ThumbnailLayoutItem } from '@/core/types/thumbnail'
 import { THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { isImageTimelineItem } from '@/core/timelineitem/TimelineItemQueries'

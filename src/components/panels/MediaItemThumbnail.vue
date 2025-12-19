@@ -42,7 +42,7 @@
         </template>
 
         <!-- WebAV解析中状态 -->
-        <template v-else-if="item?.mediaStatus === 'webavdecoding'">
+        <template v-else-if="item?.mediaStatus === 'decoding'">
           <div class="thumbnail-placeholder">
             <div class="loading-spinner"></div>
           </div>
@@ -182,7 +182,7 @@ const statusIcon = computed(() => {
       return IconComponents.TIME
     case 'asyncprocessing':
       return IconComponents.LOADING
-    case 'webavdecoding':
+    case 'decoding':
       return IconComponents.SEARCH
     case 'error':
       return IconComponents.WARNING
@@ -204,7 +204,7 @@ const statusText = computed(() => {
       return t('media.tooltip.pending')
     case 'asyncprocessing':
       return `${t('media.tooltip.processing')}: ${item.value.source.progress.toFixed(2)}%`
-    case 'webavdecoding':
+    case 'decoding':
       return t('media.tooltip.webavDecoding')
     case 'error':
       return t('media.tooltip.error')
@@ -242,8 +242,8 @@ const detailInfo = computed<string[]>(() => {
     }
   }
   
-  // webavdecoding 状态：显示鼓励信息
-  if (status === 'webavdecoding') {
+  // decoding 状态：显示鼓励信息
+  if (status === 'decoding') {
     info.push(t('media.tooltip.almostDone'))
   }
   

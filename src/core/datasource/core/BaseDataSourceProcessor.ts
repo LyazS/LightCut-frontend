@@ -8,6 +8,7 @@ import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTyp
 import type { UnifiedMediaItemData, MediaStatus } from '@/core/mediaitem/types'
 import { MediaStatusManager } from '@/core/datasource/services/MediaStatusService'
 import { WebAVProcessor } from '@/core/utils/WebAVProcessor'
+import { BunnyProcessor } from '@/core/bunnyUtils/BunnyProcessor'
 import { DATA_SOURCE_CONCURRENCY } from '@/constants/ConcurrencyConstants'
 import pLimit from 'p-limit'
 
@@ -33,13 +34,14 @@ export abstract class DataSourceProcessor {
   // 使用 p-limit 替代手动队列管理
   private limit: ReturnType<typeof pLimit>
   protected maxConcurrentTasks: number = DATA_SOURCE_CONCURRENCY.BASE_MAX_CONCURRENT_TASKS
-  
+
   // 保留任务映射（用于状态查询）
   protected tasks: Map<string, AcquisitionTask> = new Map()
 
   // 服务实例
   protected mediaStatusManager: MediaStatusManager = new MediaStatusManager()
   protected webavProcessor: WebAVProcessor = new WebAVProcessor()
+  protected bunnyProcessor: BunnyProcessor = new BunnyProcessor()
 
   constructor() {
     this.limit = pLimit(this.maxConcurrentTasks)
@@ -63,13 +65,10 @@ export abstract class DataSourceProcessor {
 
     this.tasks.set(taskId, task)
 
-    console.log(
-      `📋 [${this.getProcessorType()}] 任务已加入队列: ${taskId} (${mediaItem.name})`,
-    )
+    console.log(`📋 [${this.getProcessorType()}] 任务已加入队列: ${taskId} (${mediaItem.name})`)
 
     // 使用 p-limit 自动管理并发
     this.executeTaskWithLimit(task)
-
   }
 
   /**
@@ -100,10 +99,7 @@ export abstract class DataSourceProcessor {
         await this.executeTask(task)
       } catch (error) {
         // 错误已经通过 mediaItem.source.errorMessage 处理
-        console.error(
-          `❌ [${this.getProcessorType()}] 任务执行失败: ${task.id}`,
-          error
-        )
+        console.error(`❌ [${this.getProcessorType()}] 任务执行失败: ${task.id}`, error)
       } finally {
         // 清理任务相关的所有引用，防止内存泄漏
         this.tasks.delete(task.id)

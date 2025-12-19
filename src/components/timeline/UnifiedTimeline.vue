@@ -229,7 +229,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, h, computed } from 'vue'
-import { calculateViewportFrameRange } from '@/core/utils/thumbnailAlgorithms'
+import { calculateViewportFrameRange } from '@/core/utils/thumbnailLayout'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { NScrollbar } from 'naive-ui'

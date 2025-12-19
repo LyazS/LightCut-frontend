@@ -205,7 +205,7 @@ export const VALID_TIMELINE_TRANSITIONS: Record<TimelineItemStatus, TimelineItem
 export const MEDIA_TO_TIMELINE_STATUS_MAP = {
   pending: 'loading', // 等待开始 → 加载中
   asyncprocessing: 'loading', // 异步处理中 → 加载中
-  webavdecoding: 'loading', // WebAV解析中 → 加载中
+  decoding: 'loading', // WebAV解析中 → 加载中
   ready: 'ready', // 就绪 → 就绪
   error: 'error', // 错误 → 错误
   cancelled: 'error', // 已取消 → 错误

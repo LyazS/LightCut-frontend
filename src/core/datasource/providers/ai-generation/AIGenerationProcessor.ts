@@ -546,12 +546,15 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       }
 
       // 6. WebAV 处理
-      this.transitionMediaStatus(mediaItem, 'webavdecoding')
+      this.transitionMediaStatus(mediaItem, 'decoding')
       const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
+      const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
 
       // 7. 直接设置元数据
-      UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavResult.webavObjects)
-      UnifiedMediaItemActions.setDuration(mediaItem, webavResult.duration)
+      mediaItem.runtime.webav = webavResult.webavObjects
+      mediaItem.duration = webavResult.duration
+      mediaItem.runtime.bunny = bunnyResult.bunnyObjects
+      mediaItem.durationN = bunnyResult.durationN
       console.log(`🔧 [AIGenerationProcessor] 元数据设置完成: ${mediaItem.name}`)
 
       // 8. 🌟 根据标志决定保存策略（分别调用 saveMediaFile 和 saveMetaFile）

@@ -388,7 +388,7 @@ export function useEditSDK(
       switch (mediaItem.mediaStatus) {
         case 'pending':
         case 'asyncprocessing':
-        case 'webavdecoding':
+        case 'decoding':
           agentMediaType = 'loading'
           break
         case 'error':
@@ -483,7 +483,7 @@ export function useEditSDK(
           switch (mediaItem.mediaStatus) {
             case 'pending':
             case 'asyncprocessing':
-            case 'webavdecoding':
+            case 'decoding':
               agentMediaType = 'loading'
               break
             case 'error':

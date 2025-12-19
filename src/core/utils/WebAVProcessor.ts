@@ -46,13 +46,16 @@ export class WebAVProcessor {
    * @param file 文件对象（必需）
    * @returns 处理结果
    */
-  private async processMediaInternal(mediaItem: UnifiedMediaItemData, file: File): Promise<WebAVProcessingResult> {
+  private async processMediaInternal(
+    mediaItem: UnifiedMediaItemData,
+    file: File,
+  ): Promise<WebAVProcessingResult> {
     console.log(`🚀 [WebAVProcessor] 开始处理媒体: ${mediaItem.name} (${mediaItem.mediaType})`)
 
     if (!file) {
       throw new Error('数据源未准备好')
     }
-    
+
     const targetFile = file
 
     // 1. 根据媒体类型创建对应的WebAV Clip
@@ -100,7 +103,7 @@ export class WebAVProcessor {
     const aspectRatio = meta.width / meta.height
     let thumbnailWidth: number
     let thumbnailHeight: number
-    
+
     if (meta.width > meta.height) {
       // 横向图片/视频
       thumbnailWidth = maxEdge
@@ -117,7 +120,7 @@ export class WebAVProcessor {
       undefined, // 使用默认中间位置
       thumbnailWidth,
       thumbnailHeight,
-      ThumbnailMode.FIT
+      ThumbnailMode.FIT,
     )
 
     // 7. 将 thumbnailUrl 添加到 webavObjects
@@ -167,81 +170,5 @@ export class WebAVProcessor {
       default:
         throw new Error(`不支持的媒体类型: ${mediaType}`)
     }
-  }
-
-  /**
-   * 获取媒体元数据
-   * @param file 文件对象
-   * @param mediaType 媒体类型
-   * @returns 媒体元数据
-   */
-  async getMediaMetadata(
-    file: File,
-    mediaType: MediaType,
-  ): Promise<{
-    width: number
-    height: number
-    duration: number
-  }> {
-    const clip = await this.createClip(file, mediaType)
-    const meta = await clip.ready
-    return {
-      width: meta.width,
-      height: meta.height,
-      duration: meta.duration,
-    }
-  }
-
-  /**
-   * 验证媒体文件是否可以被WebAV处理
-   * @param file 文件对象
-   * @param mediaType 媒体类型
-   * @returns 验证结果
-   */
-  async validateMediaFile(
-    file: File,
-    mediaType: MediaType,
-  ): Promise<{
-    isValid: boolean
-    error?: string
-    metadata?: {
-      width: number
-      height: number
-      duration: number
-    }
-  }> {
-    try {
-      const clip = await this.createClip(file, mediaType)
-      const meta = await clip.ready
-
-      return {
-        isValid: true,
-        metadata: {
-          width: meta.width,
-          height: meta.height,
-          duration: meta.duration,
-        },
-      }
-    } catch (error) {
-      return {
-        isValid: false,
-        error: error instanceof Error ? error.message : '未知错误',
-      }
-    }
-  }
-
-  /**
-   * 清理WebAV资源
-   * @param webavObjects WebAV对象
-   */
-  cleanupWebAVResources(webavObjects: WebAVObjects): void {
-    // 清理缩略图URL
-    if (webavObjects.thumbnailUrl) {
-      URL.revokeObjectURL(webavObjects.thumbnailUrl)
-    }
-
-    // 清理Clip对象（如果需要）
-    // 注意：WebAV Clip对象可能需要特定的清理方法
-    console.log(`🧹 [WebAVProcessor] WebAV资源已清理`)
   }
 }
