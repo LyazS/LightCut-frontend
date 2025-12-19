@@ -80,17 +80,16 @@
 
         <!-- 就绪状态：显示缩略图 -->
         <template v-else-if="item">
-          <!-- 音频类型显示音乐图标 -->
-          <div v-if="item.mediaType === 'audio'" class="audio-icon-container">
-            <component :is="IconComponents.MUSIC" size="48px" />
-          </div>
           <!-- WebAV生成的缩略图 -->
           <img
-            v-else-if="item.runtime.bunny?.thumbnailUrl"
+            v-if="item.runtime.bunny?.thumbnailUrl"
             :src="item.runtime.bunny.thumbnailUrl"
             class="thumbnail-image"
-            alt="缩略图"
           />
+          <!-- 音频类型显示音乐图标 -->
+          <div v-else-if="item.mediaType === 'audio'" class="audio-icon-container">
+            <component :is="IconComponents.MUSIC" size="48px" />
+          </div>
           <!-- 缩略图生成中的占位符 -->
           <div v-else class="thumbnail-placeholder">
             <component :is="IconComponents.IMAGE_SMALL" size="20px" />
