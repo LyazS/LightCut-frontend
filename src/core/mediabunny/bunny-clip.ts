@@ -1,13 +1,8 @@
 import {
-  Input,
-  BlobSource,
   VideoSampleSink,
   AudioSampleSink,
-  ALL_FORMATS,
   VideoSample,
   AudioSample,
-  type MetadataTags,
-  type AttachedImage,
 } from 'mediabunny'
 import {
   RENDERER_FPS,
@@ -21,13 +16,11 @@ import {
 } from './constant'
 import type { TimeRange } from './types'
 import type { IClip } from './IClip'
+import { BunnyMedia } from './bunny-media'
 /**
  * 媒体播放器核心类 - 统一管理视频和音频播放状态
  */
 export class BunnyClip implements IClip {
-  private originalFile: File | null = null
-  private input: Input | null = null
-
   private needResetVideo: boolean = false
   private needResetAudio: boolean = false
 
@@ -43,7 +36,6 @@ export class BunnyClip implements IClip {
   private audioInTime: number = 0
 
   // 公开属性
-  public readonly ready: Promise<void>
   public timeRange: TimeRange = {
     clipStart: 0n,
     clipEnd: 0n,
@@ -56,76 +48,19 @@ export class BunnyClip implements IClip {
   public width: number = 0
   public height: number = 0
 
-  constructor(file: File) {
-    this.ready = this.loadFile(file)
-  }
-
-  /**
-   * 加载媒体文件
-   * @param file 要加载的文件
-   */
-  private async loadFile(file: File): Promise<void> {
-    console.log('📁 开始加载文件:', file.name)
-    this.originalFile = file
-    try {
-      // 创建 Input 实例
-      this.input = new Input({
-        source: new BlobSource(file),
-        formats: ALL_FORMATS,
-      })
-
-      // 获取视频和音频轨道
-      const videoTrack = await this.input.getPrimaryVideoTrack()
-      const audioTrack = await this.input.getPrimaryAudioTrack()
-
-      console.log(
-        `📊 找到视频轨道: ${videoTrack ? '是' : '否'}, 音频轨道: ${audioTrack ? '是' : '否'}`,
-      )
-
-      // 初始化视频轨道
-      let videoDuration: number | null = null
-      if (videoTrack) {
-        console.log(`🎬 视频轨道信息:`, {
-          codec: videoTrack.codec,
-          width: videoTrack.displayWidth,
-          height: videoTrack.displayHeight,
-          rotation: videoTrack.rotation,
-        })
-
-        this.width = videoTrack.displayWidth
-        this.height = videoTrack.displayHeight
-        this.videoSink = new VideoSampleSink(videoTrack)
-        videoDuration = await videoTrack.computeDuration()
-      }
-
-      // 初始化音频轨道
-      if (audioTrack) {
-        console.log(`🎵 音频轨道信息:`, {
-          codec: audioTrack.codec,
-          channels: audioTrack.numberOfChannels,
-          sampleRate: audioTrack.sampleRate,
-        })
-
-        this.audioSink = new AudioSampleSink(audioTrack)
-      }
-      if (!videoTrack && !audioTrack) {
-        throw new Error('该文件没有视频和音频轨道')
-      }
-
-      this.duration = videoDuration || (await this.input.computeDuration())
-      this.durationN = BigInt(Math.ceil(this.duration * RENDERER_FPS))
-      this.setTimeRange({
-        clipStart: 0n,
-        clipEnd: this.durationN,
-        timelineStart: 0n,
-        timelineEnd: this.durationN,
-      })
-
-      console.log(`✅ 文件加载完成，总时长: ${this.duration.toFixed(2)}s`)
-    } catch (error) {
-      console.error('❌ 文件加载失败:', error)
-      throw error
-    }
+  constructor(bunnyMedia: BunnyMedia) {
+    this.duration = bunnyMedia.duration
+    this.durationN = bunnyMedia.durationN
+    this.width = bunnyMedia.width
+    this.height = bunnyMedia.height
+    this.videoSink = bunnyMedia.getVideoSink()
+    this.audioSink = bunnyMedia.getAudioSink()
+    this.setTimeRange({
+      clipStart: 0n,
+      clipEnd: this.durationN,
+      timelineStart: 0n,
+      timelineEnd: this.durationN,
+    })
   }
 
   // ==================== 视频相关方法 ====================
@@ -315,11 +250,6 @@ export class BunnyClip implements IClip {
   }
 
   // ==================== 公共接口 ====================
-  async getMetadataTags(): Promise<MetadataTags | null> {
-    // 获取元数据
-    await this.ready
-    return (await this.input?.getMetadataTags()) ?? null
-  }
   setTimeRange(timeRange: {
     clipStart?: bigint
     clipEnd?: bigint
@@ -438,17 +368,6 @@ export class BunnyClip implements IClip {
     }
   }
 
-  async clone(): Promise<IClip> {
-    if (!this.originalFile) {
-      throw new Error('❌ 无法克隆 BunnyClip：原始文件不存在')
-    }
-    const newClip = new BunnyClip(this.originalFile)
-    await newClip.ready
-    newClip.setTimeRange(this.timeRange)
-    newClip.setPreviewRate(this.previewRate)
-    return newClip
-  }
-
   /**
    * 释放所有资源
    */
@@ -464,10 +383,6 @@ export class BunnyClip implements IClip {
     // 清理音频相关资源
     await this.cleanupAudioIterator() // 等待音频迭代器清理完成
     this.audioSink = null
-
-    // 清理 Input
-    this.input?.dispose()
-    this.input = null
 
     console.log('✅ BunnyClip 资源清理完成')
   }

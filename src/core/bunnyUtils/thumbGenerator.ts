@@ -6,7 +6,8 @@ import {
   createThumbnailCanvas,
   canvasToBlob,
 } from '@/core/bunnyUtils/thumbUtils'
-import { BunnyClip } from '../mediabunny/bunny-clip'
+import { BunnyMedia } from '../mediabunny/bunny-media'
+import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import { RENDERER_FPS } from '../mediabunny/constant'
 
 /**
@@ -20,39 +21,19 @@ import { RENDERER_FPS } from '../mediabunny/constant'
  * @returns Promise<HTMLCanvasElement>
  */
 export async function generateVideoThumbnail(
-  bunnyClip: BunnyClip,
+  bunnyMedia: BunnyMedia,
   timeNPosition?: bigint,
   containerWidth: number = 100,
   containerHeight: number = 60,
   mode: ThumbnailMode = ThumbnailMode.FIT,
-  shouldClone: boolean = true, // 新增参数，默认要clone
 ): Promise<HTMLCanvasElement> {
-  let workingClip: BunnyClip = bunnyClip // 使用原始clip或克隆的clip
+  let workingClip: BunnyClip | undefined
 
   try {
-    console.log('🎬 [ThumbnailGenerator] 开始生成视频缩略图...')
-
-    // 等待BunnyClip准备完成
-    console.log('⏳ [ThumbnailGenerator] 等待BunnyClip准备完成...')
-    await bunnyClip.ready
-    console.log('✅ [ThumbnailGenerator] BunnyClip准备完成:', {
-      duration: bunnyClip.duration,
-      width: bunnyClip.width,
-      height: bunnyClip.height,
-    })
-
-    // 根据shouldClone标志决定是否克隆BunnyClip
-    if (shouldClone) {
-      console.log('🔄 [ThumbnailGenerator] 克隆BunnyClip...')
-      workingClip = (await bunnyClip.clone()) as BunnyClip
-      console.log('✅ [ThumbnailGenerator] BunnyClip克隆完成')
-    } else {
-      console.log('ℹ️ [ThumbnailGenerator] 跳过克隆，使用原始BunnyClip')
-      // workingClip 初始值已经是 bunnyClip，无需重新赋值
-    }
-
+    await bunnyMedia.ready
+    const workingClip: BunnyClip = new BunnyClip(bunnyMedia)
     // 如果没有指定帧位置，使用视频中间位置
-    const tickTimeN = timeNPosition ?? bunnyClip.durationN / 2n
+    const tickTimeN = timeNPosition ?? bunnyMedia.durationN / 2n
     console.log('⏰ [ThumbnailGenerator] 获取视频帧时间位置:', tickTimeN, '帧')
 
     // 使用workingClip获取指定时间的帧
@@ -74,14 +55,14 @@ export async function generateVideoThumbnail(
 
     // 计算缩略图尺寸
     const sizeInfo = calculateThumbnailSize(
-      bunnyClip.width,
-      bunnyClip.height,
+      workingClip.width,
+      workingClip.height,
       containerWidth,
       containerHeight,
       mode,
     )
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
-      original: `${bunnyClip.width}x${bunnyClip.height}`,
+      original: `${workingClip.width}x${workingClip.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
       draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
       offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`,
@@ -101,11 +82,7 @@ export async function generateVideoThumbnail(
     console.error('❌ [ThumbnailGenerator] 错误堆栈:', (error as Error).stack)
     throw error
   } finally {
-    // 清理克隆的clip（只有当shouldClone为true且workingClip是克隆的实例时才需要清理）
-    if (shouldClone && workingClip !== bunnyClip) {
-      console.log('🧹 [ThumbnailGenerator] 清理克隆的clip')
-      await workingClip.dispose()
-    }
+    await workingClip?.dispose()
   }
 }
 
@@ -159,17 +136,17 @@ export async function generateImageThumbnail(
 }
 
 export async function tryGetAudioCover(
-  bunnyClip: BunnyClip,
+  bunnyMedia: BunnyMedia,
   containerWidth: number = 100,
   containerHeight: number = 60,
   mode: ThumbnailMode = ThumbnailMode.FIT,
 ): Promise<string | undefined> {
   try {
     console.log('🎵 [ThumbnailGenerator] 尝试获取音频封面...')
-    
+
     // 获取音频文件的元数据标签
-    const metadata = await bunnyClip.getMetadataTags()
-    
+    const metadata = await bunnyMedia.getMetadataTags()
+
     if (!metadata || !metadata.images || metadata.images.length === 0) {
       console.log('ℹ️ [ThumbnailGenerator] 音频文件没有封面图片')
       return undefined
@@ -196,7 +173,7 @@ export async function tryGetAudioCover(
     // 将Uint8Array转换为Blob（需要创建新的Uint8Array以确保类型兼容）
     const imageData = new Uint8Array(selectedImage.data)
     const blob = new Blob([imageData], { type: selectedImage.mimeType })
-    
+
     // 创建ImageBitmap
     const imageBitmap = await createImageBitmap(blob)
     console.log('🖼️ [ThumbnailGenerator] ImageBitmap创建成功:', {
@@ -205,12 +182,7 @@ export async function tryGetAudioCover(
     })
 
     // 使用现有的图片缩略图生成函数
-    const canvas = await generateImageThumbnail(
-      imageBitmap,
-      containerWidth,
-      containerHeight,
-      mode,
-    )
+    const canvas = await generateImageThumbnail(imageBitmap, containerWidth, containerHeight, mode)
 
     // 清理ImageBitmap资源
     imageBitmap.close()
@@ -218,7 +190,7 @@ export async function tryGetAudioCover(
     // 转换为Blob URL
     const thumbnailUrl = await canvasToBlob(canvas)
     console.log('✅ [ThumbnailGenerator] 音频封面缩略图生成成功')
-    
+
     return thumbnailUrl
   } catch (error) {
     console.error('❌ [ThumbnailGenerator] 获取音频封面失败:', error)
@@ -245,20 +217,27 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
   try {
     let canvas: HTMLCanvasElement
 
-    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.bunny?.bunnyClip) {
+    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       console.log('🎬 生成视频缩略图...')
+      const cover = await tryGetAudioCover(
+        mediaItem.runtime.bunny.bunnyMedia,
+        containerWidth,
+        containerHeight,
+        mode,
+      )
+      if (cover) return cover
+
       // 将微秒转换为帧位置
       const timeNPosition =
         timePosition !== undefined
           ? BigInt(Math.floor((timePosition / 1000000) * RENDERER_FPS))
           : undefined
       canvas = await generateVideoThumbnail(
-        mediaItem.runtime.bunny.bunnyClip,
+        mediaItem.runtime.bunny.bunnyMedia,
         timeNPosition,
         containerWidth,
         containerHeight,
         mode,
-        true,
       )
       console.log('✅ 视频缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
@@ -270,11 +249,10 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
         mode,
       )
       console.log('✅ 图片缩略图生成成功')
-    } else if (UnifiedMediaItemQueries.isAudio(mediaItem) && mediaItem.runtime.bunny?.bunnyClip) {
+    } else if (UnifiedMediaItemQueries.isAudio(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       // 如果是音频，可以尝试获取封面图
-
       return await tryGetAudioCover(
-        mediaItem.runtime.bunny.bunnyClip,
+        mediaItem.runtime.bunny.bunnyMedia,
         containerWidth,
         containerHeight,
         mode,

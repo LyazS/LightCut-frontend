@@ -275,17 +275,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
 
       // 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
       globalWebAVAnimationManager.addManager(timelineItem)
-
-      // const mediaItem = mediaModule.getMediaItem(timelineItem.mediaItemId)
-      // unifiedDebugLog('添加素材到时间轴', {
-      //   timelineItemId: timelineItem.id,
-      //   mediaItemId: timelineItem.mediaItemId,
-      //   mediaItemName: mediaItem?.name || '未知',
-      //   trackId: timelineItem.trackId,
-      //   mediaType: timelineItem.mediaType,
-      //   position: timelineItem.timeRange.timelineStartTime / 1000000,
-      //   spriteVisible: timelineItem.runtime.sprite?.visible,
-      // })
     } else {
       // 错误状态的时间轴项目
       unifiedDebugLog('添加错误状态的时间轴项目', { timelineItemId: timelineItem.id })

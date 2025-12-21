@@ -7,7 +7,7 @@ import { reactive } from 'vue'
 import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
-import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import { BunnyMedia } from '../mediabunny/bunny-media'
 // ==================== 类型定义 ====================
 
 /**
@@ -46,7 +46,7 @@ export interface WebAVObjects {
 }
 
 export interface BunnyObjects {
-  bunnyClip?: Raw<BunnyClip>
+  bunnyMedia?: Raw<BunnyMedia>
   imageClip?: ImageBitmap
   thumbnailUrl?: string
   originalWidth?: number // 原始宽度（视频和图片）

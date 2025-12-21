@@ -12,6 +12,11 @@
 import type { Raw } from 'vue'
 import type { MediaType, MediaTypeOrUnknown } from '@/core/mediaitem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
+import type { AnimationConfig } from './AnimationTypes'
+import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import type { TimeRange as TimeRangeN } from '@/core/mediabunny/types'
+import { VideoSample } from 'mediabunny'
+
 // ==================== 从 types/index.ts 复制的类型定义 ====================
 /**
  * 默认文本样式配置
@@ -174,22 +179,6 @@ export type TimelineItemStatus =
   | 'loading' // 正在处理中，包含下载、解析、等待
   | 'error' // 不可用状态，包含错误、缺失、取消
 
-// ==================== 动画系统类型定义 ====================
-// 动画相关类型已迁移到 AnimationTypes.ts
-import type {
-  BaseAnimatableProps,
-  VisualAnimatableProps,
-  AudioAnimatableProps,
-  KeyframePropertiesMap,
-  GetKeyframeProperties,
-  KeyframeProperties,
-  Keyframe,
-  AnimationConfig,
-  KeyframeButtonState,
-  KeyframeUIState,
-  WebAVAnimationConfig,
-} from './AnimationTypes'
-
 /**
  * 状态转换规则定义
  */
@@ -237,8 +226,6 @@ export interface TransformData {
  */
 export interface UnknownMediaConfig {
   name: string
-  expectedDuration?: number
-  transform?: Partial<TransformData>
 }
 
 /**
@@ -266,13 +253,10 @@ export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemCo
  * - 与持久化数据完全分离
  */
 export interface UnifiedTimelineItemRuntime {
-  /** Sprite引用 - 与时间轴项目生命周期一致 */
-  sprite?: Raw<UnifiedSprite>
-
-  /** 预留：未来可能的运行时字段 */
-  // renderCache?: RenderCacheData
-  // animationState?: AnimationRuntimeState
-  // performanceMetrics?: PerformanceData
+  /** 与时间轴项目生命周期一致 */
+  sprite?: Raw<UnifiedSprite> // webav的sprite对象
+  bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
+  bunnyCurFrame?: VideoSample // mediabunny当前帧数据
 }
 // ==================== 核心接口设计 ====================
 
@@ -300,6 +284,7 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
 
   // ==================== 时间范围 ====================
   timeRange: UnifiedTimeRange
+  timeRangeN: TimeRangeN
 
   // ==================== 配置（类型安全） ====================
   config: GetTimelineItemConfig<T>
@@ -309,41 +294,4 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
 
   // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime
-}
-
-// ==================== 工厂函数选项类型 ====================
-
-/**
- * 创建已知媒体类型时间轴项目的选项
- */
-export interface CreateKnownTimelineItemOptions<T extends MediaType> {
-  mediaItemId: string
-  trackId?: string
-  mediaType: T
-  timeRange: UnifiedTimeRange
-  config: GetTimelineItemConfig<T>
-  initialStatus?: TimelineItemStatus
-}
-
-/**
- * 创建未知媒体类型时间轴项目的选项
- */
-export interface CreateUnknownTimelineItemOptions {
-  mediaItemId: string
-  trackId?: string
-  timeRange: UnifiedTimeRange
-  config: UnknownMediaConfig
-  initialStatus?: TimelineItemStatus
-}
-
-/**
- * 通用创建选项（向后兼容）
- */
-export interface CreateTimelineItemOptions {
-  mediaItemId: string
-  trackId?: string
-  timeRange: UnifiedTimeRange
-  config: UnknownMediaConfig
-  mediaType?: MediaType
-  initialStatus?: TimelineItemStatus
 }

@@ -9,7 +9,6 @@ export type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   TransformData,
-  CreateTimelineItemOptions,
   UnknownMediaConfig,
   TextStyleConfig,
   VideoMediaConfig,

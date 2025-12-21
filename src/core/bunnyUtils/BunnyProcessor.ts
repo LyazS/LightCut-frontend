@@ -3,7 +3,7 @@ import type { UnifiedMediaItemData, BunnyObjects } from '@/core/mediaitem/types'
 import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thumbGenerator'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { BUNNY_CONCURRENCY } from '@/constants/ConcurrencyConstants'
-import { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import { BunnyMedia } from '../mediabunny/bunny-media'
 import { fileToImageBitmap } from '@/core/bunnyUtils/ToBitmap'
 import { markRaw } from 'vue'
 import { RENDERER_FPS } from '@/core/mediabunny/constant'
@@ -58,31 +58,31 @@ export class BunnyProcessor {
     let durationN: bigint
     switch (mediaItem.mediaType) {
       case 'video': {
-        const clip = new BunnyClip(targetFile)
-        await clip.ready
+        const bmedia = new BunnyMedia(targetFile)
+        await bmedia.ready
         bunnyObjects = {
-          bunnyClip: markRaw(clip),
-          originalWidth: clip.width,
-          originalHeight: clip.height,
+          bunnyMedia: markRaw(bmedia),
+          originalWidth: bmedia.width,
+          originalHeight: bmedia.height,
         }
-        durationN = clip.durationN
+        durationN = bmedia.durationN
         break
       }
       case 'audio': {
-        const clip = new BunnyClip(targetFile)
-        await clip.ready
+        const bmedia = new BunnyMedia(targetFile)
+        await bmedia.ready
         bunnyObjects = {
-          bunnyClip: markRaw(clip),
+          bunnyMedia: markRaw(bmedia),
         }
-        durationN = clip.durationN
+        durationN = bmedia.durationN
         break
       }
       case 'image': {
-        const clip = await fileToImageBitmap(targetFile)
+        const bmedia = await fileToImageBitmap(targetFile)
         bunnyObjects = {
-          imageClip: clip,
-          originalWidth: clip.width,
-          originalHeight: clip.height,
+          imageClip: bmedia,
+          originalWidth: bmedia.width,
+          originalHeight: bmedia.height,
         }
         durationN = 5n * BigInt(RENDERER_FPS)
         break

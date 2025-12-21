@@ -137,7 +137,6 @@ export {
   type UnifiedTimelineItemData,
   type TimelineItemStatus,
   type TransformData,
-  type CreateTimelineItemOptions,
 
   // 工厂函数集合
   TimelineItemFactory,

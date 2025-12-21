@@ -6,11 +6,6 @@ import type { TimeRange } from './types'
  */
 export interface IClip {
   /**
-   * 就绪状态的 Promise
-   */
-  readonly ready: Promise<void>
-
-  /**
    * 时间范围配置
    */
   timeRange: TimeRange
@@ -61,12 +56,6 @@ export interface IClip {
   tickN(
     timeN: bigint,
   ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }>
-
-  /**
-   * 克隆当前 Clip 实例
-   * @returns 新的 Clip 实例
-   */
-  clone(): Promise<IClip>
 
   /**
    * 释放所有资源
