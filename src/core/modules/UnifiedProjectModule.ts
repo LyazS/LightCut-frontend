@@ -10,10 +10,10 @@ import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManag
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
 import {
-  setupMediaSync,
+  MediaSyncFactory,
   cleanupCommandMediaSync,
   cleanupProjectLoadMediaSync,
-} from '@/core/managers/media/UnifiedMediaSyncManager'
+} from '@/core/managers/media'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { i18n } from '@/locales'
@@ -542,12 +542,10 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
             // 2. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
-              setupMediaSync({
-                mediaItemId: newTimelineItem.mediaItemId,
-                timelineItemId: newTimelineItem.id,
-                description: `restoreTimelineItems ${newTimelineItem.id}`,
-                scenario: 'projectLoad',
-              })
+              MediaSyncFactory.forProjectLoad(
+                newTimelineItem.mediaItemId,
+                newTimelineItem.id,
+              ).setup()
             }
 
             console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)

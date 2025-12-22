@@ -9,7 +9,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemDa
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { setupMediaSync } from '@/core/managers/media/UnifiedMediaSyncManager'
+import { MediaSyncFactory } from '@/core/managers/media'
 import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
 
 /**
@@ -93,12 +93,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         if (TimelineItemQueries.isLoading(item)) {
           const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
           if (mediaItem) {
-            setupMediaSync({
-              commandId: this.id,
-              mediaItemId: mediaItem.id,
-              description: this.description,
-              scenario: 'command',
-            })
+            MediaSyncFactory.forCommand(this.id, mediaItem.id).setup()
           }
         }
       }
@@ -155,13 +150,11 @@ export class RemoveTrackCommand implements SimpleCommand {
 
         // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
         if (TimelineItemQueries.isLoading(newTimelineItem)) {
-          setupMediaSync({
-            commandId: this.id,
-            mediaItemId: newTimelineItem.mediaItemId,
-            timelineItemId: newTimelineItem.id,
-            description: this.description,
-            scenario: 'command',
-          })
+          MediaSyncFactory.forCommand(
+            this.id,
+            newTimelineItem.mediaItemId,
+            newTimelineItem.id,
+          ).setup()
         }
         console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)
       }

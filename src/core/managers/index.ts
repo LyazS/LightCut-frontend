@@ -12,9 +12,8 @@ export { fileSystemService } from './filesystem/fileSystemService'
 // ==================== 媒体管理器 ====================
 
 export {
-  UnifiedMediaSyncManager,
-  setupMediaSync,
+  MediaSyncFactory,
   cleanupCommandMediaSync,
   cleanupProjectLoadMediaSync,
-  getUnifiedMediaSyncInfo,
-} from './media/UnifiedMediaSyncManager'
+  getMediaSyncInfo,
+} from './media'

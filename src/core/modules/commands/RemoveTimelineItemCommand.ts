@@ -16,10 +16,7 @@ import type { VideoResolution } from '@/core/types'
 // ==================== 新架构工具导入 ====================
 import { TimelineItemFactory } from '@/core/timelineitem'
 
-import {
-  setupMediaSync,
-  cleanupCommandMediaSync,
-} from '@/core/managers/media/UnifiedMediaSyncManager'
+import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
 
 import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
 
@@ -86,12 +83,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       if (TimelineItemQueries.isLoading(existingItem)) {
         const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
         if (mediaItem) {
-          setupMediaSync({
-            commandId: this.id,
-            mediaItemId: mediaItem.id,
-            description: `execute ${this.description}`,
-            scenario: 'command',
-          })
+          MediaSyncFactory.forCommand(this.id, mediaItem.id).setup()
         }
       }
 
@@ -134,13 +126,11 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
 
       // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (TimelineItemQueries.isLoading(newTimelineItem)) {
-        setupMediaSync({
-          commandId: this.id,
-          mediaItemId: newTimelineItem.mediaItemId,
-          timelineItemId: newTimelineItem.id,
-          description: `undo ${this.description}`,
-          scenario: 'command',
-        })
+        MediaSyncFactory.forCommand(
+          this.id,
+          newTimelineItem.mediaItemId,
+          newTimelineItem.id,
+        ).setup()
       }
       console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {

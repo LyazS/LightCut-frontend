@@ -8,7 +8,7 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/core'
-import { UnifiedMediaSyncManager } from '@/core/managers/media/UnifiedMediaSyncManager'
+import { cleanupMediaItemSync } from '@/core/managers/media'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
@@ -470,29 +470,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    * @param mediaItemId 媒体项目ID
    */
   function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
-    try {
-      const syncManager = UnifiedMediaSyncManager.getInstance()
-
-      // 清理所有与该媒体项目相关的同步
-      const syncInfoList = syncManager.getSyncInfo()
-      const relatedSyncs = syncInfoList.filter((sync) => sync.mediaItemId === mediaItemId)
-
-      relatedSyncs.forEach((sync) => {
-        if (sync.commandId) {
-          syncManager.cleanupByCommandId(sync.commandId)
-        } else if (sync.timelineItemId) {
-          syncManager.cleanupByTimelineItemId(sync.timelineItemId)
-        } else {
-          syncManager.cleanup(sync.id)
-        }
-      })
-
-      console.log(
-        `✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`,
-      )
-    } catch (error) {
-      console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
-    }
+    cleanupMediaItemSync(mediaItemId)
   }
 
   return {
