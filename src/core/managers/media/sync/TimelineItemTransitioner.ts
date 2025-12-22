@@ -17,24 +17,27 @@ import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/core/utils/spriteFactory'
+import { createSpriteForTextTimelineItem } from '@/core/utils/textTimelineUtils'
 import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
 } from '@/core/utils/webavAnimationManager'
 import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
+import { markRaw } from 'vue'
 
 /**
- * 时间轴项目状态转换器
+ * 时间轴项目状态转换器（增强版 - 支持文本类型）
  */
 export class TimelineItemTransitioner {
   constructor(
     private timelineItemId: string,
-    private mediaItem: UnifiedMediaItemData,
+    private mediaItem?: UnifiedMediaItemData, // 文本类型时为 undefined
+    private setupTimelineItemSprite?: (item: UnifiedTimelineItemData) => Promise<void>, // 文本类型需要
   ) {}
 
   /**
-   * 转换时间轴项目为 ready 状态
+   * 转换时间轴项目为 ready 状态（支持文本类型）
    */
   async transitionToReady(options: TransitionOptions): Promise<void> {
     try {
@@ -42,7 +45,7 @@ export class TimelineItemTransitioner {
       console.log(`🎨 [TimelineItemTransitioner] 开始转换时间轴项目状态: ${this.timelineItemId}`, {
         scenario,
         commandId,
-        mediaType: this.mediaItem.mediaType,
+        mediaType: this.mediaItem?.mediaType || 'text',
       })
 
       const store = useUnifiedStore()
@@ -67,32 +70,16 @@ export class TimelineItemTransitioner {
         return
       }
 
-      // 1. 更新尺寸（命令场景需要）
-      if (scenario === 'command') {
-        this.updateDimensions(timelineItem)
+      // 检查是否为文本类型
+      if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+        await this.transitionTextTimelineItem(timelineItem, options)
+      } else {
+        await this.transitionMediaTimelineItem(timelineItem, options)
       }
 
-      // 2. 创建 Sprite
-      await this.createSprite(timelineItem)
-
-      // 3. 应用配置（项目加载场景需要）
-      if (scenario === 'projectLoad') {
-        await this.applyConfig(timelineItem)
-      }
-
-      // 4. 设置轨道属性
-      this.applyTrackProperties(timelineItem)
-
-      // 5. 应用动画
-      await this.applyAnimation(timelineItem)
-
-      // 6. 更新状态
+      // 通用的后续处理
       timelineItem.timelineStatus = 'ready'
-
-      // 7. 设置双向同步
       store.setupBidirectionalSync(timelineItem)
-
-      // 8. 初始化动画管理器
       globalWebAVAnimationManager.addManager(timelineItem)
 
       console.log(`🎉 [TimelineItemTransitioner] 时间轴项目状态转换完成: ${this.timelineItemId}`)
@@ -106,9 +93,69 @@ export class TimelineItemTransitioner {
   }
 
   /**
+   * 处理文本类型的状态转换
+   */
+  private async transitionTextTimelineItem(
+    timelineItem: UnifiedTimelineItemData<'text'>,
+    options: TransitionOptions
+  ): Promise<void> {
+    console.log(`🎨 [TimelineItemTransitioner] 转换文本时间轴项目: ${timelineItem.id}`)
+
+    // 1. 使用 textTimelineUtils 中的工具函数创建精灵
+    const newSprite = await createSpriteForTextTimelineItem(timelineItem)
+    
+    // 2. 将精灵添加到 runtime
+    timelineItem.runtime.sprite = markRaw(newSprite)
+    
+    // 3. 设置sprite属性
+    if (this.setupTimelineItemSprite) {
+      await this.setupTimelineItemSprite(timelineItem)
+    }
+
+    // 4. 设置轨道属性
+    this.applyTrackProperties(timelineItem)
+
+    // 5. 应用动画（如果有）
+    await this.applyAnimation(timelineItem)
+
+    console.log(`✅ [TimelineItemTransitioner] 文本时间轴项目转换完成: ${timelineItem.id}`)
+  }
+
+  /**
+   * 处理媒体类型的状态转换（现有逻辑）
+   */
+  private async transitionMediaTimelineItem(
+    timelineItem: UnifiedTimelineItemData,
+    options: TransitionOptions
+  ): Promise<void> {
+    if (!this.mediaItem) {
+      throw new Error('媒体类型的时间轴项目必须提供 mediaItem')
+    }
+
+    // 现有的媒体类型处理逻辑
+    if (options.scenario === 'command') {
+      this.updateDimensions(timelineItem)
+    }
+
+    await this.createSprite(timelineItem)
+
+    if (options.scenario === 'projectLoad') {
+      await this.applyConfig(timelineItem)
+    }
+
+    this.applyTrackProperties(timelineItem)
+    await this.applyAnimation(timelineItem)
+  }
+
+  /**
    * 更新时间轴项目的尺寸信息
    */
   private updateDimensions(timelineItem: UnifiedTimelineItemData): void {
+    if (!this.mediaItem) {
+      console.warn(`⚠️ [TimelineItemTransitioner] 无法更新尺寸，mediaItem 不存在: ${timelineItem.id}`)
+      return
+    }
+
     try {
       // 更新timeRange - 使用媒体项目的duration
       if (this.mediaItem.duration && timelineItem.timeRange) {
@@ -175,6 +222,11 @@ export class TimelineItemTransitioner {
    * 创建 Sprite
    */
   private async createSprite(timelineItem: UnifiedTimelineItemData): Promise<void> {
+    if (!this.mediaItem) {
+      console.warn(`⚠️ [TimelineItemTransitioner] 无法创建Sprite，mediaItem 不存在: ${this.timelineItemId}`)
+      return
+    }
+
     try {
       console.log(`🔄 [TimelineItemTransitioner] 为时间轴项目创建Sprite: ${this.timelineItemId}`)
       const sprite = await createSpriteFromUnifiedMediaItem(this.mediaItem)

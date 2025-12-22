@@ -154,6 +154,7 @@ export class RemoveTrackCommand implements SimpleCommand {
             this.id,
             newTimelineItem.mediaItemId,
             newTimelineItem.id,
+            this.timelineModule.setupTimelineItemSprite, // 支持文本类型
           ).setup()
         }
         console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)

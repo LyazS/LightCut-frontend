@@ -80,6 +80,18 @@ export async function loadProjectTimeline(
       throw new Error(`项目内容文件读取失败或格式错误`)
     }
 
+    // 🔧 修复：将 timeRangeN 中的 number 转换回 bigint（从 JSON 加载后）
+    if (projectTimeline.timelineItems) {
+      projectTimeline.timelineItems.forEach((item) => {
+        item.timeRangeN = {
+          clipStart: BigInt(item.timeRangeN.clipStart),
+          clipEnd: BigInt(item.timeRangeN.clipEnd),
+          timelineStart: BigInt(item.timeRangeN.timelineStart),
+          timelineEnd: BigInt(item.timeRangeN.timelineEnd),
+        } as any
+      })
+    }
+
     console.log(`✅ [Project Content Load] 项目内容加载成功:`, {
       轨道数量: projectTimeline.tracks?.length || 0,
       时间轴项目数量: projectTimeline.timelineItems?.length || 0,

@@ -207,6 +207,13 @@ export interface RebuildTextTimelineItemResult {
   error?: string
 }
 
+/**
+ * 为命令场景重建时间轴项目（总是创建 loading 状态）
+ * 用于命令执行和项目加载场景，确保状态转换的一致性
+ *
+ * @param options 重建选项
+ * @returns 重建结果，TimelineItem 总是 loading 状态（文本项目除外）
+ */
 export async function rebuildTimelineItemForCmd(
   options: RebuildKnownTimelineItemOptions,
 ): Promise<RebuildKnownTimelineItemResult> {
@@ -217,23 +224,14 @@ export async function rebuildTimelineItemForCmd(
       throw new Error('时间轴项目数据不存在')
     }
 
-    console.log(`🔄 [${logIdentifier}] 开始重建时间轴项目...`)
+    console.log(`🔄 [${logIdentifier}] 开始重建时间轴项目（统一loading状态）...`)
 
     if (TimelineItemQueries.isTextTimelineItem(originalTimelineItemData)) {
-      console.log(`🔄 [${logIdentifier}] 检测到文本时间轴项目，使用克隆方式重建`)
-
-      // 1. 克隆原始时间轴项目
-      const newTimelineItem = cloneTimelineItem(originalTimelineItemData)
-      // 2. 使用 textTimelineUtils 中的工具函数创建精灵
-      const newSprite = await createSpriteForTextTimelineItem(newTimelineItem)
-      // 3. 将精灵添加到 runtime
-      newTimelineItem.runtime.sprite = markRaw(newSprite)
-      // 4. 设置sprite属性
-      await setupTimelineItemSprite(newTimelineItem)
-
-      console.log(`🔄 [${logIdentifier}] 文本时间轴项目重建完成:`, {
-        id: newTimelineItem.id,
-        mediaType: 'text',
+      // 文本项目也创建 loading 状态，由 TimelineItemTransitioner 统一处理
+      console.log(`🔄 [${logIdentifier}] 检测到文本时间轴项目，创建loading状态`)
+      
+      const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
+        timelineStatus: 'loading'
       })
 
       return {
@@ -241,65 +239,18 @@ export async function rebuildTimelineItemForCmd(
         success: true,
       }
     } else {
-      // 获取原始素材
-      const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
-      if (!mediaItem) {
-        throw new Error(`原始素材不存在: ${originalTimelineItemData.mediaItemId}`)
-      }
-
-      console.log(`🔄 [${logIdentifier}] 找到关联素材:`, {
-        mediaItemId: mediaItem.id,
-        mediaType: mediaItem.mediaType,
-        name: mediaItem.name,
-        duration: mediaItem.duration,
-      })
-
-      // 检查媒体类型和时长
-      if (mediaItem.mediaType === 'unknown') {
-        throw new Error(`素材类型未确定，无法重建时间轴项目: ${mediaItem.name}`)
-      }
-
-      // 检查素材状态和重建条件
-      const isMediaReady = UnifiedMediaItemQueries.isReady(mediaItem)
-      console.log(`🔄 [${logIdentifier}] 素材状态检查:`, {
-        isReady: isMediaReady,
-        mediaType: mediaItem.mediaType,
-      })
-
-      const availableDuration = mediaItem.duration
-      if (!availableDuration || availableDuration <= 0) {
-        throw new Error(`素材时长信息不可用，无法重建时间轴项目: ${mediaItem.name}`)
-      }
-
-      // 根据素材状态确定时间轴项目状态
-      const timelineStatus: TimelineItemStatus = isMediaReady ? 'ready' : 'loading'
-      console.log(`🔄 [${logIdentifier}] 确定时间轴项目状态为: ${timelineStatus}`)
-
-      // 1. 克隆新的TimelineItem，使用素材状态
+      // 非文本项目：总是创建 loading 状态，不再根据媒体状态决定
+      console.log(`🔄 [${logIdentifier}] 创建loading状态的时间轴项目`)
+      
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
-        timelineStatus: timelineStatus,
+        timelineStatus: 'loading'
       }) as UnifiedTimelineItemData<MediaType>
 
-      if (isMediaReady) {
-        // Ready素材：创建包含sprite的完整时间轴项目
-        console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目`)
-
-        // 2. 使用新的统一函数从时间轴项目数据创建sprite
-        const newSprite = await createSpriteFromUnifiedMediaItem(mediaItem)
-
-        // 4. 设置runtime和sprite
-        newTimelineItem.runtime.sprite = markRaw(newSprite)
-        // 4. 设置sprite属性
-        await setupTimelineItemSprite(newTimelineItem)
-
-        console.log(`🔄 [${logIdentifier}] 重建ready状态时间轴项目完成:`, {
-          id: newTimelineItem.id,
-          mediaType: mediaItem.mediaType,
-          timeRange: originalTimelineItemData.timeRange,
-          position: { x: newSprite.rect.x, y: newSprite.rect.y },
-          size: { w: newSprite.rect.w, h: newSprite.rect.h },
-        })
-      }
+      console.log(`🔄 [${logIdentifier}] loading状态时间轴项目创建完成:`, {
+        id: newTimelineItem.id,
+        mediaType: originalTimelineItemData.mediaType,
+        timelineStatus: newTimelineItem.timelineStatus,
+      })
 
       return {
         timelineItem: newTimelineItem,

@@ -130,6 +130,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
           this.id,
           newTimelineItem.mediaItemId,
           newTimelineItem.id,
+          this.timelineModule.setupTimelineItemSprite, // 支持文本类型
         ).setup()
       }
       console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)

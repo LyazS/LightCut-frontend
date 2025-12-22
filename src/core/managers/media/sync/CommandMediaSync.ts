@@ -6,6 +6,7 @@
 import { watch } from 'vue'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { BaseMediaSync } from './BaseMediaSync'
 import { TimelineItemTransitioner } from './TimelineItemTransitioner'
@@ -19,6 +20,7 @@ export class CommandMediaSync extends BaseMediaSync {
     private commandId: string,
     mediaItemId: string,
     timelineItemId?: string,
+    private setupTimelineItemSprite?: (item: any) => Promise<void>, // 支持文本类型
   ) {
     super(mediaItemId, timelineItemId)
   }
@@ -51,6 +53,49 @@ export class CommandMediaSync extends BaseMediaSync {
     if (this.timelineItemId) {
       await this.transitionTimelineItem(mediaItem)
     }
+  }
+
+  /**
+   * 设置同步，对于文本类型立即触发转换
+   */
+  async setup(): Promise<void> {
+    // 检查是否为文本类型的时间轴项目
+    if (this.timelineItemId) {
+      const store = useUnifiedStore()
+      const timelineItem = store.getTimelineItem(this.timelineItemId)
+      
+      if (timelineItem && TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+        console.log(`🎨 [CommandMediaSync] 检测到文本类型，立即触发状态转换: ${this.timelineItemId}`)
+        
+        // 文本类型立即转换，不需要等待媒体加载
+        await this.transitionTextTimelineItem()
+        return
+      }
+    }
+
+    // 非文本类型使用父类的设置逻辑
+    await super.setup()
+  }
+
+  /**
+   * 转换文本类型的时间轴项目
+   */
+  private async transitionTextTimelineItem(): Promise<void> {
+    if (!this.timelineItemId) return
+
+    const transitioner = new TimelineItemTransitioner(
+      this.timelineItemId,
+      undefined,
+      this.setupTimelineItemSprite
+    )
+
+    await transitioner.transitionToReady({
+      scenario: 'command',
+      commandId: this.commandId,
+    })
+
+    // 文本类型转换完成后自动清理
+    this.autoCleanup()
   }
 
   protected setupWatcher(mediaItem: UnifiedMediaItemData): () => void {
@@ -104,7 +149,26 @@ export class CommandMediaSync extends BaseMediaSync {
   private async transitionTimelineItem(mediaItem: UnifiedMediaItemData): Promise<void> {
     if (!this.timelineItemId) return
 
-    const transitioner = new TimelineItemTransitioner(this.timelineItemId, mediaItem)
+    const store = useUnifiedStore()
+    const timelineItem = store.getTimelineItem(this.timelineItemId)
+    
+    if (!timelineItem) return
+
+    // 根据时间轴项目类型创建不同的 transitioner
+    let transitioner: TimelineItemTransitioner
+    
+    if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+      // 文本类型需要 setupTimelineItemSprite 函数
+      transitioner = new TimelineItemTransitioner(
+        this.timelineItemId,
+        undefined,
+        this.setupTimelineItemSprite
+      )
+    } else {
+      // 媒体类型需要 mediaItem
+      transitioner = new TimelineItemTransitioner(this.timelineItemId, mediaItem)
+    }
+
     await transitioner.transitionToReady({
       scenario: 'command',
       commandId: this.commandId,

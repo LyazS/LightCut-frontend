@@ -93,6 +93,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
           this.id,
           newTimelineItem.mediaItemId,
           newTimelineItem.id,
+          this.timelineModule.setupTimelineItemSprite, // 支持文本类型
         ).setup()
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
