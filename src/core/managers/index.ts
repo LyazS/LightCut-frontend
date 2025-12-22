@@ -4,7 +4,7 @@
  */
 
 // ==================== 核心管理器 ====================
-export { UnifiedProjectManager, unifiedProjectManager } from './core/UnifiedProjectManager'
+export { UnifiedProjectManager, unifiedProjectManager } from './project/UnifiedProjectManager'
 
 // ==================== 文件系统服务 ====================
 export { fileSystemService } from './filesystem/fileSystemService'

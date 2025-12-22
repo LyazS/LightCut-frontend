@@ -364,7 +364,7 @@ async function loadProjects() {
 
     // 为每个项目加载缩略图
     const projectsWithThumbnails = await Promise.all(
-      projectList.map(async (project) => {
+      projectList.map(async (project: UnifiedProjectConfig) => {
         try {
           // 尝试加载缩略图
           const thumbnailService = useProjectThumbnailService()
@@ -514,7 +514,7 @@ async function handleSaveProjectEdit(data: { name: string; description: string }
       .then(() => {
         console.log('项目配置保存成功:', updatedProject.name)
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.error('保存项目配置失败:', error)
         // 保存失败时重新加载项目列表以恢复正确状态
         loadProjects()
