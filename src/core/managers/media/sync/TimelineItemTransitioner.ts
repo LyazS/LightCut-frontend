@@ -1,7 +1,7 @@
 /**
  * 时间轴项目状态转换器
  * 负责将时间轴项目从 loading 状态转换为 ready 状态
- * 
+ *
  * 职责：
  * - 更新时间轴项目尺寸
  * - 创建和配置 Sprite
@@ -25,7 +25,8 @@ import {
 import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 import { markRaw } from 'vue'
-
+import { textToImageBitmap } from '@/core/bunnyUtils/ToBitmap'
+import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 /**
  * 时间轴项目状态转换器（增强版 - 支持文本类型）
  */
@@ -97,20 +98,22 @@ export class TimelineItemTransitioner {
    */
   private async transitionTextTimelineItem(
     timelineItem: UnifiedTimelineItemData<'text'>,
-    options: TransitionOptions
+    options: TransitionOptions,
   ): Promise<void> {
     console.log(`🎨 [TimelineItemTransitioner] 转换文本时间轴项目: ${timelineItem.id}`)
 
     // 1. 使用 textTimelineUtils 中的工具函数创建精灵
     const newSprite = await createSpriteForTextTimelineItem(timelineItem)
-    
+
     // 2. 将精灵添加到 runtime
     timelineItem.runtime.sprite = markRaw(newSprite)
-    
+
     // 3. 设置sprite属性
     if (this.setupTimelineItemSprite) {
       await this.setupTimelineItemSprite(timelineItem)
     }
+    const bmap = await textToImageBitmap(timelineItem.config.text, timelineItem.config.style)
+    timelineItem.runtime.imageBitmap = bmap
 
     // 4. 设置轨道属性
     this.applyTrackProperties(timelineItem)
@@ -126,7 +129,7 @@ export class TimelineItemTransitioner {
    */
   private async transitionMediaTimelineItem(
     timelineItem: UnifiedTimelineItemData,
-    options: TransitionOptions
+    options: TransitionOptions,
   ): Promise<void> {
     if (!this.mediaItem) {
       throw new Error('媒体类型的时间轴项目必须提供 mediaItem')
@@ -137,7 +140,7 @@ export class TimelineItemTransitioner {
       this.updateDimensions(timelineItem)
     }
 
-    await this.createSprite(timelineItem)
+    await this.createSpriteAndBunny(timelineItem)
 
     if (options.scenario === 'projectLoad') {
       await this.applyConfig(timelineItem)
@@ -152,7 +155,9 @@ export class TimelineItemTransitioner {
    */
   private updateDimensions(timelineItem: UnifiedTimelineItemData): void {
     if (!this.mediaItem) {
-      console.warn(`⚠️ [TimelineItemTransitioner] 无法更新尺寸，mediaItem 不存在: ${timelineItem.id}`)
+      console.warn(
+        `⚠️ [TimelineItemTransitioner] 无法更新尺寸，mediaItem 不存在: ${timelineItem.id}`,
+      )
       return
     }
 
@@ -221,9 +226,11 @@ export class TimelineItemTransitioner {
   /**
    * 创建 Sprite
    */
-  private async createSprite(timelineItem: UnifiedTimelineItemData): Promise<void> {
+  private async createSpriteAndBunny(timelineItem: UnifiedTimelineItemData): Promise<void> {
     if (!this.mediaItem) {
-      console.warn(`⚠️ [TimelineItemTransitioner] 无法创建Sprite，mediaItem 不存在: ${this.timelineItemId}`)
+      console.warn(
+        `⚠️ [TimelineItemTransitioner] 无法创建Sprite，mediaItem 不存在: ${this.timelineItemId}`,
+      )
       return
     }
 
@@ -237,7 +244,16 @@ export class TimelineItemTransitioner {
 
       const store = useUnifiedStore()
       await store.addSpriteToCanvas(timelineItem.runtime.sprite)
-
+      if (this.mediaItem.runtime.bunny?.bunnyMedia) {
+        const bunnyclip = new BunnyClip(this.mediaItem.runtime.bunny.bunnyMedia)
+        bunnyclip.setTimeRange({
+          clipStart: BigInt(timelineItem.timeRange.clipStartTime),
+          clipEnd: BigInt(timelineItem.timeRange.clipEndTime),
+          timelineStart: BigInt(timelineItem.timeRange.timelineStartTime),
+          timelineEnd: BigInt(timelineItem.timeRange.timelineEndTime),
+        })
+        timelineItem.runtime.bunnyClip = markRaw(bunnyclip)
+      }
       console.log(
         `✅ [TimelineItemTransitioner] Sprite创建成功并存储到runtime: ${this.timelineItemId}`,
       )
@@ -257,9 +273,7 @@ export class TimelineItemTransitioner {
     try {
       // 检查sprite是否存在
       if (!timelineItem.runtime.sprite) {
-        console.warn(
-          `⚠️ [TimelineItemTransitioner] Sprite不存在，无法应用配置: ${timelineItem.id}`,
-        )
+        console.warn(`⚠️ [TimelineItemTransitioner] Sprite不存在，无法应用配置: ${timelineItem.id}`)
         return
       }
 
@@ -347,16 +361,13 @@ export class TimelineItemTransitioner {
         }
       }
 
-      console.log(
-        `✅ [TimelineItemTransitioner] 基本配置已应用到sprite: ${timelineItem.id}`,
-        {
-          width: sprite.rect.w,
-          height: sprite.rect.h,
-          rotation: sprite.rect.angle,
-          opacity: sprite.opacity,
-          zIndex: sprite.zIndex,
-        },
-      )
+      console.log(`✅ [TimelineItemTransitioner] 基本配置已应用到sprite: ${timelineItem.id}`, {
+        width: sprite.rect.w,
+        height: sprite.rect.h,
+        rotation: sprite.rect.angle,
+        opacity: sprite.opacity,
+        zIndex: sprite.zIndex,
+      })
     } catch (error) {
       console.error(
         `❌ [TimelineItemTransitioner] 应用时间轴项目配置到sprite失败: ${timelineItem.id}`,
@@ -382,15 +393,12 @@ export class TimelineItemTransitioner {
           timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
         }
 
-        console.log(
-          `✅ [TimelineItemTransitioner] 已设置轨道属性到sprite: ${timelineItem.id}`,
-          {
-            trackId: track.id,
-            trackName: track.name,
-            isVisible: track.isVisible,
-            isMuted: track.isMuted,
-          },
-        )
+        console.log(`✅ [TimelineItemTransitioner] 已设置轨道属性到sprite: ${timelineItem.id}`, {
+          trackId: track.id,
+          trackName: track.name,
+          isVisible: track.isVisible,
+          isMuted: track.isMuted,
+        })
       }
     } catch (trackError) {
       console.error(

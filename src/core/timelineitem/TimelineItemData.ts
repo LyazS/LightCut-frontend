@@ -257,6 +257,7 @@ export interface UnifiedTimelineItemRuntime {
   sprite?: Raw<UnifiedSprite> // webav的sprite对象
   bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
   bunnyCurFrame?: VideoSample // mediabunny当前帧数据
+  imageBitmap?: ImageBitmap // 文本渲染的ImageBitmap
 }
 // ==================== 核心接口设计 ====================
 
