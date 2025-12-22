@@ -37,16 +37,17 @@ export class CommandMediaSync extends BaseMediaSync {
   }
 
   protected async handleReadyMedia(mediaItem: UnifiedMediaItemData): Promise<void> {
-    console.log(`⏭️ [CommandMediaSync] 媒体已就绪，跳过同步: ${mediaItem.name}`)
+    console.log(`⏭️ [CommandMediaSync] 媒体已就绪: ${mediaItem.name}`)
 
-    // 更新命令中的媒体数据
+    // 1. 更新命令中的媒体数据
     const store = useUnifiedStore()
     const command = store.getCommand(this.commandId)
     if (command && !command.isDisposed) {
       command.updateMediaData?.(mediaItem, this.timelineItemId)
+      console.log(`🔄 [CommandMediaSync] 已更新命令媒体数据: ${this.commandId}`)
     }
 
-    // 如果有时间轴项目，直接转换状态
+    // 2. 转换时间轴项目状态
     if (this.timelineItemId) {
       await this.transitionTimelineItem(mediaItem)
     }
@@ -63,7 +64,8 @@ export class CommandMediaSync extends BaseMediaSync {
         })
 
         if (newStatus === 'ready') {
-          await this.handleMediaReady(mediaItem)
+          await this.handleReadyMedia(mediaItem)
+          this.autoCleanup()
         } else if (this.isErrorStatus(newStatus)) {
           await this.handleMediaError(mediaItem, newStatus)
         }
@@ -81,23 +83,6 @@ export class CommandMediaSync extends BaseMediaSync {
     })
   }
 
-  private async handleMediaReady(mediaItem: UnifiedMediaItemData): Promise<void> {
-    // 1. 更新命令中的媒体数据
-    const store = useUnifiedStore()
-    const command = store.getCommand(this.commandId)
-    if (command && !command.isDisposed) {
-      command.updateMediaData?.(mediaItem, this.timelineItemId)
-      console.log(`🔄 [CommandMediaSync] 已更新命令媒体数据: ${this.commandId}`)
-    }
-
-    // 2. 转换时间轴项目状态
-    if (this.timelineItemId) {
-      await this.transitionTimelineItem(mediaItem)
-    }
-
-    // 3. 自动清理
-    this.autoCleanup()
-  }
 
   private async handleMediaError(
     mediaItem: UnifiedMediaItemData,

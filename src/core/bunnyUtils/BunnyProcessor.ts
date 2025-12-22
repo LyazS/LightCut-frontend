@@ -12,6 +12,7 @@ import { RENDERER_FPS } from '@/core/mediabunny/constant'
  */
 export interface BunnyProcessingResult {
   bunnyObjects: BunnyObjects
+  duration: number
   durationN: bigint
 }
 
@@ -55,6 +56,7 @@ export class BunnyProcessor {
     const targetFile = file
 
     let bunnyObjects: BunnyObjects
+    let duration: number
     let durationN: bigint
     switch (mediaItem.mediaType) {
       case 'video': {
@@ -65,6 +67,7 @@ export class BunnyProcessor {
           originalWidth: bmedia.width,
           originalHeight: bmedia.height,
         }
+        duration = bmedia.duration
         durationN = bmedia.durationN
         break
       }
@@ -74,6 +77,7 @@ export class BunnyProcessor {
         bunnyObjects = {
           bunnyMedia: markRaw(bmedia),
         }
+        duration = bmedia.duration
         durationN = bmedia.durationN
         break
       }
@@ -84,6 +88,7 @@ export class BunnyProcessor {
           originalWidth: bmedia.width,
           originalHeight: bmedia.height,
         }
+        duration = 5 * RENDERER_FPS
         durationN = 5n * BigInt(RENDERER_FPS)
         break
       }
@@ -135,6 +140,7 @@ export class BunnyProcessor {
 
     const result: BunnyProcessingResult = {
       bunnyObjects,
+      duration: duration,
       durationN: durationN,
     }
 

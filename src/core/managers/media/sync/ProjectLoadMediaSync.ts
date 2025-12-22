@@ -51,7 +51,8 @@ export class ProjectLoadMediaSync extends BaseMediaSync {
         })
 
         if (newStatus === 'ready') {
-          await this.handleMediaReady(mediaItem)
+          await this.handleReadyMedia(mediaItem)
+          this.autoCleanup()
         } else if (this.isErrorStatus(newStatus)) {
           await this.handleMediaError(mediaItem, newStatus)
         }
@@ -68,10 +69,6 @@ export class ProjectLoadMediaSync extends BaseMediaSync {
     })
   }
 
-  private async handleMediaReady(mediaItem: UnifiedMediaItemData): Promise<void> {
-    await this.transitionTimelineItem(mediaItem)
-    this.autoCleanup()
-  }
 
   private async handleMediaError(
     mediaItem: UnifiedMediaItemData,
