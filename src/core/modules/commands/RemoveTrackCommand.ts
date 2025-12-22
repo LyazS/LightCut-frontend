@@ -22,6 +22,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly description: string
   private trackData: UnifiedTrackData // 保存被删除的轨道数据
   private affectedTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的时间轴项目的重建元数据
+  private _isDisposed = false
 
   constructor(
     private trackId: string,
@@ -223,5 +224,24 @@ export class RemoveTrackCommand implements SimpleCommand {
         break
       }
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [RemoveTrackCommand] 命令资源已清理: ${this.id}`)
   }
 }

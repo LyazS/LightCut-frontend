@@ -12,6 +12,7 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
   public readonly description: string
   private previousMuteState: boolean // 保存切换前的静音状态
   private targetMuteState?: boolean // 外部指定的目标静音状态
+  private _isDisposed = false
 
   constructor(
     private trackId: string,
@@ -95,5 +96,24 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
       console.error(`❌ 撤销切换轨道静音状态失败: ${track?.name || `轨道 ${this.trackId}`}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [ToggleTrackMuteCommand] 命令资源已清理: ${this.id}`)
   }
 }

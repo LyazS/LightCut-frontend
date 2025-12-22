@@ -44,6 +44,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> // 保存原始项目的重建数据
   private firstItemId: string // 分割后第一个项目的ID
   private secondItemId: string // 分割后第二个项目的ID
+  private _isDisposed = false
 
   constructor(
     private originalTimelineItemId: string,
@@ -264,5 +265,24 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       console.error(`❌ 撤销分割时间轴项目失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [SplitTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

@@ -21,8 +21,8 @@ export interface SimpleCommand {
   updateMediaData?(mediaData: UnifiedMediaItemData, timelineItemId?: string): void
 
   /** 检查命令是否已被清理 */
-  readonly isDisposed?: boolean
+  readonly isDisposed: boolean
 
   /** 清理命令持有的资源 */
-  dispose?(): void
+  dispose(): void
 }

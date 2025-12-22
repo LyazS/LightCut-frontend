@@ -13,6 +13,7 @@ export abstract class BaseBatchCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   protected subCommands: SimpleCommand[] = []
+  private _isDisposed = false
 
   constructor(description: string) {
     this.id = this.generateCommandId()
@@ -52,20 +53,30 @@ export abstract class BaseBatchCommand implements SimpleCommand {
   }
 
   /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
    * 清理批量命令及其子命令的资源
    */
   dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
     try {
       // 先清理所有子命令
       this.subCommands.forEach((command) => {
-        if (typeof command.dispose === 'function') {
-          command.dispose()
-        }
+        command.dispose()
       })
 
       // 清空子命令数组
       this.subCommands = []
 
+      this._isDisposed = true
       console.log(`🧹 批量命令资源已清理: ${this.description}`)
     } catch (error) {
       console.error(`❌ 清理批量命令资源失败: ${this.description}`, error)

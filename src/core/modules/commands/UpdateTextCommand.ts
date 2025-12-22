@@ -25,6 +25,7 @@ export class UpdateTextCommand implements SimpleCommand {
   private originalTimelineItemData: UnifiedTimelineItemData<'text'> | null = null // 保存原始项目的重建数据
   private oldText: string = ''
   private oldStyle: TextStyleConfig | null = null
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -213,5 +214,24 @@ export class UpdateTextCommand implements SimpleCommand {
       console.error(`❌ 撤销文本更新失败:`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [UpdateTextCommand] 命令资源已清理: ${this.id}`)
   }
 }

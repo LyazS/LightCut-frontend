@@ -25,6 +25,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
   public readonly description: string
   private beforeSnapshot: KeyframeSnapshot
   private afterSnapshot: KeyframeSnapshot | null = null
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -137,5 +138,24 @@ export class UpdatePropertyCommand implements SimpleCommand {
       console.error('❌ 属性更新命令撤销失败:', error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [UpdatePropertyCommand] 命令资源已清理: ${this.id}`)
   }
 }

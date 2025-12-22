@@ -11,6 +11,7 @@ export class RenameTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private oldName: string = '' // 保存原始名称用于撤销
+  private _isDisposed = false
 
   constructor(
     private trackId: string,
@@ -77,5 +78,24 @@ export class RenameTrackCommand implements SimpleCommand {
       console.error(`❌ 撤销重命名轨道失败: ${this.newName} -> ${this.oldName}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [RenameTrackCommand] 命令资源已清理: ${this.id}`)
   }
 }

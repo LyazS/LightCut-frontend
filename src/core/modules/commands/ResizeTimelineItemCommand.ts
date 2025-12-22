@@ -25,6 +25,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   private oldDurationFrames: number
   private newDurationFrames: number
   private hasAnimation: boolean = false
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -213,5 +214,24 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       console.error(`❌ 撤销调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [ResizeTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

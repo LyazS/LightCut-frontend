@@ -33,6 +33,7 @@ import {
 export class UpdateTransformCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -436,5 +437,24 @@ export class UpdateTransformCommand implements SimpleCommand {
         '🎬 [Command] Timeline item has animation, but animation update is not yet implemented in unified architecture',
       )
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [UpdateTransformCommand] 命令资源已清理: ${this.id}`)
   }
 }
