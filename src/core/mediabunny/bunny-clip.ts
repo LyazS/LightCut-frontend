@@ -3,6 +3,7 @@ import {
   AudioSampleSink,
   VideoSample,
   AudioSample,
+  type AnyIterable,
 } from 'mediabunny'
 import {
   RENDERER_FPS,
@@ -25,13 +26,21 @@ export class BunnyClip implements IClip {
   private needResetAudio: boolean = false
 
   // 视频相关属性
-  private videoSink: VideoSampleSink | null = null
+  private videoSampleAtTSFunc:
+    | ((timestamps: AnyIterable<number>) => AsyncGenerator<VideoSample | null, void, unknown>)
+    | null = null
+  private videoGetSampleFunc: ((timestamps: number) => Promise<VideoSample | null>) | null = null
   private videoIteratorN: AsyncGenerator<VideoSample | null, void, unknown> | null = null
   private videoInTimeN: bigint = 0n
   private nextFrameN: VideoSample | null = null
 
   // 音频相关属性
-  private audioSink: AudioSampleSink | null = null
+  private audioSampleFunc:
+    | ((
+        startTimestamp?: number | undefined,
+        endTimestamp?: number | undefined,
+      ) => AsyncGenerator<AudioSample, void, unknown>)
+    | null = null
   private audioIterator: AsyncGenerator<AudioSample, void, unknown> | null = null
   private audioInTime: number = 0
 
@@ -45,16 +54,13 @@ export class BunnyClip implements IClip {
   public previewRate: number = 1.0 // 预览倍速
   public duration: number = 0
   public durationN: bigint = 0n
-  public width: number = 0
-  public height: number = 0
 
   constructor(bunnyMedia: BunnyMedia) {
     this.duration = bunnyMedia.duration
     this.durationN = bunnyMedia.durationN
-    this.width = bunnyMedia.width
-    this.height = bunnyMedia.height
-    this.videoSink = bunnyMedia.getVideoSink()
-    this.audioSink = bunnyMedia.getAudioSink()
+    this.videoSampleAtTSFunc = bunnyMedia.videoSamplesAtTimestamps()
+    this.videoGetSampleFunc = bunnyMedia.videoGetSample()
+    this.audioSampleFunc = bunnyMedia.audioSamplesFunc()
     this.setTimeRange({
       clipStart: 0n,
       clipEnd: this.durationN,
@@ -79,8 +85,8 @@ export class BunnyClip implements IClip {
   }
 
   private async ensureVideoIteratorN(startN: bigint): Promise<void> {
-    if (!this.videoIteratorN && this.videoSink) {
-      this.videoIteratorN = this.videoSink.samplesAtTimestamps(this.generateTimestamps(startN))
+    if (!this.videoIteratorN && this.videoSampleAtTSFunc) {
+      this.videoIteratorN = this.videoSampleAtTSFunc(this.generateTimestamps(startN))
       this.nextFrameN = (await this.videoIteratorN.next()).value ?? null
       this.videoInTimeN = startN
       console.log(`📌 [视频] 创建迭代器，起始时间: ${startN}帧`)
@@ -163,8 +169,8 @@ export class BunnyClip implements IClip {
    * @param startTime 迭代器起始时间，默认从0开始
    */
   private async ensureAudioIterator(startTime: number = 0): Promise<void> {
-    if (!this.audioIterator && this.audioSink) {
-      this.audioIterator = this.audioSink.samples(startTime)
+    if (!this.audioIterator && this.audioSampleFunc) {
+      this.audioIterator = this.audioSampleFunc(startTime)
       console.log(`📌 [音频] 创建迭代器，起始时间: ${startTime.toFixed(2)}s`)
     }
   }
@@ -323,8 +329,8 @@ export class BunnyClip implements IClip {
       })
     }
     const [audio, video] = await Promise.all([
-      this.audioSink ? this.findAudioBuffersN(timeN) : [],
-      this.videoSink ? this.findVideoFrameN(timeN) : null,
+      this.audioSampleFunc ? this.findAudioBuffersN(timeN) : [],
+      this.videoSampleAtTSFunc ? this.findVideoFrameN(timeN) : null,
     ])
     return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
   }
@@ -344,7 +350,7 @@ export class BunnyClip implements IClip {
         state: 'outofrange',
       })
     }
-    const video = (await this.videoSink?.getSample(Number(timeN) / RENDERER_FPS)) ?? null
+    const video = (await this.videoGetSampleFunc?.(Number(timeN) / RENDERER_FPS)) ?? null
     return await this.tickInterceptor(timeN, { audio: [], video, state: 'success' })
   }
 
@@ -356,9 +362,9 @@ export class BunnyClip implements IClip {
   async *thumbnailIter(
     timeNs: bigint[],
   ): AsyncGenerator<{ frame: VideoFrame | null; state: boolean }, void, unknown> {
-    if (this.videoSink) {
+    if (this.videoSampleAtTSFunc) {
       const timeIter = timeNs.map((n) => Number(n) / RENDERER_FPS)[Symbol.iterator]()
-      for await (const sample of this.videoSink.samplesAtTimestamps(timeIter)) {
+      for await (const sample of this.videoSampleAtTSFunc(timeIter)) {
         const frame = sample?.toVideoFrame() ?? null
         sample?.close()
         yield { frame, state: true }
@@ -378,11 +384,9 @@ export class BunnyClip implements IClip {
     this.nextFrameN?.close() // 释放缓存的视频帧
     this.nextFrameN = null
     await this.cleanupVideoIteratorN() // 清理视频迭代器
-    this.videoSink = null
 
     // 清理音频相关资源
     await this.cleanupAudioIterator() // 等待音频迭代器清理完成
-    this.audioSink = null
 
     console.log('✅ BunnyClip 资源清理完成')
   }

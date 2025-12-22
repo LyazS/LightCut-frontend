@@ -7,6 +7,9 @@ import {
   InputVideoTrack,
   InputAudioTrack,
   type MetadataTags,
+  VideoSample,
+  AudioSample,
+  type AnyIterable,
 } from 'mediabunny'
 import { RENDERER_FPS } from './constant'
 /**
@@ -16,6 +19,8 @@ export class BunnyMedia {
   private input: Input | null = null
   private videoTrack: InputVideoTrack | null = null
   private audioTrack: InputAudioTrack | null = null
+  private videoSink: VideoSampleSink | null = null
+  private audioSink: AudioSampleSink | null = null
   // 视频相关属性
 
   // 公开属性
@@ -63,6 +68,7 @@ export class BunnyMedia {
         this.width = this.videoTrack.displayWidth
         this.height = this.videoTrack.displayHeight
         videoDuration = await this.videoTrack.computeDuration()
+        this.videoSink = new VideoSampleSink(this.videoTrack)
       }
 
       // 初始化音频轨道
@@ -72,8 +78,9 @@ export class BunnyMedia {
           channels: this.audioTrack.numberOfChannels,
           sampleRate: this.audioTrack.sampleRate,
         })
+        this.audioSink = new AudioSampleSink(this.audioTrack)
       }
-      if (!this.videoTrack && !this.audioTrack) {
+      if (!this.videoSink && !this.audioSink) {
         throw new Error('该文件没有视频和音频轨道')
       }
 
@@ -94,11 +101,32 @@ export class BunnyMedia {
     return (await this.input?.getMetadataTags()) ?? null
   }
 
-  getVideoSink(): VideoSampleSink | null {
-    return this.videoTrack ? new VideoSampleSink(this.videoTrack) : null
+  videoSamplesAtTimestamps():
+    | ((timestamps: AnyIterable<number>) => AsyncGenerator<VideoSample | null, void, unknown>)
+    | null {
+    return this.videoSink?.samplesAtTimestamps ?? null
   }
-  getAudioSink(): AudioSampleSink | null {
-    return this.audioTrack ? new AudioSampleSink(this.audioTrack) : null
+
+  videoGetSample(): ((timestamps: number) => Promise<VideoSample | null>) | null {
+    return this.videoSink?.getSample ?? null
+  }
+
+  videoSamplesFunc():
+    | ((
+        startTimestamp?: number | undefined,
+        endTimestamp?: number | undefined,
+      ) => AsyncGenerator<VideoSample | null, void, unknown>)
+    | null {
+    return this.videoSink?.samples ?? null
+  }
+
+  audioSamplesFunc():
+    | ((
+        startTimestamp?: number | undefined,
+        endTimestamp?: number | undefined,
+      ) => AsyncGenerator<AudioSample, void, unknown>)
+    | null {
+    return this.audioSink?.samples ?? null
   }
 
   /**

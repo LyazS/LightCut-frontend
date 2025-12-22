@@ -55,14 +55,14 @@ export async function generateVideoThumbnail(
 
     // 计算缩略图尺寸
     const sizeInfo = calculateThumbnailSize(
-      workingClip.width,
-      workingClip.height,
+      bunnyMedia.width,
+      bunnyMedia.height,
       containerWidth,
       containerHeight,
       mode,
     )
     console.log('📐 [ThumbnailGenerator] 缩略图尺寸:', {
-      original: `${workingClip.width}x${workingClip.height}`,
+      original: `${bunnyMedia.width}x${bunnyMedia.height}`,
       container: `${sizeInfo.containerWidth}x${sizeInfo.containerHeight}`,
       draw: `${sizeInfo.drawWidth}x${sizeInfo.drawHeight}`,
       offset: `${sizeInfo.offsetX},${sizeInfo.offsetY}`,
