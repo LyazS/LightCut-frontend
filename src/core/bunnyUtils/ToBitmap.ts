@@ -1,48 +1,47 @@
 import { toPng } from 'html-to-image'
+import type { TextStyleConfig } from '@/core/timelineitem/TimelineItemData'
 
-type TextToImageOptions = {
-  fontFamily?: string
-  fontSize?: number
-  fontWeight?: string | number
-  color?: string
-  maxWidth?: number
-  lineHeight?: number
-  letterSpacing?: number
-  textAlign?: 'left' | 'center' | 'right'
-  background?: string
-  pixelRatio?: number
-}
-
+/**
+ * 将文本渲染为 ImageBitmap
+ * @param text 文本内容
+ * @param styleConfig 文本样式配置（使用 TextStyleConfig）
+ * @returns Promise<ImageBitmap>
+ */
 export async function textToImageBitmap(
   text: string,
-  options: TextToImageOptions = {},
+  styleConfig: TextStyleConfig,
 ): Promise<ImageBitmap> {
   if (!text) {
     throw new Error('text is empty')
   }
 
-  const {
-    fontFamily = 'system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif',
-    fontSize = 32,
-    fontWeight = 400,
-    color = '#000',
-    maxWidth,
-    lineHeight = 1.4,
-    letterSpacing = 0,
-    textAlign = 'left',
-    background = 'transparent',
-    pixelRatio = Math.min(window.devicePixelRatio || 1, 2), // ✅ 防止超高 DPI OOM
-  } = options
+  const background = styleConfig.backgroundColor || 'transparent'
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) // ✅ 防止超高 DPI OOM
 
   // ✅ 防坑 1：确保字体加载完成（否则 fallback）
   if (document.fonts?.ready) {
     await document.fonts.ready
   }
 
+  // 如果有自定义字体，先加载
+  if (styleConfig.customFont) {
+    try {
+      const fontFace = new FontFace(
+        styleConfig.customFont.name,
+        `url(${styleConfig.customFont.url})`,
+      )
+      await fontFace.load()
+      document.fonts.add(fontFace)
+    } catch (error) {
+      console.warn('⚠️ [textToImageBitmap] 自定义字体加载失败，使用默认字体:', error)
+    }
+  }
+
   // ✅ 防坑 2：创建可测量、不可见、但可渲染的 DOM
   const el = document.createElement('div')
   el.textContent = text
 
+  // 应用基础样式
   Object.assign(el.style, {
     position: 'fixed', // ✅ 不受父级影响
     left: '0',
@@ -53,22 +52,53 @@ export async function textToImageBitmap(
     boxSizing: 'border-box',
 
     display: 'inline-block', // ✅ 防 inline 宽度 0
-    whiteSpace: maxWidth ? 'normal' : 'pre',
+    whiteSpace: styleConfig.maxWidth ? 'normal' : 'pre',
     wordBreak: 'break-word',
 
-    fontFamily,
-    fontSize: `${fontSize}px`,
-    fontWeight: String(fontWeight),
-    lineHeight: String(lineHeight),
-    letterSpacing: `${letterSpacing}px`,
-    color,
-    textAlign,
+    // 应用 TextStyleConfig 的样式
+    fontFamily: styleConfig.customFont?.name || styleConfig.fontFamily,
+    fontSize: `${styleConfig.fontSize}px`,
+    fontWeight: String(styleConfig.fontWeight),
+    fontStyle: styleConfig.fontStyle,
+    lineHeight: styleConfig.lineHeight ? String(styleConfig.lineHeight) : '1.2',
+    color: styleConfig.color,
+    textAlign: styleConfig.textAlign,
 
     background,
   })
 
-  if (maxWidth) {
-    el.style.maxWidth = `${maxWidth}px`
+  // 应用最大宽度
+  if (styleConfig.maxWidth) {
+    el.style.maxWidth = `${styleConfig.maxWidth}px`
+  }
+
+  // 应用文本阴影
+  if (styleConfig.textShadow) {
+    el.style.textShadow = styleConfig.textShadow
+  }
+
+  // 应用文本描边
+  if (styleConfig.textStroke) {
+    el.style.webkitTextStroke = `${styleConfig.textStroke.width}px ${styleConfig.textStroke.color}`
+  }
+
+  // 应用文本发光效果
+  if (styleConfig.textGlow) {
+    const { color, blur, spread = 0 } = styleConfig.textGlow
+    const glowShadows = [
+      `0 0 ${blur}px ${color}`,
+      `0 0 ${blur * 2}px ${color}`,
+      `0 0 ${blur * 3}px ${color}`,
+    ]
+    if (spread > 0) {
+      glowShadows.push(`0 0 ${spread}px ${color}`)
+    }
+    // 如果已有 textShadow，合并
+    if (el.style.textShadow) {
+      el.style.textShadow += ', ' + glowShadows.join(', ')
+    } else {
+      el.style.textShadow = glowShadows.join(', ')
+    }
   }
 
   document.body.appendChild(el)
