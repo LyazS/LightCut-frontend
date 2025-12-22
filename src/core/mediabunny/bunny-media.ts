@@ -104,11 +104,13 @@ export class BunnyMedia {
   videoSamplesAtTimestamps():
     | ((timestamps: AnyIterable<number>) => AsyncGenerator<VideoSample | null, void, unknown>)
     | null {
-    return this.videoSink?.samplesAtTimestamps ?? null
+    if (!this.videoSink) return null
+    return this.videoSink.samplesAtTimestamps.bind(this.videoSink)
   }
 
   videoGetSample(): ((timestamps: number) => Promise<VideoSample | null>) | null {
-    return this.videoSink?.getSample ?? null
+    if (!this.videoSink) return null
+    return this.videoSink.getSample.bind(this.videoSink)
   }
 
   videoSamplesFunc():
@@ -117,7 +119,8 @@ export class BunnyMedia {
         endTimestamp?: number | undefined,
       ) => AsyncGenerator<VideoSample | null, void, unknown>)
     | null {
-    return this.videoSink?.samples ?? null
+    if (!this.videoSink) return null
+    return this.videoSink.samples.bind(this.videoSink)
   }
 
   audioSamplesFunc():
@@ -126,7 +129,8 @@ export class BunnyMedia {
         endTimestamp?: number | undefined,
       ) => AsyncGenerator<AudioSample, void, unknown>)
     | null {
-    return this.audioSink?.samples ?? null
+    if (!this.audioSink) return null
+    return this.audioSink.samples.bind(this.audioSink)
   }
 
   /**
