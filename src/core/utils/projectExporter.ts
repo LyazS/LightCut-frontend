@@ -360,9 +360,7 @@ async function combineToBlob(options: {
 /**
  * 导出单个媒体项目为 Blob（使用原始尺寸）
  */
-export async function exportMediaItem(
-  options: ExportMediaItemOptions
-): Promise<Blob> {
+export async function exportMediaItem(options: ExportMediaItemOptions): Promise<Blob> {
   const { mediaItem, onProgress } = options
 
   // 1. 验证媒体项目状态
@@ -375,10 +373,14 @@ export async function exportMediaItem(
   if (!webav) {
     throw new Error('媒体项目缺少 WebAV 对象')
   }
+  const bunny = mediaItem.runtime.bunny
+  if (!bunny) {
+    throw new Error('媒体项目缺少 WebAV 对象')
+  }
 
-  const originalWidth = webav.originalWidth
-  const originalHeight = webav.originalHeight
-  
+  const originalWidth = bunny.originalWidth
+  const originalHeight = bunny.originalHeight
+
   if (!originalWidth || !originalHeight) {
     throw new Error('无法获取媒体项目的原始尺寸')
   }
@@ -386,7 +388,7 @@ export async function exportMediaItem(
   // 3. 图片类型特殊处理：直接使用 generateThumbnailForUnifiedMediaItem 获取完整大图
   if (mediaItem.mediaType === 'image') {
     console.log('🖼️ 图片类型，使用 generateThumbnailForUnifiedMediaItem 获取完整大图')
-    
+
     // 使用原始尺寸生成完整大图
     const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
       mediaItem,
@@ -395,18 +397,18 @@ export async function exportMediaItem(
       originalHeight,
       ThumbnailMode.FIT, // 使用适应模式，保持宽高比
     )
-    
+
     if (!thumbnailUrl) {
       throw new Error('无法生成图片缩略图')
     }
-    
+
     // 将 Blob URL 转换为 Blob
     const response = await fetch(thumbnailUrl)
     const blob = await response.blob()
-    
+
     // 清理 Blob URL
     URL.revokeObjectURL(thumbnailUrl)
-    
+
     return blob
   }
 
@@ -455,11 +457,9 @@ export async function exportMediaItem(
 /**
  * 导出单个时间轴项目为 Blob（使用原始尺寸）
  */
-export async function exportTimelineItem(
-  options: ExportTimelineItemOptions
-): Promise<Blob> {
+export async function exportTimelineItem(options: ExportTimelineItemOptions): Promise<Blob> {
   const { timelineItem, onProgress } = options
-  
+
   // 获取 unifiedStore 实例
   const unifiedStore = useUnifiedStore()
 
@@ -471,21 +471,21 @@ export async function exportTimelineItem(
   // 2. 图片类型特殊处理：使用 generateThumbnailForUnifiedMediaItem
   if (isImageTimelineItem(timelineItem)) {
     console.log('🖼️ 图片类型时间轴项目，使用 generateThumbnailForUnifiedMediaItem')
-    
+
     // 获取关联的媒体项目
     const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
     if (!mediaItem) {
       throw new Error('找不到关联的媒体项目')
     }
-    
+
     // 获取原始尺寸
-    const originalWidth = mediaItem.runtime.webav?.originalWidth
-    const originalHeight = mediaItem.runtime.webav?.originalHeight
-    
+    const originalWidth = mediaItem.runtime.bunny?.originalWidth
+    const originalHeight = mediaItem.runtime.bunny?.originalHeight
+
     if (!originalWidth || !originalHeight) {
       throw new Error('无法获取媒体项目的原始尺寸')
     }
-    
+
     // 使用原始尺寸生成完整大图
     const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
       mediaItem,
@@ -494,18 +494,18 @@ export async function exportTimelineItem(
       originalHeight,
       ThumbnailMode.FIT,
     )
-    
+
     if (!thumbnailUrl) {
       throw new Error('无法生成图片缩略图')
     }
-    
+
     // 将 Blob URL 转换为 Blob
     const response = await fetch(thumbnailUrl)
     const blob = await response.blob()
-    
+
     // 清理 Blob URL
     URL.revokeObjectURL(thumbnailUrl)
-    
+
     return blob
   }
 
@@ -529,10 +529,10 @@ export async function exportTimelineItem(
   if (!mediaItem) {
     throw new Error('找不到关联的媒体项目')
   }
-  
-  const originalWidth = mediaItem.runtime.webav?.originalWidth
-  const originalHeight = mediaItem.runtime.webav?.originalHeight
-  
+
+  const originalWidth = mediaItem.runtime.bunny?.originalWidth
+  const originalHeight = mediaItem.runtime.bunny?.originalHeight
+
   if (!originalWidth || !originalHeight) {
     throw new Error('无法获取媒体项目的原始尺寸')
   }
@@ -545,7 +545,7 @@ export async function exportTimelineItem(
 
   // 7. 使用时间轴项目的 timeRange（只设置时间范围，不设置其他属性）
   const { timeRange } = timelineItem
-  
+
   offscreenSprite.setTimeRange({
     clipStartTime: timeRange.clipStartTime,
     clipEndTime: timeRange.clipEndTime,

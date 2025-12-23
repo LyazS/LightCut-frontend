@@ -79,8 +79,8 @@ export class WebAVProcessor {
 
     // 3. 创建WebAV对象并设置clip
     const webavObjects: WebAVObjects = {
-      originalWidth: meta.width,
-      originalHeight: meta.height,
+      // originalWidth: meta.width,
+      // originalHeight: meta.height,
     }
 
     // 根据媒体类型设置对应的clip

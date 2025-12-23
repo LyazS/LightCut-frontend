@@ -41,8 +41,8 @@ export interface WebAVObjects {
   audioClip?: Raw<AudioClip>
   thumbnailUrl?: string
   // WebAV解析得到的原始尺寸信息
-  originalWidth?: number // 原始宽度（视频和图片）
-  originalHeight?: number // 原始高度（视频和图片）
+  // originalWidth?: number // 原始宽度（视频和图片）
+  // originalHeight?: number // 原始高度（视频和图片）
 }
 
 export interface BunnyObjects {

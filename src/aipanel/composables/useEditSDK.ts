@@ -419,11 +419,11 @@ export function useEditSDK(
       // 对于视频和图片素材，添加宽高信息（仅在就绪状态下）
       if (
         mediaItem.mediaStatus === 'ready' &&
-        mediaItem.runtime.webav?.originalWidth &&
-        mediaItem.runtime.webav?.originalHeight
+        mediaItem.runtime.bunny?.originalWidth &&
+        mediaItem.runtime.bunny?.originalHeight
       ) {
-        baseInfo.width = mediaItem.runtime.webav.originalWidth
-        baseInfo.height = mediaItem.runtime.webav.originalHeight
+        baseInfo.width = mediaItem.runtime.bunny.originalWidth
+        baseInfo.height = mediaItem.runtime.bunny.originalHeight
       }
 
       return baseInfo

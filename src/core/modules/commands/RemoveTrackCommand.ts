@@ -187,11 +187,11 @@ export class RemoveTrackCommand implements SimpleCommand {
 
       // 从 webav 对象中获取原始尺寸信息
       if (
-        mediaData.runtime.webav?.originalWidth !== undefined &&
-        mediaData.runtime.webav?.originalHeight !== undefined
+        mediaData.runtime.bunny?.originalWidth !== undefined &&
+        mediaData.runtime.bunny?.originalHeight !== undefined
       ) {
-        config.width = mediaData.runtime.webav.originalWidth
-        config.height = mediaData.runtime.webav.originalHeight
+        config.width = mediaData.runtime.bunny.originalWidth
+        config.height = mediaData.runtime.bunny.originalHeight
       }
 
       if (mediaData.duration !== undefined) {

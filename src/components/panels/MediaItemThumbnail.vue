@@ -269,9 +269,9 @@ const detailInfo = computed<string[]>(() => {
     }
     
     // 分辨率（视频和图片）
-    if ((item.value.mediaType === 'video' || item.value.mediaType === 'image') && item.value.runtime.webav?.originalWidth) {
-      const width = item.value.runtime.webav.originalWidth
-      const height = item.value.runtime.webav.originalHeight
+    if ((item.value.mediaType === 'video' || item.value.mediaType === 'image') && item.value.runtime.bunny?.originalWidth) {
+      const width = item.value.runtime.bunny.originalWidth
+      const height = item.value.runtime.bunny.originalHeight
       info.push(`${t('media.tooltip.resolution')}: ${width}x${height}`)
     }
   }
