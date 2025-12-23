@@ -70,13 +70,6 @@ export const UnifiedMediaItemQueries = {
 
   // 获取原始尺寸
   getOriginalSize(item: UnifiedMediaItemData): { width: number; height: number } | undefined {
-    // if (item.runtime.bunny?.originalWidth && item.runtime.bunny?.originalHeight) {
-    //   return {
-    //     width: item.runtime.bunny.originalWidth,
-    //     height: item.runtime.bunny.originalHeight,
-    //   }
-    // }
-    // TODO: clear webav
     if (item.runtime.bunny?.originalWidth && item.runtime.bunny?.originalHeight) {
       return {
         width: item.runtime.bunny.originalWidth,

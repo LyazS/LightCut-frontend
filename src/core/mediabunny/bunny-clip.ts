@@ -336,34 +336,34 @@ export class BunnyClip implements IClip {
   }
 
   /**
-   * Seek 时获取指定时间点的视频帧（仅视频，不含音频）
-   * @param timeN 时间轴上的帧位置
+   * 获取指定时间点的视频帧（仅视频，不含音频）
+   * @param clipTimeN Clip上的帧位置
    * @returns 包含视频帧和状态，音频数组始终为空
    */
   async getSampleN(
-    timeN: bigint,
+    clipTimeN: bigint,
   ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
-    if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
-      return this.tickInterceptor(timeN, {
+    if (clipTimeN < 0n || this.durationN < clipTimeN) {
+      return this.tickInterceptor(clipTimeN, {
         audio: [],
         video: null,
         state: 'outofrange',
       })
     }
-    const video = (await this.videoGetSampleFunc?.(Number(timeN) / RENDERER_FPS)) ?? null
-    return await this.tickInterceptor(timeN, { audio: [], video, state: 'success' })
+    const video = (await this.videoGetSampleFunc?.(Number(clipTimeN) / RENDERER_FPS)) ?? null
+    return await this.tickInterceptor(clipTimeN, { audio: [], video, state: 'success' })
   }
 
   /**
    * 批量生成缩略图的异步迭代器，用于时间轴缩略图显示
-   * @param timeNs 时间点数组（帧位置）
+   * @param clipTimeNs 时间点数组（帧位置）
    * @yields 每次返回 { frame: VideoFrame | null, state: boolean }
    */
   async *thumbnailIter(
-    timeNs: bigint[],
+    clipTimeNs: bigint[],
   ): AsyncGenerator<{ frame: VideoFrame | null; state: boolean }, void, unknown> {
     if (this.videoSampleAtTSFunc) {
-      const timeIter = timeNs.map((n) => Number(n) / RENDERER_FPS)[Symbol.iterator]()
+      const timeIter = clipTimeNs.map((n) => Number(n) / RENDERER_FPS)[Symbol.iterator]()
       for await (const sample of this.videoSampleAtTSFunc(timeIter)) {
         const frame = sample?.toVideoFrame() ?? null
         sample?.close()

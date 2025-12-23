@@ -113,7 +113,7 @@ export class TimelineItemTransitioner {
       await this.setupTimelineItemSprite(timelineItem)
     }
     const bmap = await textToImageBitmap(timelineItem.config.text, timelineItem.config.style)
-    timelineItem.runtime.imageBitmap = bmap
+    timelineItem.runtime.textBitmap = bmap
 
     // 4. 设置轨道属性
     this.applyTrackProperties(timelineItem)

@@ -135,7 +135,7 @@ export async function generateImageThumbnail(
   }
 }
 
-export async function tryGetAudioCover(
+export async function tryGetMediaCover(
   bunnyMedia: BunnyMedia,
   containerWidth: number = 100,
   containerHeight: number = 60,
@@ -219,7 +219,7 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
 
     if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       console.log('🎬 生成视频缩略图...')
-      const cover = await tryGetAudioCover(
+      const cover = await tryGetMediaCover(
         mediaItem.runtime.bunny.bunnyMedia,
         containerWidth,
         containerHeight,
@@ -251,7 +251,7 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
       console.log('✅ 图片缩略图生成成功')
     } else if (UnifiedMediaItemQueries.isAudio(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       // 如果是音频，可以尝试获取封面图
-      return await tryGetAudioCover(
+      return await tryGetMediaCover(
         mediaItem.runtime.bunny.bunnyMedia,
         containerWidth,
         containerHeight,
