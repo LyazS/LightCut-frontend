@@ -42,9 +42,14 @@ interface ExtendedHTMLElement extends HTMLElement {
  */
 interface BunnyRenderExpose {
   getCanvas: () => HTMLCanvasElement | null
-  initializeBunnyCanvas: () => Promise<void>
-  recreateCanvasWithNewSize: (newResolution: VideoResolution) => Promise<void>
+  initializeMediaBunnyCanvas: () => Promise<void>
 }
+
+// 暴露方法
+defineExpose({
+  getCanvas: () => canvasRef.value,
+  initializeMediaBunnyCanvas,
+})
 
 const unifiedStore = useUnifiedStore()
 
@@ -53,7 +58,7 @@ const canvasRef = ref<HTMLCanvasElement>()
 const rendererContainer = ref<HTMLElement>()
 
 // 计算属性
-const error = computed(() => unifiedStore.webAVError)
+const error = computed(() => unifiedStore.mediaBunnyError)
 
 // 画布原始尺寸（基于视频分辨率）
 const canvasWidth = computed(() => unifiedStore.videoResolution.width)
@@ -141,15 +146,36 @@ const cleanupResizeObserver = (): void => {
   }
 }
 
+/**
+ * 初始化 MediaBunny Canvas
+ */
+async function initializeMediaBunnyCanvas(): Promise<void> {
+  if (!canvasRef.value) {
+    console.error('❌ Canvas 元素未找到')
+    return
+  }
+  
+  try {
+    // 设置 Canvas 元素
+    await unifiedStore.setMediaBunnyCanvas(canvasRef.value)
+    
+    console.log('✅ MediaBunny Canvas 初始化成功')
+  } catch (error) {
+    console.error('❌ MediaBunny Canvas 初始化失败:', error)
+  }
+}
+
 // 生命周期
 onMounted(async () => {
   await nextTick()
   updateContainerSize()
   setupResizeObserver()
+  await initializeMediaBunnyCanvas()
 })
 
-onUnmounted(() => {
+onUnmounted(async () => {
   cleanupResizeObserver()
+  await unifiedStore.destroyMediaBunny()
 })
 </script>
 

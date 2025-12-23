@@ -17,6 +17,7 @@ import { createUnifiedVideoThumbnailModule } from '@/core/modules/UnifiedVideoTh
 import { createUnifiedSnapModule } from '@/core/modules/UnifiedSnapModule'
 import { createUnifiedUserModule } from '@/core/modules/UnifiedUserModule'
 import { createUnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
+import { createUnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
@@ -150,6 +151,9 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   const unifiedUserModule = createUnifiedUserModule(registry)
   registry.register(MODULE_NAMES.USER, unifiedUserModule)
+
+  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry)
+  registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
 
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(
@@ -413,6 +417,28 @@ export const useUnifiedStore = defineStore('unified', () => {
     // WebAV画布销毁和重建
     destroyCanvas: unifiedWebavModule.destroyCanvas,
     recreateCanvas: unifiedWebavModule.recreateCanvas,
+
+    // ==================== MediaBunny模块状态和方法 ====================
+
+    // MediaBunny状态
+    mediaBunnyPlaybackState: unifiedMediaBunnyModule.playbackState,
+    isMediaBunnyReady: unifiedMediaBunnyModule.isMediaBunnyReady,
+    mediaBunnyError: unifiedMediaBunnyModule.mediaBunnyError,
+
+    // MediaBunny画布管理
+    setMediaBunnyCanvas: unifiedMediaBunnyModule.setCanvas,
+    destroyMediaBunny: unifiedMediaBunnyModule.destroy,
+
+    // MediaBunny播放控制
+    mediaBunnyPlay: unifiedMediaBunnyModule.play,
+    mediaBunnyPause: unifiedMediaBunnyModule.pause,
+    mediaBunnySeekTo: unifiedMediaBunnyModule.seekTo,
+    updateMediaBunnyTimelineDuration: unifiedMediaBunnyModule.updateTimelineDuration,
+
+    // MediaBunny工具方法
+    isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
+    getMediaBunnySummary: unifiedMediaBunnyModule.getMediaBunnySummary,
+    resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,
 
     // ==================== 计算属性 ====================
 

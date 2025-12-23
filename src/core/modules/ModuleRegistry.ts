@@ -15,6 +15,7 @@ import type { UnifiedVideoThumbnailModule } from './UnifiedVideoThumbnailModule'
 import type { UnifiedSnapModule } from './UnifiedSnapModule'
 import type { UnifiedUserModule } from './UnifiedUserModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
+import type { UnifiedMediaBunnyModule } from './UnifiedMediaBunnyModule'
 // 模块名称常量
 export const MODULE_NAMES = {
   CONFIG: 'config',
@@ -33,6 +34,7 @@ export const MODULE_NAMES = {
   SNAP: 'snap',
   USER: 'user',
   DIRECTORY: 'directory',
+  MEDIABUNNY: 'mediabunny',
 } as const
 
 // 模块类型映射
@@ -53,6 +55,7 @@ export type ModuleMap = {
   [MODULE_NAMES.SNAP]: UnifiedSnapModule
   [MODULE_NAMES.USER]: UnifiedUserModule
   [MODULE_NAMES.DIRECTORY]: UnifiedDirectoryModule
+  [MODULE_NAMES.MEDIABUNNY]: UnifiedMediaBunnyModule
 }
 
 /**
