@@ -111,10 +111,6 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       const mediaItem = mediaItems.value[index]
 
       // 1. 清理缩略图URL
-      if (mediaItem.runtime.webav?.thumbnailUrl) {
-        URL.revokeObjectURL(mediaItem.runtime.webav.thumbnailUrl)
-        console.log(`🧹 [UnifiedMediaModule] webav缩略图URL已清理: ${mediaItem.name}`)
-      }
       if (mediaItem.runtime.bunny?.thumbnailUrl) {
         URL.revokeObjectURL(mediaItem.runtime.bunny.thumbnailUrl)
         console.log(`🧹 [UnifiedMediaModule] bunny缩略图URL已清理: ${mediaItem.name}`)

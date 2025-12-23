@@ -98,34 +98,6 @@ export class WebAVProcessor {
     }
     mediaItem.runtime.webav = webavObjects
 
-    // 5. 计算缩略图尺寸（最长边使用常量，保持宽高比）
-    const maxEdge = THUMBNAIL_CONSTANTS.MEDIA_ITEM_MAX_EDGE
-    const aspectRatio = meta.width / meta.height
-    let thumbnailWidth: number
-    let thumbnailHeight: number
-
-    if (meta.width > meta.height) {
-      // 横向图片/视频
-      thumbnailWidth = maxEdge
-      thumbnailHeight = Math.round(maxEdge / aspectRatio)
-    } else {
-      // 纵向图片/视频
-      thumbnailHeight = maxEdge
-      thumbnailWidth = Math.round(maxEdge * aspectRatio)
-    }
-
-    // 6. 使用统一的缩略图生成函数
-    const thumbnailUrl = await generateThumbnailForUnifiedMediaItem(
-      mediaItem,
-      undefined, // 使用默认中间位置
-      thumbnailWidth,
-      thumbnailHeight,
-      ThumbnailMode.FIT,
-    )
-
-    // 7. 将 thumbnailUrl 添加到 webavObjects
-    webavObjects.thumbnailUrl = thumbnailUrl
-
     // 8. 计算时长（帧数）
     let durationFrames: number
     if (mediaItem.mediaType === 'audio' || mediaItem.mediaType === 'video') {

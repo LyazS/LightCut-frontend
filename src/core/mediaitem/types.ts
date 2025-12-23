@@ -39,7 +39,7 @@ export interface WebAVObjects {
   mp4Clip?: Raw<MP4Clip>
   imgClip?: Raw<ImgClip>
   audioClip?: Raw<AudioClip>
-  thumbnailUrl?: string
+  // thumbnailUrl?: string
   // WebAV解析得到的原始尺寸信息
   // originalWidth?: number // 原始宽度（视频和图片）
   // originalHeight?: number // 原始高度（视频和图片）
