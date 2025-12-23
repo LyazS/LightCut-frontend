@@ -186,13 +186,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
             if (clonedItem.runtime) {
               clonedItem.runtime = {}
             }
-            // 🔧 修复：将 timeRangeN 中的 bigint 转换为 number（用于序列化）
-            clonedItem.timeRangeN = {
-              clipStart: Number(clonedItem.timeRangeN.clipStart) as any,
-              clipEnd: Number(clonedItem.timeRangeN.clipEnd) as any,
-              timelineStart: Number(clonedItem.timeRangeN.timelineStart) as any,
-              timelineEnd: Number(clonedItem.timeRangeN.timelineEnd) as any,
-            }
             return clonedItem
           }),
         }

@@ -25,7 +25,9 @@ export class BunnyMedia {
 
   // 公开属性
   public readonly ready: Promise<void>
+  // 原始时长（秒）
   public duration: number = 0
+  // 时长帧数（帧）
   public durationN: bigint = 0n
   public width: number = 0
   public height: number = 0

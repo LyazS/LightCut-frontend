@@ -552,9 +552,9 @@ export class AIGenerationProcessor extends DataSourceProcessor {
 
       // 7. 直接设置元数据
       mediaItem.runtime.webav = webavResult.webavObjects
-      mediaItem.duration = webavResult.duration
+      // mediaItem.duration = webavResult.duration
       mediaItem.runtime.bunny = bunnyResult.bunnyObjects
-      mediaItem.durationN = bunnyResult.durationN
+      mediaItem.duration = Number(bunnyResult.durationN)
       console.log(`🔧 [AIGenerationProcessor] 元数据设置完成: ${mediaItem.name}`)
 
       // 8. 🌟 根据标志决定保存策略（分别调用 saveMediaFile 和 saveMetaFile）

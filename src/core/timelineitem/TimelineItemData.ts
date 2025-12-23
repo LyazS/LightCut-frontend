@@ -254,10 +254,10 @@ export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemCo
  */
 export interface UnifiedTimelineItemRuntime {
   /** 与时间轴项目生命周期一致 */
-  sprite?: Raw<UnifiedSprite> // webav的sprite对象
+  sprite?: Raw<UnifiedSprite> // 旧的webav的sprite对象
   bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
   bunnyCurFrame?: VideoSample // mediabunny当前帧数据
-  imageBitmap?: ImageBitmap // 文本渲染的ImageBitmap
+  imageBitmap?: ImageBitmap // 文本/图片渲染的ImageBitmap
 }
 // ==================== 核心接口设计 ====================
 
@@ -285,7 +285,6 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
 
   // ==================== 时间范围 ====================
   timeRange: UnifiedTimeRange
-  timeRangeN: TimeRangeN
 
   // ==================== 配置（类型安全） ====================
   config: GetTimelineItemConfig<T>

@@ -1490,7 +1490,6 @@ async function handleTextToImageSubmit(config: {
       mediaType: expectedMediaType,
       // 🌟 预设时长：图片5秒，视频和音频使用默认值
       duration: expectedMediaType === 'image' ? 5 : undefined,
-      durationN: expectedMediaType === 'image' ? 5n : undefined,
     })
 
     // 7. 添加到媒体库和当前目录

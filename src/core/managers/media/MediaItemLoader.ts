@@ -100,7 +100,6 @@ export class MediaItemLoader {
         createdAt: metaData.createdAt,
         mediaType: metaData.mediaType,
         duration: metaData.duration,
-        durationN: metaData.durationN ? BigInt(metaData.durationN) : undefined,
         mediaStatus: metaData.mediaStatus || 'pending', // 🌟 如果 meta 文件中有终态状态，使用它；否则默认为 pending
       },
     )

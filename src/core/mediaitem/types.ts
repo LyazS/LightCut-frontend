@@ -78,7 +78,6 @@ export interface UnifiedMediaItemData {
 
   // ==================== 元数据（状态相关） ====================
   duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
-  durationN?: bigint // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
 }
 
 // ==================== 专门的状态类型定义 ====================
@@ -90,7 +89,7 @@ export interface UnifiedMediaItemData {
 export type ReadyMediaItem = UnifiedMediaItemData & {
   mediaStatus: 'ready'
   duration: number
-  durationN: bigint
+  // durationN: bigint
 }
 
 /**

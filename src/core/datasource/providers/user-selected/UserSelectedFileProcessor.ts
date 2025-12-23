@@ -122,9 +122,9 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
 
       // 5. 直接设置元数据
       mediaItem.runtime.webav = webavResult.webavObjects
-      mediaItem.duration = webavResult.duration
+      // mediaItem.duration = webavResult.duration
       mediaItem.runtime.bunny = bunnyResult.bunnyObjects
-      mediaItem.durationN = bunnyResult.durationN
+      mediaItem.duration = Number(bunnyResult.durationN)
       console.log(`🔧 [UserSelectedFileProcessor] 元数据设置完成: ${mediaItem.name}`)
 
       // 6. 🌟 使用统一的保存逻辑判断

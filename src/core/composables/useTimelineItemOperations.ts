@@ -115,12 +115,6 @@ export function useTimelineItemOperations() {
           clipStartTime: 0,
           clipEndTime: availableDuration,
         },
-        timeRangeN: {
-          timelineStart: BigInt(startTimeFrames),
-          timelineEnd: BigInt(startTimeFrames + availableDuration),
-          clipStart: 0n,
-          clipEnd: BigInt(availableDuration),
-        },
         config: config,
         animation: undefined, // 新创建的项目默认没有动画
         timelineStatus: timelineStatus, // 根据素材状态设置时间轴项目状态

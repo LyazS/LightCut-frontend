@@ -153,7 +153,6 @@ class GlobalMetaFileManager {
         mediaType: mediaItem.mediaType,
         source: extractSourceData(mediaItem.source),
         duration: mediaItem.duration,
-        durationN: Number(mediaItem.durationN),
         // 🌟 只在终态时保存 mediaStatus
         ...(terminalStatuses.includes(mediaItem.mediaStatus) && {
           mediaStatus: mediaItem.mediaStatus as 'ready' | 'error' | 'cancelled' | 'missing',
