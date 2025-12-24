@@ -162,7 +162,6 @@ const currentProject = computed(() => {
     duration: 0, // 未使用
     settings: {
       videoResolution: unifiedStore.videoResolution,
-      frameRate: unifiedStore.frameRate,
       timelineDurationFrames: unifiedStore.timelineDurationFrames,
     },
   }

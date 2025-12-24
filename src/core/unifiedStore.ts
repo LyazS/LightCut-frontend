@@ -316,7 +316,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     currentFrame: unifiedPlaybackModule.currentFrame,
     isPlaying: unifiedPlaybackModule.isPlaying,
     playbackRate: unifiedPlaybackModule.playbackRate,
-    durationN: unifiedPlaybackModule.durationN,
 
     // 计算属性
     formattedCurrentTime: unifiedPlaybackModule.formattedCurrentTime,
@@ -334,8 +333,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     stop: unifiedPlaybackModule.stop,
     setPlaybackRate: unifiedPlaybackModule.setPlaybackRate,
     resetPlaybackRate: unifiedPlaybackModule.resetPlaybackRate,
-    setDurationN: unifiedPlaybackModule.setDurationN,
-    getPlaybackSummary: unifiedPlaybackModule.getPlaybackSummary,
     resetPlaybackToDefaults: unifiedPlaybackModule.resetToDefaults,
 
     // ==================== 配置模块状态和方法 ====================
@@ -351,13 +348,10 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
-    frameRate: unifiedConfigModule.frameRate,
     timelineDurationFrames: unifiedConfigModule.timelineDurationFrames,
 
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
-    setFrameRate: unifiedConfigModule.setFrameRate,
-    getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
 
@@ -403,7 +397,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // MediaBunny工具方法
     isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
-    getMediaBunnySummary: unifiedMediaBunnyModule.getMediaBunnySummary,
     resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,
 
     // ==================== 计算属性 ====================

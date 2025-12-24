@@ -38,7 +38,6 @@ export interface UnifiedProjectConfig {
       height: number
       aspectRatio: string
     }
-    frameRate: number // 固定30帧
     timelineDurationFrames: number
   }
 }

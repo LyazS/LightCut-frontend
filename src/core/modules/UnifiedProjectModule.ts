@@ -169,7 +169,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
           duration: calculatedDuration,
           settings: {
             videoResolution: configModule.videoResolution.value,
-            frameRate: configModule.frameRate.value,
             timelineDurationFrames: configModule.timelineDurationFrames.value,
           },
           // ❌ 移除目录配置部分

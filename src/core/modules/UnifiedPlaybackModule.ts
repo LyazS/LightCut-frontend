@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import { alignFramesToFrame, framesToTimecode } from '@/core/utils/timeUtils'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
-import type { UnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
 import type { UnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
 
 /**
@@ -14,25 +13,12 @@ import type { UnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyMo
  * - 完全移除 WebAV 依赖
  */
 export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
-  // 通过注册中心获取依赖模块
-  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
-  const frameRate = configModule.frameRate
-  
-  // 获取 MediaBunny 模块引用（延迟获取，避免循环依赖）
-  let mediaBunnyModule: UnifiedMediaBunnyModule | null = null
-  const getMediaBunnyModule = () => {
-    if (!mediaBunnyModule) {
-      mediaBunnyModule = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
-    }
-    return mediaBunnyModule
-  }
   // ==================== 状态定义 ====================
 
   // 播放相关状态
   const currentFrame = ref(0) // 当前播放帧数（整数）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
-  const durationN = ref<bigint>(0n) // 项目时长（帧数，bigint类型）
 
   // ==================== 计算属性 ====================
 
@@ -81,7 +67,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * @param frames 目标帧数
    */
   async function seekToFrame(frames: number): Promise<void> {
-    const mediabunny = getMediaBunnyModule()
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
     if (mediabunny.isMediaBunnyAvailable()) {
       await mediabunny.seekToFrame(frames)
     }
@@ -104,7 +90,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 播放
    */
   async function play(): Promise<void> {
-    const mediabunny = getMediaBunnyModule()
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
     if (mediabunny.isMediaBunnyAvailable()) {
       await mediabunny.startPlayback()
     }
@@ -115,7 +101,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 暂停
    */
   async function pause(): Promise<void> {
-    const mediabunny = getMediaBunnyModule()
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
     if (mediabunny.isMediaBunnyAvailable()) {
       await mediabunny.stopPlayback()
     }
@@ -134,7 +120,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 停止播放并回到开始
    */
   async function stop(): Promise<void> {
-    const mediabunny = getMediaBunnyModule()
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
     if (mediabunny.isMediaBunnyAvailable()) {
       await mediabunny.stopPlayback()
       await mediabunny.seekToFrame(0)
@@ -171,30 +157,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     setPlaybackRate(1)
     console.log('🔄 重置播放速度为正常')
   }
-  
-  /**
-   * 设置项目时长
-   * @param duration 项目时长（帧数，bigint类型）
-   */
-  function setDurationN(duration: bigint): void {
-    durationN.value = duration
-    console.log(`🎯 设置项目时长: ${duration}帧`)
-  }
-
-  /**
-   * 获取播放状态摘要
-   * @returns 播放状态摘要对象
-   */
-  function getPlaybackSummary() {
-    return {
-      currentFrame: currentFrame.value,
-      formattedCurrentTime: formattedCurrentTime.value,
-      isPlaying: isPlaying.value,
-      playbackRate: playbackRate.value,
-      playbackRateText: playbackRateText.value,
-      frameRate: frameRate.value,
-    }
-  }
 
   /**
    * 重置播放状态为默认值
@@ -213,7 +175,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     currentFrame,
     isPlaying,
     playbackRate,
-    durationN,
 
     // 计算属性
     formattedCurrentTime,
@@ -231,8 +192,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     stop,
     setPlaybackRate,
     resetPlaybackRate,
-    setDurationN,
-    getPlaybackSummary,
     resetToDefaults,
   }
 }

@@ -119,7 +119,6 @@ export class UnifiedProjectManager {
           height: 1080,
           aspectRatio: '16:9',
         },
-        frameRate: 30,
         timelineDurationFrames: 1800,
       },
     }

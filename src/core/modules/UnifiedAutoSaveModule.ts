@@ -56,7 +56,6 @@ export function createUnifiedAutoSaveModule(
     mediaItems: mediaModule.mediaItems,
     projectConfig: computed(() => ({
       videoResolution: configModule.videoResolution.value,
-      frameRate: configModule.frameRate.value,
       timelineDurationFrames: configModule.timelineDurationFrames.value,
     })),
     // 🆕 添加目录配置监听

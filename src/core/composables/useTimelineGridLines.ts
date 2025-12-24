@@ -1,6 +1,7 @@
 import { computed, type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { calculateVisibleFrameRange } from '@/core/utils/coordinateUtils'
+import { RENDERER_FPS } from '@/core/mediabunny/constant'
 
 /**
  * 时间轴网格线计算模块
@@ -18,7 +19,7 @@ export function useTimelineGridLines() {
     const totalDurationFrames = unifiedStore.totalDurationFrames
     const pixelsPerFrame =
       (unifiedStore.TimelineContentWidth * unifiedStore.zoomLevel) / totalDurationFrames
-    const pixelsPerSecond = pixelsPerFrame * unifiedStore.frameRate
+    const pixelsPerSecond = pixelsPerFrame * RENDERER_FPS
 
     // 根据缩放级别决定网格间隔（基于帧数）
     let intervalFrames = 150 // 默认每5秒一条网格线（150帧）

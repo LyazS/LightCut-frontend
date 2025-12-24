@@ -37,7 +37,6 @@ export async function loadProjectConfig(projectId: string): Promise<UnifiedProje
 
     console.log(`✅ [Project Config Load] 项目配置加载成功:`, {
       videoResolution: projectConfig.settings.videoResolution,
-      frameRate: projectConfig.settings.frameRate,
     })
 
     return projectConfig

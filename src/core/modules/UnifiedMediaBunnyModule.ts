@@ -246,7 +246,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
     updateClips(timelineModule.timelineItems.value, currentTimeN)
 
     // 渲染到 Canvas（使用 bunnyCurFrameMap 和 runtime 中的数据）
-    renderToCanvas(timelineModule.timelineItems.value, mediaModule)
+    renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTimeN)
 
     // 更新 playbackModule.currentFrame
     playbackModule.setCurrentFrame(Number(currentTimeN))
@@ -276,8 +276,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
                 // 先关闭旧帧
                 const oldFrame = bunnyCurFrameMap.get(item.id)
                 oldFrame?.close()
-                bunnyCurFrameMap.set(item.id, video.clone())
-                video.close()
+                bunnyCurFrameMap.set(item.id, video)
               }
 
               // 调度音频
@@ -301,18 +300,32 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * - bunnyCurFrameMap.get(item.id) (视频)
    * - runtime.textBitmap (文本)
    * - mediaItem.runtime.bunny.imageClip (图片)
+   * @param timelineItems 时间轴项目列表
+   * @param mediaModule 媒体模块
+   * @param currentTimeN 当前播放时间（帧数，bigint类型）
    */
   function renderToCanvas(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
     mediaModule: UnifiedMediaModule,
+    currentTimeN: bigint,
   ): void {
     if (!canvas || !ctx) return
 
     // 清空画布
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-    // 收集所有可渲染的项目
+    // 收集所有可渲染的项目（需要同时满足：可渲染 + 在当前时间范围内）
     const renderableItems = timelineItems.filter((item) => {
+      // 检查是否在当前播放时间范围内
+      const isInTimeRange =
+        currentTimeN >= BigInt(item.timeRange.timelineStartTime) &&
+        currentTimeN <= BigInt(item.timeRange.timelineEndTime)
+
+      if (!isInTimeRange) {
+        return false
+      }
+
+      // 检查是否可渲染
       if (item.mediaType === 'video') {
         return bunnyCurFrameMap.has(item.id)
       } else if (item.mediaType === 'text') {
@@ -487,7 +500,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
     await updateClips(timelineModule.timelineItems.value, currentTimeN)
 
     // 渲染到 Canvas
-    renderToCanvas(timelineModule.timelineItems.value, mediaModule)
+    renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTimeN)
 
     console.log(`⏩ MediaBunny Seek 到: ${clampedFrames}帧`)
   }
@@ -524,7 +537,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
         // 非播放状态下的帧数变化，需要更新渲染
         const currentTimeN = BigInt(newFrame)
         updateClips(timelineModule.timelineItems.value, currentTimeN)
-        renderToCanvas(timelineModule.timelineItems.value, mediaModule)
+        renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTimeN)
       }
     })
 
@@ -549,33 +562,6 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    */
   function isMediaBunnyAvailable(): boolean {
     return !!(canvas && ctx && isMediaBunnyReady.value && !mediaBunnyError.value)
-  }
-
-  /**
-   * 获取 MediaBunny 状态摘要
-   * @returns MediaBunny 状态摘要对象
-   */
-  function getMediaBunnySummary() {
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-
-    return {
-      hasCanvas: !!canvas,
-      isReady: isMediaBunnyReady.value,
-      hasError: !!mediaBunnyError.value,
-      error: mediaBunnyError.value,
-      isAvailable: isMediaBunnyAvailable(),
-      canvasInfo: canvas
-        ? {
-            width: canvas.width,
-            height: canvas.height,
-          }
-        : null,
-      durationN: durationN.toString(),
-      playbackState: {
-        isPlaying: playbackModule.isPlaying.value,
-        currentFrame: playbackModule.currentFrame.value,
-      },
-    }
   }
 
   /**
@@ -604,7 +590,6 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
 
     // 工具方法
     isMediaBunnyAvailable,
-    getMediaBunnySummary,
     resetToDefaults,
   }
 }
