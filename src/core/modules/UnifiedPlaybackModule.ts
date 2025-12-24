@@ -85,37 +85,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   }
 
   /**
-   * 相对跳转（帧数）
-   * @param deltaFrames 帧数偏移量（可为负数）
-   */
-  function seekByFrames(deltaFrames: number) {
-    const newFrames = currentFrame.value + deltaFrames
-    setCurrentFrame(newFrames)
-    console.log('⏭️ 相对跳转:', {
-      deltaFrames,
-      oldFrame: currentFrame.value - deltaFrames,
-      newFrame: currentFrame.value,
-      timecode: framesToTimecode(currentFrame.value),
-    })
-  }
-
-  /**
-   * 跳转到下一帧
-   */
-  function nextFrame() {
-    seekByFrames(1)
-    console.log('⏭️ 下一帧')
-  }
-
-  /**
-   * 跳转到上一帧
-   */
-  function previousFrame() {
-    seekByFrames(-1)
-    console.log('⏮️ 上一帧')
-  }
-
-  /**
    * 设置播放状态
    * @param playing 是否播放
    */
@@ -239,9 +208,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     // 帧数控制方法
     setCurrentFrame,
     seekToFrame,
-    seekByFrames,
-    nextFrame,
-    previousFrame,
 
     // 播放控制方法
     setPlaying,

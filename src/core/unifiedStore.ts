@@ -335,9 +335,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 帧数控制方法
     setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
     seekToFrame: unifiedPlaybackModule.seekToFrame,
-    seekByFrames: unifiedPlaybackModule.seekByFrames,
-    nextFrame: unifiedPlaybackModule.nextFrame,
-    previousFrame: unifiedPlaybackModule.previousFrame,
 
     // 播放控制方法
     setPlaying: unifiedPlaybackModule.setPlaying,
