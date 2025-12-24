@@ -145,7 +145,7 @@ export class BunnyClip implements IClip {
   }
 
   private async resetVideoN(startN: bigint): Promise<void> {
-    console.log(`⏩ 视频 Seek 到`)
+    console.log(`⏩ 视频 Seek 到 ${startN}帧`)
 
     // 清理缓存的下一帧
     this.nextFrameN?.close()

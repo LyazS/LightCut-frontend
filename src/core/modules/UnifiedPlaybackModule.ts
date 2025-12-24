@@ -2,32 +2,37 @@ import { ref, computed } from 'vue'
 import { alignFramesToFrame, framesToTimecode } from '@/core/utils/timeUtils'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
-import type { UnifiedWebavModule } from '@/core/modules/UnifiedWebavModule'
+import type { UnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
 
 /**
  * 播放控制管理模块
  * 负责管理播放状态和时间控制
+ *
+ * 架构说明：
+ * - UnifiedPlaybackModule 作为主控，管理所有播放状态
+ * - 通过 MediaBunny 模块进行实际的渲染
+ * - 完全移除 WebAV 依赖
  */
 export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   // 通过注册中心获取依赖模块
   const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
   const frameRate = configModule.frameRate
   
-  // 获取 WebAV 模块引用（延迟获取，避免循环依赖）
-  let webavModule: UnifiedWebavModule | null = null
-  const getWebavModule = () => {
-    if (!webavModule) {
-      webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
+  // 获取 MediaBunny 模块引用（延迟获取，避免循环依赖）
+  let mediaBunnyModule: UnifiedMediaBunnyModule | null = null
+  const getMediaBunnyModule = () => {
+    if (!mediaBunnyModule) {
+      mediaBunnyModule = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
     }
-    return webavModule
+    return mediaBunnyModule
   }
   // ==================== 状态定义 ====================
 
   // 播放相关状态
   const currentFrame = ref(0) // 当前播放帧数（整数）
-  const currentWebAVFrame = ref(0) // 当前播放帧数（整数）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
+  const durationN = ref<bigint>(0n) // 项目时长（帧数，bigint类型）
 
   // ==================== 计算属性 ====================
 
@@ -76,9 +81,9 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * @param frames 目标帧数
    */
   async function seekToFrame(frames: number): Promise<void> {
-    const webav = getWebavModule()
-    if (webav.isWebAVReadyGlobal()) {
-      await webav.seekTo(frames)
+    const mediabunny = getMediaBunnyModule()
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.seekToFrame(frames)
     }
     setCurrentFrame(frames)
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
@@ -99,9 +104,9 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 播放
    */
   async function play(): Promise<void> {
-    const webav = getWebavModule()
-    if (webav.isWebAVReadyGlobal()) {
-      await webav.play()
+    const mediabunny = getMediaBunnyModule()
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.startPlayback()
     }
     setPlaying(true)
   }
@@ -110,9 +115,9 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 暂停
    */
   async function pause(): Promise<void> {
-    const webav = getWebavModule()
-    if (webav.isWebAVReadyGlobal()) {
-      webav.pause()
+    const mediabunny = getMediaBunnyModule()
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.stopPlayback()
     }
     setPlaying(false)
   }
@@ -129,10 +134,10 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 停止播放并回到开始
    */
   async function stop(): Promise<void> {
-    const webav = getWebavModule()
-    if (webav.isWebAVReadyGlobal()) {
-      webav.pause()
-      await webav.seekTo(0)
+    const mediabunny = getMediaBunnyModule()
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.stopPlayback()
+      await mediabunny.seekToFrame(0)
     }
     setPlaying(false)
     setCurrentFrame(0)
@@ -166,6 +171,15 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     setPlaybackRate(1)
     console.log('🔄 重置播放速度为正常')
   }
+  
+  /**
+   * 设置项目时长
+   * @param duration 项目时长（帧数，bigint类型）
+   */
+  function setDurationN(duration: bigint): void {
+    durationN.value = duration
+    console.log(`🎯 设置项目时长: ${duration}帧`)
+  }
 
   /**
    * 获取播放状态摘要
@@ -197,9 +211,9 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   return {
     // 状态
     currentFrame,
-    currentWebAVFrame,
     isPlaying,
     playbackRate,
+    durationN,
 
     // 计算属性
     formattedCurrentTime,
@@ -217,6 +231,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     stop,
     setPlaybackRate,
     resetPlaybackRate,
+    setDurationN,
     getPlaybackSummary,
     resetToDefaults,
   }

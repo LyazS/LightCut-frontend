@@ -368,43 +368,43 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
       return
     }
 
-    // 播放状态变化事件
-    globalAVCanvas.on('playing', () => {
-      playbackModule.setPlaying(true)
-    })
+    // // 播放状态变化事件
+    // globalAVCanvas.on('playing', () => {
+    //   playbackModule.setPlaying(true)
+    // })
 
-    globalAVCanvas.on('paused', () => {
-      playbackModule.setPlaying(false)
-    })
+    // globalAVCanvas.on('paused', () => {
+    //   playbackModule.setPlaying(false)
+    // })
 
-    // 时间更新事件
-    globalAVCanvas.on('timeupdate', (microseconds: number) => {
-      // 将微秒转换为帧数
-      const frames = microsecondsToFrames(microseconds)
-      // console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
-      playbackModule.currentWebAVFrame.value = frames
-      if (playbackModule.isPlaying.value) {
-        playbackModule.setCurrentFrame(frames)
-      }
-    })
+    // // 时间更新事件
+    // globalAVCanvas.on('timeupdate', (microseconds: number) => {
+    //   // 将微秒转换为帧数
+    //   const frames = microsecondsToFrames(microseconds)
+    //   // console.log(`[setCurrentFrame] timeupdate ${frames} ${microseconds}ms`)
+    //   playbackModule.currentWebAVFrame.value = frames
+    //   if (playbackModule.isPlaying.value) {
+    //     playbackModule.setCurrentFrame(frames)
+    //   }
+    // })
 
-    // 创建节流函数，50ms内只执行一次
-    const throttledPreviewFrame = throttle(async (frame: number) => {
-      if (globalAVCanvas && !playbackModule.isPlaying.value) {
-        const microseconds2 = framesToMicroseconds(frame)
-        await globalAVCanvas.previewFrame(microseconds2)
-        // console.log(`[setCurrentFrame] watch previewFrame ${frame} ${microseconds2}ms`)
-      }
-    }, 50)
+    // // 创建节流函数，50ms内只执行一次
+    // const throttledPreviewFrame = throttle(async (frame: number) => {
+    //   if (globalAVCanvas && !playbackModule.isPlaying.value) {
+    //     const microseconds2 = framesToMicroseconds(frame)
+    //     await globalAVCanvas.previewFrame(microseconds2)
+    //     // console.log(`[setCurrentFrame] watch previewFrame ${frame} ${microseconds2}ms`)
+    //   }
+    // }, 50)
 
-    watch(
-      [playbackModule.currentFrame, playbackModule.currentWebAVFrame],
-      async ([new_cf, new_cwf]) => {
-        if (new_cf != new_cwf) {
-          throttledPreviewFrame(new_cf)
-        }
-      },
-    )
+    // watch(
+    //   [playbackModule.currentFrame, playbackModule.currentWebAVFrame],
+    //   async ([new_cf, new_cwf]) => {
+    //     if (new_cf != new_cwf) {
+    //       throttledPreviewFrame(new_cf)
+    //     }
+    //   },
+    // )
 
     console.log('✅ [WebAV Events] Event listeners setup completed')
   }

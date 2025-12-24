@@ -324,9 +324,9 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 播放控制状态
     currentFrame: unifiedPlaybackModule.currentFrame,
-    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
     isPlaying: unifiedPlaybackModule.isPlaying,
     playbackRate: unifiedPlaybackModule.playbackRate,
+    durationN: unifiedPlaybackModule.durationN,
 
     // 计算属性
     formattedCurrentTime: unifiedPlaybackModule.formattedCurrentTime,
@@ -344,6 +344,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     stop: unifiedPlaybackModule.stop,
     setPlaybackRate: unifiedPlaybackModule.setPlaybackRate,
     resetPlaybackRate: unifiedPlaybackModule.resetPlaybackRate,
+    setDurationN: unifiedPlaybackModule.setDurationN,
     getPlaybackSummary: unifiedPlaybackModule.getPlaybackSummary,
     resetPlaybackToDefaults: unifiedPlaybackModule.resetToDefaults,
 
@@ -397,7 +398,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== MediaBunny模块状态和方法 ====================
 
     // MediaBunny状态
-    mediaBunnyPlaybackState: unifiedMediaBunnyModule.playbackState,
     isMediaBunnyReady: unifiedMediaBunnyModule.isMediaBunnyReady,
     mediaBunnyError: unifiedMediaBunnyModule.mediaBunnyError,
 
@@ -406,9 +406,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     destroyMediaBunny: unifiedMediaBunnyModule.destroy,
 
     // MediaBunny播放控制
-    mediaBunnyPlay: unifiedMediaBunnyModule.play,
-    mediaBunnyPause: unifiedMediaBunnyModule.pause,
-    mediaBunnySeekTo: unifiedMediaBunnyModule.seekTo,
+    mediaBunnyStartPlayback: unifiedMediaBunnyModule.startPlayback,
+    mediaBunnyStopPlayback: unifiedMediaBunnyModule.stopPlayback,
+    mediaBunnySeekToFrame: unifiedMediaBunnyModule.seekToFrame,
     updateMediaBunnyTimelineDuration: unifiedMediaBunnyModule.updateTimelineDuration,
 
     // MediaBunny工具方法

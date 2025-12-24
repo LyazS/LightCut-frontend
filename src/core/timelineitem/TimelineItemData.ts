@@ -256,7 +256,6 @@ export interface UnifiedTimelineItemRuntime {
   /** 与时间轴项目生命周期一致 */
   sprite?: Raw<UnifiedSprite> // 旧的webav的sprite对象
   bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
-  bunnyCurFrame?: VideoSample // mediabunny当前帧数据
   textBitmap?: ImageBitmap // 专门用于文本渲染的ImageBitmap
 }
 // ==================== 核心接口设计 ====================
