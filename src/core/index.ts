@@ -195,9 +195,6 @@ export {
   // 拖拽预览管理器
   getDragPreviewManager,
 
-  // 播放控制
-  usePlaybackControls,
-
   // 历史记录操作
   useHistoryOperations,
 } from './composables'

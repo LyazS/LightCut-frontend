@@ -376,17 +376,10 @@ export const useUnifiedStore = defineStore('unified', () => {
     // ==================== WebAV模块状态和方法 ====================
 
     // WebAV状态
-    avCanvas: unifiedWebavModule.avCanvas,
     isWebAVReady: unifiedWebavModule.isWebAVReady,
     webAVError: unifiedWebavModule.webAVError,
 
     // WebAV管理方法
-    setAVCanvas: unifiedWebavModule.setAVCanvas,
-    setWebAVReady: unifiedWebavModule.setWebAVReady,
-    setWebAVError: unifiedWebavModule.setWebAVError,
-    clearWebAVState: unifiedWebavModule.clearWebAVState,
-    getWebAVSummary: unifiedWebavModule.getWebAVSummary,
-    resetWebAVToDefaults: unifiedWebavModule.resetToDefaults,
     addSpriteToCanvas: unifiedWebavModule.addSprite,
     removeSpriteFromCanvas: unifiedWebavModule.removeSprite,
 
@@ -396,21 +389,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     getAVCanvas: unifiedWebavModule.getAVCanvas,
     getCanvasContainer: unifiedWebavModule.getCanvasContainer,
 
-    // WebAV播放控制
-    webAVPlay: unifiedWebavModule.play,
-    webAVPause: unifiedWebavModule.pause,
-    webAVSeekTo: unifiedWebavModule.seekTo,
-
-    // WebAV Clip创建和管理
-    createMP4Clip: unifiedWebavModule.createMP4Clip,
-    createImgClip: unifiedWebavModule.createImgClip,
-    createAudioClip: unifiedWebavModule.createAudioClip,
-    cloneMP4Clip: unifiedWebavModule.cloneMP4Clip,
-    cloneImgClip: unifiedWebavModule.cloneImgClip,
-    cloneAudioClip: unifiedWebavModule.cloneAudioClip,
-
     // WebAV实例管理
-    destroyWebAV: unifiedWebavModule.destroy,
     isWebAVReadyGlobal: unifiedWebavModule.isWebAVReadyGlobal,
     waitForWebAVReady: unifiedWebavModule.waitForWebAVReady,
 

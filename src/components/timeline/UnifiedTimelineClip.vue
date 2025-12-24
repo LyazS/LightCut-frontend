@@ -58,7 +58,6 @@ import type { UnifiedTimelineClipProps, ContentTemplateProps } from '@/core/type
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { ContentRendererFactory } from '@/components/cliprenderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { usePlaybackControls } from '@/core/composables'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { alignFramesToFrame } from '@/core/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
@@ -73,7 +72,6 @@ const props = defineProps<UnifiedTimelineClipProps>()
 
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
-const { pauseForEditing } = usePlaybackControls()
 const { t } = useAppI18n()
 
 // 获取素材名称
@@ -287,7 +285,7 @@ function handleDragStart(event: DragEvent) {
   }
 
   // 3. 暂停播放
-  pauseForEditing(t('timeline.clip.dragStartReason'))
+  unifiedStore.pause()
 
   // 4. 确保项目被选中
   if (!unifiedStore.selectedTimelineItemIds.has(props.data.id)) {
@@ -346,7 +344,7 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   console.log('🔧 [CleanTimelineClip] 开始调整大小:', direction, props.data.id)
 
   // 暂停播放以便进行编辑
-  pauseForEditing(t('timeline.clip.resizeStartReason'))
+  unifiedStore.pause()
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -568,12 +566,11 @@ function jumpToKeyframe(absoluteFrame: number) {
   })
 
   // 暂停播放以便进行时间跳转
-  pauseForEditing(t('timeline.clip.keyframeJumpReason'))
+  unifiedStore.pause()
 
-  // 通过WebAV进行时间跳转，这会触发画布渲染更新
+  // 使用统一接口进行时间跳转
   try {
-    // 使用webAVSeekTo方法，确保画布渲染得到更新
-    unifiedStore.webAVSeekTo(absoluteFrame)
+    unifiedStore.seekToFrame(absoluteFrame)
   } catch (error) {
     console.error('❌ [CleanTimelineClip] 关键帧跳转失败:', error)
   }

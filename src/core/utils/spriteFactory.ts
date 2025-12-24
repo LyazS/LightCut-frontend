@@ -31,6 +31,9 @@ import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/core/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
 
+// 导入 WebAV Clip 工具函数
+import { cloneMP4Clip, cloneImgClip, cloneAudioClip } from '@/core/utils/webavClipUtils'
+
 /**
  * 从统一媒体项目数据创建对应的 Sprite 实例
  *
@@ -75,11 +78,7 @@ export async function createSpriteFromUnifiedMediaItem(
     throw new Error(`媒体项目 WebAV 对象未就绪，无法创建 Sprite: ${mediaData.name}`)
   }
 
-  // 4. 动态导入 unifiedStore 以避免循环依赖
-  const { useUnifiedStore } = await import('@/core/unifiedStore')
-  const unifiedStore = useUnifiedStore()
-
-  // 5. 根据媒体类型创建对应的 Sprite
+  // 4. 根据媒体类型创建对应的 Sprite
   try {
     switch (mediaData.mediaType) {
       case 'video': {
@@ -88,7 +87,7 @@ export async function createSpriteFromUnifiedMediaItem(
         }
 
         // 克隆 MP4Clip 以避免多个 Sprite 共享同一个 Clip
-        const clonedMP4Clip = await unifiedStore.cloneMP4Clip(mediaData.runtime.webav.mp4Clip)
+        const clonedMP4Clip = await cloneMP4Clip(mediaData.runtime.webav.mp4Clip)
         return markRaw(new VideoVisibleSprite(clonedMP4Clip))
       }
 
@@ -98,7 +97,7 @@ export async function createSpriteFromUnifiedMediaItem(
         }
 
         // 克隆 ImgClip 以避免多个 Sprite 共享同一个 Clip
-        const clonedImgClip = await unifiedStore.cloneImgClip(mediaData.runtime.webav.imgClip)
+        const clonedImgClip = await cloneImgClip(mediaData.runtime.webav.imgClip)
         return markRaw(new ImageVisibleSprite(clonedImgClip))
       }
 
@@ -108,7 +107,7 @@ export async function createSpriteFromUnifiedMediaItem(
         }
 
         // 克隆 AudioClip 以避免多个 Sprite 共享同一个 Clip
-        const clonedAudioClip = await unifiedStore.cloneAudioClip(mediaData.runtime.webav.audioClip)
+        const clonedAudioClip = await cloneAudioClip(mediaData.runtime.webav.audioClip)
         return markRaw(new AudioVisibleSprite(clonedAudioClip))
       }
 

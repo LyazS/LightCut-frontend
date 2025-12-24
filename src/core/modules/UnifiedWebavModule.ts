@@ -158,27 +158,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
   }
 
   /**
-   * 获取WebAV状态摘要
-   * @returns WebAV状态摘要对象
-   */
-  function getWebAVSummary() {
-    return {
-      hasCanvas: !!avCanvas.value,
-      isReady: isWebAVReady.value,
-      hasError: !!webAVError.value,
-      error: webAVError.value,
-      isAvailable: isWebAVAvailable(),
-      canvasInfo: avCanvas.value
-        ? {
-            width: 'width' in avCanvas.value ? avCanvas.value.width : 'unknown',
-            height: 'height' in avCanvas.value ? avCanvas.value.height : 'unknown',
-            constructor: avCanvas.value.constructor.name,
-          }
-        : null,
-    }
-  }
-
-  /**
    * 重置WebAV状态为默认值
    */
   function resetToDefaults() {
@@ -228,38 +207,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
       setWebAVError(`移除sprite失败: ${errorMessage}`)
       return false
     }
-  }
-
-  // ==================== Clip创建和管理 ====================
-
-  /**
-   * 创建MP4Clip
-   * @param file 视频文件
-   */
-  async function createMP4Clip(file: File): Promise<Raw<MP4Clip>> {
-    // 使用工具函数
-    const { createMP4Clip: createClip } = await import('@/core/utils/webavClipUtils')
-    return createClip(file)
-  }
-
-  /**
-   * 创建ImgClip
-   * @param file 图片文件
-   */
-  async function createImgClip(file: File): Promise<Raw<ImgClip>> {
-    // 使用工具函数
-    const { createImgClip: createClip } = await import('@/core/utils/webavClipUtils')
-    return createClip(file)
-  }
-
-  /**
-   * 创建AudioClip
-   * @param file 音频文件
-   */
-  async function createAudioClip(file: File): Promise<Raw<AudioClip>> {
-    // 使用工具函数
-    const { createAudioClip: createClip } = await import('@/core/utils/webavClipUtils')
-    return createClip(file)
   }
 
   // ==================== 画布容器管理 ====================
@@ -529,36 +476,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     playbackModule.setCurrentFrame(frames)
   }
 
-  /**
-   * 克隆MP4Clip实例
-   * @param originalClip 原始MP4Clip
-   */
-  async function cloneMP4Clip(originalClip: Raw<MP4Clip>): Promise<Raw<MP4Clip>> {
-    // 使用工具函数
-    const { cloneMP4Clip: cloneClip } = await import('@/core/utils/webavClipUtils')
-    return cloneClip(originalClip)
-  }
-
-  /**
-   * 克隆ImgClip实例
-   * @param originalClip 原始ImgClip
-   */
-  async function cloneImgClip(originalClip: Raw<ImgClip>): Promise<Raw<ImgClip>> {
-    // 使用工具函数
-    const { cloneImgClip: cloneClip } = await import('@/core/utils/webavClipUtils')
-    return cloneClip(originalClip)
-  }
-
-  /**
-   * 克隆AudioClip实例
-   * @param originalClip 原始AudioClip
-   */
-  async function cloneAudioClip(originalClip: Raw<AudioClip>): Promise<Raw<AudioClip>> {
-    // 使用工具函数
-    const { cloneAudioClip: cloneClip } = await import('@/core/utils/webavClipUtils')
-    return cloneClip(originalClip)
-  }
-
   // ==================== 实例管理 ====================
 
   /**
@@ -757,20 +674,11 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
 
   return {
     // 状态
-    avCanvas,
     isWebAVReady,
     webAVError,
 
-    // 状态管理方法
-    setAVCanvas,
-    setWebAVReady,
-    setWebAVError,
-    clearWebAVState,
-
     // 工具方法
     isWebAVAvailable,
-    getWebAVSummary,
-    resetToDefaults,
     addSprite,
     removeSprite,
 
@@ -785,16 +693,7 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     pause,
     seekTo,
 
-    // Clip创建和管理
-    createMP4Clip,
-    createImgClip,
-    createAudioClip,
-    cloneMP4Clip,
-    cloneImgClip,
-    cloneAudioClip,
-
     // 实例管理
-    destroy,
     isWebAVReadyGlobal,
     waitForWebAVReady,
 

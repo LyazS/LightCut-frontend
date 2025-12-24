@@ -37,44 +37,27 @@
 import { computed } from 'vue'
 import { NDropdown } from 'naive-ui'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { usePlaybackControls } from '@/core/composables'
 import { useAppI18n } from '@/core/composables/useI18n'
 import HoverButton from '@/components/base/HoverButton.vue'
 import { IconComponents, getPlaybackIcon } from '@/constants/iconComponents'
 
 const unifiedStore = useUnifiedStore()
-const { safePlaybackOperation, restartPlayback } = usePlaybackControls()
 const { t } = useAppI18n()
 
 const isPlaying = computed(() => unifiedStore.isPlaying)
 const playbackRate = computed(() => unifiedStore.playbackRate)
 
-// WebAV作为播放状态的主控
+// 统一播放控制接口
 function togglePlayPause() {
-  safePlaybackOperation(
-    () => {
-      if (isPlaying.value) {
-        // 通过WebAV暂停，WebAV会触发事件更新store状态
-        unifiedStore.webAVPause()
-      } else {
-        // 通过WebAV播放，WebAV会触发事件更新store状态
-        unifiedStore.webAVPlay()
-      }
-    },
-    t('common.play') + '/' + t('common.pause') + t('common.toggle'),
-  )
+  if (isPlaying.value) {
+    unifiedStore.pause()
+  } else {
+    unifiedStore.play()
+  }
 }
 
 function stop() {
-  safePlaybackOperation(
-    () => {
-      // 暂停播放并跳转到开始位置
-      unifiedStore.webAVPause()
-      // 只通过WebAV设置时间，WebAV会触发timeupdate事件更新Store
-      unifiedStore.webAVSeekTo(0)
-    },
-    t('common.stop') + t('common.playback'),
-  )
+  unifiedStore.stop()
 }
 
 const speedOptions = [
@@ -99,11 +82,20 @@ const speedDropdownOptions = computed(() =>
 )
 
 function handleSpeedSelect(key: number) {
+  // 记录当前播放状态
+  const wasPlaying = unifiedStore.isPlaying
+  if (unifiedStore.isPlaying) {
+    // 暂停播放
+    unifiedStore.pause()
+  }
+
   // 更新store中的播放速度
   unifiedStore.setPlaybackRate(key)
 
-  // 如果正在播放，重新开始播放以应用新的播放速度
-  restartPlayback()
+  // 如果之前在播放，则恢复播放
+  if (wasPlaying && unifiedStore.isWebAVReadyGlobal()) {
+    unifiedStore.play()
+  }
 }
 </script>
 

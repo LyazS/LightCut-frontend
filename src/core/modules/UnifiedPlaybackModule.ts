@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { alignFramesToFrame, framesToTimecode } from '@/core/utils/timeUtils'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
+import type { UnifiedWebavModule } from '@/core/modules/UnifiedWebavModule'
 
 /**
  * 播放控制管理模块
@@ -11,6 +12,15 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   // 通过注册中心获取依赖模块
   const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
   const frameRate = configModule.frameRate
+  
+  // 获取 WebAV 模块引用（延迟获取，避免循环依赖）
+  let webavModule: UnifiedWebavModule | null = null
+  const getWebavModule = () => {
+    if (!webavModule) {
+      webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
+    }
+    return webavModule
+  }
   // ==================== 状态定义 ====================
 
   // 播放相关状态
@@ -65,7 +75,11 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 跳转到指定帧数
    * @param frames 目标帧数
    */
-  function seekToFrame(frames: number) {
+  async function seekToFrame(frames: number): Promise<void> {
+    const webav = getWebavModule()
+    if (webav.isWebAVReadyGlobal()) {
+      await webav.seekTo(frames)
+    }
     setCurrentFrame(frames)
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
   }
@@ -115,14 +129,22 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   /**
    * 播放
    */
-  function play() {
+  async function play(): Promise<void> {
+    const webav = getWebavModule()
+    if (webav.isWebAVReadyGlobal()) {
+      await webav.play()
+    }
     setPlaying(true)
   }
 
   /**
    * 暂停
    */
-  function pause() {
+  async function pause(): Promise<void> {
+    const webav = getWebavModule()
+    if (webav.isWebAVReadyGlobal()) {
+      webav.pause()
+    }
     setPlaying(false)
   }
 
@@ -137,7 +159,12 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   /**
    * 停止播放并回到开始
    */
-  function stop() {
+  async function stop(): Promise<void> {
+    const webav = getWebavModule()
+    if (webav.isWebAVReadyGlobal()) {
+      webav.pause()
+      await webav.seekTo(0)
+    }
     setPlaying(false)
     setCurrentFrame(0)
     console.log('⏹️ 停止播放')

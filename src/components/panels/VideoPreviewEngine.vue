@@ -138,11 +138,6 @@ const adjustPanelWidths = () => {
 }
 
 onMounted(() => {
-  logComponentLifecycle('VideoPreviewEngine', 'mounted', {
-    isWebAVReady: unifiedStore.isWebAVReady,
-    hasAVCanvas: !!unifiedStore.avCanvas,
-  })
-
   // 初始化百分比宽度（基于当前像素宽度）
   initializePanelPercentages()
 

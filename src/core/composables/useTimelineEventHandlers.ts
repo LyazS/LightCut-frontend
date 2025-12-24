@@ -1,5 +1,4 @@
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { usePlaybackControls } from '@/core/composables'
 import type { Ref } from 'vue'
 import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 
@@ -12,7 +11,6 @@ export function useTimelineEventHandlers(
   handleTimelineItemRemove: (timelineItemId: string) => Promise<void>,
 ) {
   const unifiedStore = useUnifiedStore()
-  const { pauseForEditing } = usePlaybackControls()
 
   /**
    * 处理时间轴容器点击事件
@@ -112,7 +110,7 @@ export function useTimelineEventHandlers(
     })
 
     // 暂停播放以便进行编辑
-    pauseForEditing('片段大小调整')
+    unifiedStore.pause()
 
     // 确保项目被选中（如果还没有选中的话）
     if (!unifiedStore.isTimelineItemSelected(itemId)) {

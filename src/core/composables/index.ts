@@ -5,9 +5,6 @@
 // 重新导出 getDragPreviewManager 函数
 export { getDragPreviewManager } from './useDragPreview'
 
-// 重新导出 usePlaybackControls 函数
-export { usePlaybackControls } from './usePlaybackControls'
-
 // 重新导出 useKeyboardShortcuts 函数
 export { useKeyboardShortcuts } from './useKeyboardShortcuts'
 
