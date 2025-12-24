@@ -65,9 +65,6 @@ interface TimelineItemProps<T extends MediaType = MediaType> {
   /** 是否多选状态 - 必选 */
   isMultiSelected: boolean
 
-  /** 当前播放时间（帧数） - 必选 */
-  currentFrame: number
-
   /** 轨道高度 - 必选 */
   trackHeight: number
 

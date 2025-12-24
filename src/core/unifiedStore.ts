@@ -357,10 +357,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== WebAV模块状态和方法 ====================
 
-    // WebAV状态
-    isWebAVReady: unifiedWebavModule.isWebAVReady,
-    webAVError: unifiedWebavModule.webAVError,
-
     // WebAV管理方法
     addSpriteToCanvas: unifiedWebavModule.addSprite,
     removeSpriteFromCanvas: unifiedWebavModule.removeSprite,

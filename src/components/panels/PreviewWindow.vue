@@ -1,23 +1,8 @@
 <template>
   <div class="preview-window">
-    <!-- 渲染器切换 -->
+    <!-- Bunny渲染器 -->
     <div class="renderer-container">
-      <!-- WebAV渲染器 -->
-      <WebAVRenderer v-show="useWebAVRenderer" />
-      
-      <!-- Bunny渲染器 -->
-      <BunnyRender v-show="!useWebAVRenderer" />
-    </div>
-
-    <!-- 渲染器切换按钮 -->
-    <div class="renderer-toggle">
-      <button
-        @click="toggleRenderer"
-        class="toggle-btn"
-        :title="`切换到 ${useWebAVRenderer ? 'Bunny' : 'WebAV'} 渲染器`"
-      >
-        {{ useWebAVRenderer ? 'WebAV' : 'Bunny' }}
-      </button>
+      <BunnyRender />
     </div>
 
     <!-- 播放控制面板紧贴在预览窗口下方 -->
@@ -57,7 +42,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import WebAVRenderer from '@/components/panels/WebAVRenderer.vue'
 import BunnyRender from '@/components/panels/BunnyRender.vue'
 import ResolutionModal from '@/components/modals/ResolutionModal.vue'
 import UnifiedPlaybackControls from '@/components/timeline/UnifiedPlaybackControls.vue'
@@ -70,15 +54,6 @@ const { t } = useAppI18n()
 
 // 分辨率弹窗显示状态
 const showResolutionModal = ref(false)
-
-// 渲染器切换状态
-const useWebAVRenderer = ref(false)
-
-// 切换渲染器
-const toggleRenderer = () => {
-  useWebAVRenderer.value = !useWebAVRenderer.value
-  console.log(`切换到 ${useWebAVRenderer.value ? 'WebAV' : 'Bunny'} 渲染器`)
-}
 
 // 从videoStore获取当前分辨率，而不是使用硬编码的默认值
 const currentResolution = computed(() => {
@@ -137,30 +112,6 @@ function handleResolutionConfirm(resolution: {
   flex: 1;
   position: relative;
   overflow: hidden;
-}
-
-.renderer-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-}
-
-.toggle-btn {
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: var(--border-radius-medium);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  backdrop-filter: blur(4px);
-}
-
-.toggle-btn:hover {
-  background-color: rgba(0, 0, 0, 0.9);
-  transform: translateY(-1px);
 }
 
 .controls-section {

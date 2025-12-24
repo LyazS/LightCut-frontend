@@ -110,7 +110,6 @@ const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
   isMultiSelected: props.isMultiSelected,
-  currentFrame: props.currentFrame,
   trackHeight: props.trackHeight,
   timelineWidth: props.timelineWidth,
   viewportFrameRange: props.viewportFrameRange,

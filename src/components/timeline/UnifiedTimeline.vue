@@ -414,7 +414,6 @@ function renderTimelineItem(item: UnifiedTimelineItemData, track: UnifiedTrackDa
     data: item,
     isSelected: unifiedStore.isTimelineItemSelected(item.id),
     isMultiSelected: unifiedStore.isMultiSelectMode,
-    currentFrame: unifiedStore.currentFrame,
     trackHeight: track.height,
     timelineWidth: unifiedStore.TimelineContentWidth,
     viewportFrameRange: viewportFrameRange.value,

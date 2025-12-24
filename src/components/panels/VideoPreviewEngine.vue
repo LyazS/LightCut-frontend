@@ -47,12 +47,7 @@
         <div class="clip-management-toolbar">
           <UnifiedClipManagementToolbar />
         </div>
-        <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
-        <div v-else class="timeline-loading">
-          <div class="loading-spinner"></div>
-          <p>{{ t('editor.initializingWebAV') }}</p>
-        </div>
+        <UnifiedTimeline />
       </div>
     </div>
 
@@ -110,15 +105,6 @@ const SPLITTER_WIDTH = 8
 
 // 注册全局快捷键
 useKeyboardShortcuts()
-
-// 添加WebAV就绪状态监听
-watch(
-  () => unifiedStore.isWebAVReady,
-  (isReady, wasReady) => {
-    logWebAVReadyStateChange(isReady, wasReady)
-  },
-  { immediate: true },
-)
 
 // 窗口大小变化时调整面板宽度
 const adjustPanelWidths = () => {
