@@ -118,7 +118,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
   // 缓存的刻度间隔计算结果 - 使用 timelineWidth（不包含轨道控制区域）
   const scaleIntervals = computed(() => {
     return calculateScaleIntervals(
-      unifiedStore.timelineWidth,
+      unifiedStore.TimelineContentWidth,
       unifiedStore.totalDurationFrames,
       unifiedStore.zoomLevel,
     )
@@ -134,7 +134,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
 
     // 计算可见帧数范围 - 使用 timelineWidth（不包含轨道控制区域）
     const { startFrames, endFrames } = calculateVisibleFrameRange(
-      unifiedStore.timelineWidth,
+      unifiedStore.TimelineContentWidth,
       unifiedStore.totalDurationFrames,
       unifiedStore.zoomLevel,
       unifiedStore.scrollOffset,
@@ -152,10 +152,10 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
       if (frames < 0) continue
 
       const isMajor = frames % currentLevel.majorInterval === 0
-      const position = unifiedStore.frameToPixel(frames, unifiedStore.timelineWidth)
+      const position = unifiedStore.frameToPixel(frames, unifiedStore.TimelineContentWidth)
 
       // 只添加可见范围内的刻度（扩增可见范围）
-      if (position >= -50 && position <= unifiedStore.timelineWidth + 50) {
+      if (position >= -50 && position <= unifiedStore.TimelineContentWidth + 50) {
         marks.push({
           time: frames,
           position,
@@ -232,7 +232,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
 
     const rect = scaleContainer.value.getBoundingClientRect()
     const clickX = event.clientX - rect.left
-    return unifiedStore.pixelToFrame(clickX, unifiedStore.timelineWidth)
+    return unifiedStore.pixelToFrame(clickX, unifiedStore.TimelineContentWidth)
   }
 
   /**
@@ -246,7 +246,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
     // 限制鼠标X坐标在刻度容器范围内
     const clampedX = Math.max(rect.left, Math.min(event.clientX, rect.right))
     const clickX = clampedX - rect.left
-    return unifiedStore.pixelToFrame(clickX, unifiedStore.timelineWidth)
+    return unifiedStore.pixelToFrame(clickX, unifiedStore.TimelineContentWidth)
   }
 
   /**

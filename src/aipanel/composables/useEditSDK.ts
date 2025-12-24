@@ -448,7 +448,7 @@ export function useEditSDK(
       // 需要从统一存储获取总时长和容器宽度
       const unifiedStore = useUnifiedStore()
       const { startFrames, endFrames } = calculateVisibleFrameRange(
-        unifiedStore.containerWidth, // 使用统一存储的容器宽度
+        unifiedStore.TimelineContainerWidth, // 使用统一存储的容器宽度
         unifiedStore.totalDurationFrames,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,

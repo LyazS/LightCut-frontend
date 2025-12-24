@@ -30,13 +30,6 @@ import type { UnifiedViewportModule } from '@/core/modules/UnifiedViewportModule
 import type { UnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
 import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
 import {
-  expandTimelineIfNeededFrames,
-  smartExpandTimelineIfNeeded,
-  batchExpandTimelineIfNeeded,
-  predictiveExpandTimeline,
-  getTimelineExpansionSuggestion,
-} from '@/core/utils/timeUtils'
-import {
   getTimelineItemAtFrames,
   getTimelineItemsByTrack,
   findTimelineItemBySprite,
@@ -51,10 +44,7 @@ import {
   findOverlappingTimelineItemsOnTrack,
   findOrphanedTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
-import {
-  cloneTimelineItem,
-  duplicateTimelineItem,
-} from '@/core/timelineitem/TimelineItemFactory'
+import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/TimelineItemFactory'
 
 /**
  * 统一视频编辑器存储
@@ -113,17 +103,17 @@ export const useUnifiedStore = defineStore('unified', () => {
   })
 
   // 时间轴容器宽度（用于可见范围计算）
-  const containerWidth = ref(800) // 默认容器宽度
+  const TimelineContainerWidth = ref(800) // 默认容器宽度
 
   // 设置容器宽度的方法
   function setContainerWidth(width: number) {
-    containerWidth.value = width
+    TimelineContainerWidth.value = width
   }
 
   // 时间轴内容区域宽度（轨道内容区域的宽度，不包含轨道控制区域）
   // 计算属性：containerWidth - TRACK_CONTROL_WIDTH
-  const timelineWidth = computed(() => {
-    return containerWidth.value - LayoutConstants.TRACK_CONTROL_WIDTH
+  const TimelineContentWidth = computed(() => {
+    return TimelineContainerWidth.value - LayoutConstants.TRACK_CONTROL_WIDTH
   })
 
   const unifiedViewportModule = createUnifiedViewportModule(registry)
@@ -529,39 +519,6 @@ export const useUnifiedStore = defineStore('unified', () => {
         unifiedViewportModule.scrollOffset.value,
       ),
 
-    // ==================== 时间轴扩展功能 ====================
-    expandTimelineIfNeededFrames: (targetFrames: number) =>
-      expandTimelineIfNeededFrames(targetFrames, unifiedConfigModule.timelineDurationFrames),
-    smartExpandTimelineIfNeeded: (targetFrames: number, minRatio?: number, maxRatio?: number) =>
-      smartExpandTimelineIfNeeded(
-        targetFrames,
-        unifiedConfigModule.timelineDurationFrames,
-        minRatio,
-        maxRatio,
-      ),
-    batchExpandTimelineIfNeeded: (targetFramesList: number[], expansionRatio?: number) =>
-      batchExpandTimelineIfNeeded(
-        targetFramesList,
-        unifiedConfigModule.timelineDurationFrames,
-        expansionRatio,
-      ),
-    predictiveExpandTimeline: (
-      currentUsedFrames: number,
-      usageThreshold?: number,
-      expansionRatio?: number,
-    ) =>
-      predictiveExpandTimeline(
-        currentUsedFrames,
-        unifiedConfigModule.timelineDurationFrames,
-        usageThreshold,
-        expansionRatio,
-      ),
-    getTimelineExpansionSuggestion: (
-      currentDuration: number,
-      targetFrames: number,
-      currentUsedFrames: number,
-    ) => getTimelineExpansionSuggestion(currentDuration, targetFrames, currentUsedFrames),
-
     // ==================== 时间轴搜索工具函数 ====================
     getTimelineItemAtFrames: (frames: number) =>
       getTimelineItemAtFrames(frames, unifiedTimelineModule.timelineItems.value),
@@ -744,10 +701,10 @@ export const useUnifiedStore = defineStore('unified', () => {
     list_timelineitems,
 
     // 时间轴容器宽度（用于可见范围计算）
-    containerWidth,
+    TimelineContainerWidth,
     setContainerWidth,
 
     // 时间轴内容区域宽度（计算属性）
-    timelineWidth,
+    TimelineContentWidth,
   }
 })

@@ -413,7 +413,7 @@ export function useTimelineContextMenu(
     const relativeX = clickX - timelineBodyRect.left - LayoutConstants.TRACK_CONTROL_WIDTH
 
     // 转换为帧数
-    const timeFrames = unifiedStore.pixelToFrame(relativeX, unifiedStore.timelineWidth)
+    const timeFrames = unifiedStore.pixelToFrame(relativeX, unifiedStore.TimelineContentWidth)
 
     // 确保时间位置不为负数
     return Math.max(0, Math.round(timeFrames))

@@ -68,7 +68,6 @@ export {
 export {
   // 时间计算工具
   calculatePixelsPerFrame,
-  expandTimelineIfNeededFrames,
   formatFileSize,
 
   // 时间码转换函数

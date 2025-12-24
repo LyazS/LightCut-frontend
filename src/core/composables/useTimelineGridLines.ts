@@ -17,7 +17,7 @@ export function useTimelineGridLines() {
     const lines = []
     const totalDurationFrames = unifiedStore.totalDurationFrames
     const pixelsPerFrame =
-      (unifiedStore.timelineWidth * unifiedStore.zoomLevel) / totalDurationFrames
+      (unifiedStore.TimelineContentWidth * unifiedStore.zoomLevel) / totalDurationFrames
     const pixelsPerSecond = pixelsPerFrame * unifiedStore.frameRate
 
     // 根据缩放级别决定网格间隔（基于帧数）
@@ -40,7 +40,7 @@ export function useTimelineGridLines() {
 
     // 计算可见时间范围（使用帧数版本）
     const { startFrames, endFrames } = calculateVisibleFrameRange(
-      unifiedStore.timelineWidth,
+      unifiedStore.TimelineContentWidth,
       totalDurationFrames,
       unifiedStore.zoomLevel,
       unifiedStore.scrollOffset,
