@@ -8,7 +8,7 @@ import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
 } from '@/core/utils/durationUtils'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'

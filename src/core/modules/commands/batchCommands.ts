@@ -20,7 +20,7 @@ import {
 } from '@/core/modules/commands/timelineCommands'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 

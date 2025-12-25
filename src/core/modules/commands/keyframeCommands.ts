@@ -13,7 +13,6 @@ export {
   ToggleKeyframeCommand,
   type KeyframeSnapshot,
   type TimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
   generateCommandId,
   createSnapshot,

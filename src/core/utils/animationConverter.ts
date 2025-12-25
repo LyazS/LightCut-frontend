@@ -8,7 +8,7 @@ import type {
   AnimationConfig,
   WebAVAnimationConfig,
   Keyframe,
-} from '@/core/timelineitem/AnimationTypes'
+} from '@/core/timelineitem/animationtypes'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { framesToMicroseconds } from '@/core/utils/timeUtils'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'

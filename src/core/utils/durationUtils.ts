@@ -3,7 +3,7 @@
  * 基于新架构的统一类型系统，提供与原 durationUtils 相同的功能
  */
 
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { secondsToFrames } from '@/core/utils/timeUtils'
 
 // ==================== 帧数版本的时长计算工具 ====================

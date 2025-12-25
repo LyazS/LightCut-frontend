@@ -34,7 +34,7 @@ import {
   isPlayheadInTimelineItem,
   findOverlappingTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
-import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/TimelineItemFactory'
+import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/factory'
 
 /**
  * 统一视频编辑器存储

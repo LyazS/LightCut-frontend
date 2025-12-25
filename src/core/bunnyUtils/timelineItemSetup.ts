@@ -1,7 +1,7 @@
 import { markRaw } from 'vue'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { TextMediaConfig } from '@/core/timelineitem/TimelineItemData'
+import type { TextMediaConfig } from '@/core/timelineitem/type'
 import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import { textToImageBitmap } from './ToBitmap'
 

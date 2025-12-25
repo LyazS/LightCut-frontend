@@ -4,7 +4,7 @@
  */
 
 import type { Raw } from 'vue'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaTypeOrUnknown, UnifiedMediaItemData } from '@/core/mediaitem'
 import type { UnifiedSprite } from '@/core/visiblesprite'
 

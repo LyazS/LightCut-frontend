@@ -3,7 +3,7 @@
  */
 
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 /**
  * 媒体同步场景

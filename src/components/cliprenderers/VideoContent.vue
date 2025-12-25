@@ -45,7 +45,7 @@ import {
 } from '@/core/utils/thumbnailLayout'
 import type { ThumbnailLayoutItem } from '@/core/types/thumbnail'
 import { THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
-import { isImageTimelineItem } from '@/core/timelineitem/TimelineItemQueries'
+import { isImageTimelineItem } from '@/core/timelineitem/queries'
 
 const props = defineProps<ContentTemplateProps<'video' | 'image'>>()
 const unifiedStore = useUnifiedStore()

@@ -9,7 +9,7 @@ import {
   getTrackTypeLabel,
 } from '@/constants/iconComponents'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { LayoutConstants } from '@/constants/LayoutConstants'
 import { exportTimelineItem } from '@/core/utils/projectExporter'
 

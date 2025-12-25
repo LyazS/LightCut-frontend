@@ -11,7 +11,7 @@
  */
 
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TransitionOptions } from './types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'

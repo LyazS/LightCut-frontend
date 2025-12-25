@@ -2,10 +2,10 @@ import { reactive } from 'vue'
 import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
 import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import { generateUUID4 } from '@/core/utils/idGenerator'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
-import type { TextMediaConfig, TextStyleConfig } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import type { TextMediaConfig, TextStyleConfig } from '@/core/timelineitem/type'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/TimelineItemData'
+import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/type'
 import type { TimeRange as TimeRangeN } from '@/core/mediabunny/types'
 
 /**

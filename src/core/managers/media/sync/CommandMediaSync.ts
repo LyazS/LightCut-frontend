@@ -6,7 +6,7 @@
 import { watch } from 'vue'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { BaseMediaSync } from './BaseMediaSync'
 import { TimelineItemTransitioner } from './TimelineItemTransitioner'

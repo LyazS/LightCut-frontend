@@ -8,7 +8,7 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type { Ref } from 'vue'
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { VideoResolution } from '@/core/types'
 
@@ -16,7 +16,7 @@ import type { VideoResolution } from '@/core/types'
 import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
 
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 // ==================== 旧架构类型工具导入 ====================
 import { generateCommandId } from '@/core/utils/idGenerator'
 

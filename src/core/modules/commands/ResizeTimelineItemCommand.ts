@@ -4,13 +4,13 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem'
 
 /**

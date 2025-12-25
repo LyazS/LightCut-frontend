@@ -14,7 +14,7 @@ import {
 } from '@/core/offscreensprite'
 import type { UnifiedOffscreenSprite } from '@/core/offscreensprite'
 import type { UnifiedSprite } from '@/core/visiblesprite'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import {
@@ -24,7 +24,7 @@ import {
   isTextTimelineItem,
   hasVisualProperties,
   hasAudioProperties,
-} from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/queries'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import { convertToWebAVAnimation, isValidAnimationConfig } from '@/core/utils/animationConverter'
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'

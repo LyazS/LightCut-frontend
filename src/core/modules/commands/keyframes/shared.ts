@@ -9,9 +9,9 @@ import type {
   AudioMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
-import type { AnimationConfig } from '@/core/timelineitem/AnimationTypes'
-import { hasVisualProperties } from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/type'
+import type { AnimationConfig } from '@/core/timelineitem/animationtypes'
+import { hasVisualProperties } from '@/core/timelineitem/queries'
 import { generateCommandId as generateId } from '@/core/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'

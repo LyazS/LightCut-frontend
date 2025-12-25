@@ -158,8 +158,8 @@ import {
   isImageTimelineItem,
   hasVisualProperties,
   hasAudioProperties,
-} from '@/core/timelineitem/TimelineItemQueries'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/queries'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { framesToTimecode, timecodeToFrames } from '@/core/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables'
 import { getMuteIcon } from '@/constants/iconComponents'

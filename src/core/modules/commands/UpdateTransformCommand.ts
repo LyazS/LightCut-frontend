@@ -18,7 +18,7 @@ import type {
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem'
 
 // ==================== 新架构工具导入 ====================
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 import {
   isUnifiedVideoVisibleSprite,

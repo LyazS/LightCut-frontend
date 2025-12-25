@@ -5,12 +5,12 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem'
 import { MediaSyncFactory } from '@/core/managers/media'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**
  * 删除轨道命令

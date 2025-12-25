@@ -27,7 +27,7 @@ import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { AudioSample } from 'mediabunny'
 

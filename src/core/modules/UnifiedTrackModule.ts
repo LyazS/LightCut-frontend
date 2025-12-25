@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
-import { isReady } from '@/core/timelineitem/TimelineItemQueries'
+import { isReady } from '@/core/timelineitem/queries'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 
 /**

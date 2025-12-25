@@ -11,7 +11,7 @@ import type {
   TimelineStartSnapPoint,
 } from '@/types/snap'
 import { DEFAULT_SNAP_CONFIG } from '@/types/snap'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'

@@ -1,6 +1,6 @@
 import { MP4Clip, ImgClip } from '@webav/av-cliper'
 import type { UnifiedMediaItemData } from '@/core/mediaitem'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'
 

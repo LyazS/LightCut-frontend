@@ -7,8 +7,8 @@ import type { MediaType } from '@/core/mediaitem'
 import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
-} from '@/core/timelineitem/TimelineItemData'
-import { TimelineStatusDisplayUtils } from '@/core/timelineitem/TimelineStatusDisplayUtils'
+} from '@/core/timelineitem/type'
+import { TimelineStatusDisplayUtils } from '@/core/timelineitem/statusdisplayutils'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
 // ==================== 类型守卫函数 ====================

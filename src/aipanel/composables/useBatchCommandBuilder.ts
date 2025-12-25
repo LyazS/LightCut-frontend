@@ -11,7 +11,7 @@ import type {
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,

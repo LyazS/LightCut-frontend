@@ -16,7 +16,7 @@ import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
@@ -25,14 +25,14 @@ import type {
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
 // ==================== 新架构工具导入 ====================
 
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 

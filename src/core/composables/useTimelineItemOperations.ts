@@ -6,13 +6,13 @@ import type {
   UnifiedTimelineItemData,
   GetTimelineItemConfig,
   TimelineItemStatus,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 
 /**
  * 时间轴项目操作模块

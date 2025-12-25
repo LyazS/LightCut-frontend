@@ -31,7 +31,7 @@ import {
 } from '@/core/modules/commands/timelineCommands'
 import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchCommands'
 import { TimelineItemQueries } from '@/core/timelineitem/'
-import { duplicateTimelineItem } from '@/core/timelineitem/TimelineItemFactory'
+import { duplicateTimelineItem } from '@/core/timelineitem/factory'
 import { UpdateTextCommand } from '@/core/modules/commands/UpdateTextCommand'
 import type { TextStyleConfig } from '@/core/timelineitem'
 import {

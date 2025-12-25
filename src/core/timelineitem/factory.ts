@@ -13,15 +13,15 @@ import type {
   AudioMediaConfig,
   TextMediaConfig,
   GetMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type {
   UnifiedTimelineItemData,
   UnknownMediaConfig,
   TimelineItemStatus,
-} from '@/core/timelineitem/TimelineItemData'
-import type { AnimationConfig } from './AnimationTypes'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/type'
+import type { AnimationConfig } from './animationtypes'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import {
   createSpriteFromUnifiedTimelineItem,

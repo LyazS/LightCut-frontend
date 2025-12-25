@@ -4,12 +4,12 @@
  * 适配新架构版本
  */
 
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type {
   Keyframe,
   KeyframeButtonState,
   KeyframeUIState,
-} from '@/core/timelineitem/AnimationTypes'
+} from '@/core/timelineitem/animationtypes'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import {
   hasVisualProperties,
@@ -18,7 +18,7 @@ import {
   isImageTimelineItem,
   isTextTimelineItem,
   isAudioTimelineItem,
-} from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/queries'
 
 // ==================== 关键帧位置转换工具函数 ====================
 

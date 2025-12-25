@@ -3,9 +3,9 @@
  * 基于新架构的统一类型系统，适用于UnifiedTimelineItemData
  */
 
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 // ==================== 时间范围同步工具 ====================
 

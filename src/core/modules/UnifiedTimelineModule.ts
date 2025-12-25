@@ -4,8 +4,8 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
   UnknownMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/type'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { MediaType } from '@/core/mediaitem/types'
@@ -13,7 +13,7 @@ import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
 import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/core/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
@@ -62,7 +62,7 @@ import {
   isReady,
   isVideoTimelineItem,
   isAudioTimelineItem,
-} from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/queries'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 import { TimelineItemFactory } from '../timelineitem'
 

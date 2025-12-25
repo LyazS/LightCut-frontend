@@ -23,8 +23,8 @@ import type {
   ImageMediaConfig,
   TextMediaConfig,
   BaseMediaProps,
-} from '@/core/timelineitem/TimelineItemData'
-import { hasVisualProperties } from '@/core/timelineitem/TimelineItemQueries'
+} from '@/core/timelineitem/type'
+import { hasVisualProperties } from '@/core/timelineitem/queries'
 
 // 导入统一架构的 Sprite 类
 import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'

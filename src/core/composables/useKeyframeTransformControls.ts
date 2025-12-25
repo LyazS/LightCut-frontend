@@ -8,7 +8,7 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/core/utils/rotationTransform'
 import { useUnifiedKeyframeUI } from '@/core/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 
 interface UnifiedKeyframeTransformControlsOptions {

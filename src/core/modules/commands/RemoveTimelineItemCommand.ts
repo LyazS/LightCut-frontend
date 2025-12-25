@@ -9,7 +9,7 @@ import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { VideoResolution } from '@/core/types'
 
@@ -18,7 +18,7 @@ import { TimelineItemFactory } from '@/core/timelineitem'
 
 import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
 
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**
  * 移除时间轴项目命令

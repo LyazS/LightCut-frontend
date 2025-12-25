@@ -2,7 +2,7 @@
  * 统一Clip架构相关工具函数
  */
 
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem'
 
 // ==================== 媒体项目信息工具 ====================

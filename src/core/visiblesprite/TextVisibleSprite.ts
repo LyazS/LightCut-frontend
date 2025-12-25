@@ -1,7 +1,7 @@
 import { ImgClip } from '@webav/av-cliper'
 import { debounce } from 'lodash'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import type { TextStyleConfig } from '@/core/timelineitem/TimelineItemData'
+import type { TextStyleConfig } from '@/core/timelineitem/type'
 import { framesToMicroseconds } from '@/core/utils/timeUtils'
 import { BaseVisibleSprite } from '@/core/visiblesprite/BaseVisibleSprite'
 import { TextHelper } from '@/core/utils'
