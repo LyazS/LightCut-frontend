@@ -11,7 +11,6 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
   generateCommandId,
   createSnapshot,
@@ -33,7 +32,6 @@ export class UpdatePropertyCommand implements SimpleCommand {
     private property: string,
     private newValue: any,
     private timelineModule: TimelineModule,
-    private webavAnimationManager: WebAVAnimationManager,
     private playbackControls?: PlaybackControls,
   ) {
     this.id = generateCommandId()
@@ -81,7 +79,6 @@ export class UpdatePropertyCommand implements SimpleCommand {
       const { handlePropertyChange } = await import('@/core/utils/unifiedKeyframeUtils')
 
       // 使用统一的属性修改处理逻辑
-      // 注意：handlePropertyChange 内部已经包含了 updateWebAVAnimation 调用，无需重复调用
       const actionType = await handlePropertyChange(item, this.frame, this.property, this.newValue)
 
       // 保存执行后的状态快照
@@ -122,7 +119,7 @@ export class UpdatePropertyCommand implements SimpleCommand {
     }
 
     try {
-      await applyKeyframeSnapshot(item, this.beforeSnapshot, this.webavAnimationManager)
+      await applyKeyframeSnapshot(item, this.beforeSnapshot)
 
       // 撤销属性修改时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {

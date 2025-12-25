@@ -1,7 +1,6 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 
 // 类型导入
@@ -118,7 +117,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     // 如果有动画，更新WebAV动画时长
     if (this.hasAnimation) {
-      await updateWebAVAnimation(timelineItem)
+      // 动画时长更新已迁移到 Bunny 组件，无需手动更新
       console.log(
         `🎬 [ResizeTimelineItemCommand] Animation duration updated after clip resize (${isUndo ? 'undo' : 'execute'})`,
       )

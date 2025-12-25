@@ -18,10 +18,6 @@ import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/core/utils/spriteFactory'
 import { createSpriteForTextTimelineItem } from '@/core/utils/textTimelineUtils'
-import {
-  globalWebAVAnimationManager,
-  updateWebAVAnimation,
-} from '@/core/utils/webavAnimationManager'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 import { markRaw } from 'vue'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
@@ -79,7 +75,7 @@ export class TimelineItemTransitioner {
       // 通用的后续处理
       timelineItem.timelineStatus = 'ready'
       store.setupBidirectionalSync(timelineItem)
-      globalWebAVAnimationManager.addManager(timelineItem)
+      // 动画管理器已迁移到 Bunny 组件，无需手动初始化
 
       console.log(`🎉 [TimelineItemTransitioner] 时间轴项目状态转换完成: ${this.timelineItemId}`)
     } catch (error) {
@@ -286,8 +282,7 @@ export class TimelineItemTransitioner {
           keyframeCount: timelineItem.animation.keyframes.length,
         })
 
-        // 使用WebAVAnimationManager来应用动画
-        await updateWebAVAnimation(timelineItem)
+        // 动画配置已迁移到 Bunny 组件，无需手动应用
 
         console.log(`✅ [TimelineItemTransitioner] 动画配置应用成功: ${timelineItem.id}`)
       } catch (animationError) {

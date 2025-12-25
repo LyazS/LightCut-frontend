@@ -156,16 +156,6 @@ export {
   filterKeyframesInRange,
 } from './animationConverter'
 
-// ==================== WebAV动画管理器 ====================
-export {
-  // 动画管理器类
-  WebAVAnimationManager,
-  globalWebAVAnimationManager,
-
-  // 便捷函数
-  updateWebAVAnimation,
-} from './webavAnimationManager'
-
 // ==================== 统一关键帧工具 ====================
 export {
   // 关键帧位置转换工具函数

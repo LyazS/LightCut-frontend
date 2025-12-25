@@ -162,7 +162,6 @@ import {
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
 import { framesToTimecode, timecodeToFrames } from '@/core/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
 import { getMuteIcon } from '@/constants/iconComponents'
 import NumberInput from '@/components/base/NumberInput.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
@@ -421,7 +420,7 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    await updateWebAVAnimation(props.selectedTimelineItem)
+    // 动画时长更新已迁移到 Bunny 组件，无需手动更新
     console.log('🎬 [Duration Update] Animation duration updated after clip duration change')
   }
 

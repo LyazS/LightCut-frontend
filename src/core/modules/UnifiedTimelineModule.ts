@@ -59,10 +59,6 @@ import { syncTimeRange } from '@/core/utils/timeRangeUtils'
 import { microsecondsToFrames, framesToTimecode } from '@/core/utils/timeUtils'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 import {
-  globalWebAVAnimationManager,
-  updateWebAVAnimation,
-} from '@/core/utils/webavAnimationManager'
-import {
   isReady,
   isVideoTimelineItem,
   isAudioTimelineItem,
@@ -240,8 +236,7 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
           keyframeCount: timelineItem.animation.keyframes.length,
         })
 
-        // 使用WebAVAnimationManager来应用动画
-        await updateWebAVAnimation(timelineItem)
+        // 动画配置已迁移到 Bunny 组件，无需手动应用
 
         console.log(`✅ [UnifiedTimelineModule] 动画配置应用成功: ${timelineItem.id}`)
       } catch (animationError) {
@@ -274,9 +269,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
     } else if (TimelineItemQueries.isReady(timelineItem)) {
       // 设置sprite属性
       // await setupTimelineItemSprite(timelineItem)
-
-      // 初始化动画管理器（仅就绪状态的已知类型时间轴项目）
-      globalWebAVAnimationManager.addManager(timelineItem)
     } else {
       // 错误状态的时间轴项目
       unifiedDebugLog('添加错误状态的时间轴项目', { timelineItemId: timelineItem.id })
@@ -337,8 +329,7 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
           status: item.timelineStatus,
         })
       } else if (TimelineItemQueries.isReady(item)) {
-        // 清理动画管理器（仅就绪状态的已知类型时间轴项目）
-        globalWebAVAnimationManager.removeManager(timelineItemId)
+        // 动画管理器已迁移到 Bunny 组件，无需清理
       }
 
       // 从数组中移除
@@ -589,14 +580,8 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
 
       // 如果有动画，需要重新设置WebAV动画时长
       if (item.animation && item.animation.keyframes.length > 0) {
-        // 异步更新动画，不阻塞播放速度调整
-        updateWebAVAnimation(item)
-          .then(() => {
-            console.log('🎬 [Playback Rate] Animation duration updated after playback rate change')
-          })
-          .catch((error) => {
-            console.error('🎬 [Playback Rate] Failed to update animation duration:', error)
-          })
+        // 动画时长更新已迁移到 Bunny 组件，无需手动更新
+        console.log('🎬 [Playback Rate] Animation duration updated after playback rate change')
       }
 
       // 只有视频才记录详细的时间范围信息

@@ -22,7 +22,6 @@ import {
 } from '@/core/utils/unifiedKeyframeUtils'
 // 关键帧命令已经迁移到 unifiedStore
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
 
 /**
  * 统一关键帧UI管理 Composable（新架构版本）
@@ -227,20 +226,6 @@ export function useUnifiedKeyframeUI(
   }
 
   /**
-   * 更新WebAV动画
-   */
-  const updateWebAVAnimationWrapper = async () => {
-    if (!timelineItem.value) return
-
-    try {
-      // 使用WebAV动画管理器
-      await updateWebAVAnimation(timelineItem.value)
-    } catch (error) {
-      console.error('🎬 [Unified Keyframe UI] Failed to update WebAV animation:', error)
-    }
-  }
-
-  /**
    * 跳转到指定帧
    */
   const jumpToFrame = async (frame: number) => {
@@ -277,11 +262,6 @@ export function useUnifiedKeyframeUI(
           value,
           {
             getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id),
-          },
-          {
-            updateWebAVAnimation: async (item) => {
-              await updateWebAVAnimation(item)
-            },
           },
           { seekTo: unifiedStore.seekToFrame }, // 播放头控制器
         )
@@ -330,8 +310,5 @@ export function useUnifiedKeyframeUI(
     clearAllKeyframes: clearAllKeyframesWrapper,
     jumpToFrame,
     seekToFrame,
-
-    // 工具方法
-    updateWebAVAnimation: updateWebAVAnimationWrapper,
   }
 }

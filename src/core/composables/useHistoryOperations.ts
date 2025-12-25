@@ -41,10 +41,8 @@ import {
   ClearAllKeyframesCommand,
   ToggleKeyframeCommand,
   type TimelineModule as KeyframeTimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
 } from '@/core/modules/commands/keyframeCommands'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
 
 // 变换属性类型定义
 interface TransformProperties {
@@ -782,9 +780,6 @@ export function useHistoryOperations(
         frame,
         unifiedTimelineModule,
         {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
-        {
           seekTo: (frame: number) => {
             // 播放头控制应该由调用方提供，这里简化为不控制播放头
             console.log('🔍 关键帧操作播放头控制:', frame)
@@ -816,9 +811,6 @@ export function useHistoryOperations(
         timelineItemId,
         frame,
         unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
         {
           seekTo: (frame: number) => {
             console.log('🔍 关键帧操作播放头控制:', frame)
@@ -865,9 +857,6 @@ export function useHistoryOperations(
         value,
         unifiedTimelineModule,
         {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
-        {
           seekTo: (frame: number) => {
             console.log('🔍 关键帧操作播放头控制:', frame)
           },
@@ -896,9 +885,6 @@ export function useHistoryOperations(
       const command = new ClearAllKeyframesCommand(
         timelineItemId,
         unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
         {
           seekTo: (frame: number) => {
             console.log('🔍 关键帧操作播放头控制:', frame)
@@ -930,9 +916,6 @@ export function useHistoryOperations(
         timelineItemId,
         frame,
         unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
         {
           seekTo: (frame: number) => {
             console.log('🔍 关键帧操作播放头控制:', frame)

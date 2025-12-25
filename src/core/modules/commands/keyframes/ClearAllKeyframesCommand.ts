@@ -8,7 +8,6 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
   generateCommandId,
   createSnapshot,
@@ -25,7 +24,6 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
   constructor(
     private timelineItemId: string,
     private timelineModule: TimelineModule,
-    private webavAnimationManager: WebAVAnimationManager,
     private playbackControls?: PlaybackControls,
   ) {
     this.id = generateCommandId()
@@ -55,8 +53,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
       // 清除所有关键帧
       clearAllKeyframes(item)
 
-      // 更新WebAV动画
-      await this.webavAnimationManager.updateWebAVAnimation(item)
+      // 动画更新已迁移到 Bunny 组件，无需手动更新
 
       // 保存执行后的状态快照
       this.afterSnapshot = createSnapshot(item)
@@ -85,7 +82,7 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     }
 
     try {
-      await applyKeyframeSnapshot(item, this.beforeSnapshot, this.webavAnimationManager)
+      await applyKeyframeSnapshot(item, this.beforeSnapshot)
 
       // 撤销清除关键帧操作时，跳转到第一个关键帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls && this.beforeSnapshot.animationConfig?.keyframes?.length) {

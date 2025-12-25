@@ -9,7 +9,6 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
   generateCommandId,
   createSnapshot,
@@ -29,7 +28,6 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     private timelineItemId: string,
     private frame: number,
     private timelineModule: TimelineModule,
-    private webavAnimationManager: WebAVAnimationManager,
     private playbackControls?: PlaybackControls,
   ) {
     this.id = generateCommandId()
@@ -77,8 +75,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
       // 使用统一的关键帧切换逻辑
       toggleKeyframe(item, this.frame)
 
-      // 更新WebAV动画
-      await this.webavAnimationManager.updateWebAVAnimation(item)
+      // 动画更新已迁移到 Bunny 组件，无需手动更新
 
       // 保存执行后的状态快照
       this.afterSnapshot = createSnapshot(item)
@@ -108,7 +105,7 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      await applyKeyframeSnapshot(item, this.beforeSnapshot, this.webavAnimationManager)
+      await applyKeyframeSnapshot(item, this.beforeSnapshot)
 
       // 撤销关键帧切换操作时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {

@@ -39,13 +39,6 @@ export interface TimelineModule {
 }
 
 /**
- * WebAV动画管理器接口
- */
-export interface WebAVAnimationManager {
-  updateWebAVAnimation: (item: UnifiedTimelineItemData) => Promise<void>
-}
-
-/**
  * 播放控制接口
  */
 export interface PlaybackControls {
@@ -79,7 +72,6 @@ export function createSnapshot(item: UnifiedTimelineItemData): KeyframeSnapshot 
 export async function applyKeyframeSnapshot(
   item: UnifiedTimelineItemData,
   snapshot: KeyframeSnapshot,
-  webavAnimationManager: WebAVAnimationManager,
 ): Promise<void> {
   // 1. 恢复动画配置（关键帧数据）
   if (snapshot.animationConfig) {
@@ -156,8 +148,7 @@ export async function applyKeyframeSnapshot(
     }
   }
 
-  // 3. 更新WebAV动画配置
-  await webavAnimationManager.updateWebAVAnimation(item)
+  // 3. 动画配置更新已迁移到 Bunny 组件，无需手动更新
 }
 
 /**
