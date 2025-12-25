@@ -2,6 +2,7 @@ import { generateCommandId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
+import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
@@ -11,6 +12,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
 import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemFactory } from '@/core/timelineitem'
 
 /**
  * 调整时间轴项目大小命令
@@ -88,50 +90,11 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
     }
 
-    const sprite = timelineItem.runtime.sprite
-    if (!sprite) {
-      throw new Error(`时间轴项目没有sprite: ${this.timelineItemId}`)
-    }
-
-    // 根据媒体类型设置时间范围
-    if (
-      TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
-      TimelineItemQueries.isAudioTimelineItem(timelineItem)
-    ) {
-      // 视频和音频类型：保持clipStartTime和clipEndTime，更新timeline时间
-      const clipStartTime = timeRange.clipStartTime
-      const clipEndTime = timeRange.clipEndTime
-
-      sprite.setTimeRange({
-        clipStartTime,
-        clipEndTime,
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      })
-    } else if (
-      TimelineItemQueries.isImageTimelineItem(timelineItem) ||
-      TimelineItemQueries.isTextTimelineItem(timelineItem)
-    ) {
-      // 图片和文本类型：只设置时间轴时间，clipStartTime和clipEndTime保持为-1
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-        clipStartTime: -1,
-        clipEndTime: -1,
-      })
-    } else {
-      throw new Error('不支持的媒体类型')
-    }
-
     // 同步timeRange到TimelineItem
-    timelineItem.timeRange = sprite.getTimeRange()
+    TimelineItemFactory.setTimeRange(timelineItem, timeRange)
 
     // 如果时长有变化且有关键帧，调整关键帧位置
     if (this.hasAnimation && this.oldDurationFrames !== this.newDurationFrames) {
-      const { adjustKeyframesForDurationChange } = await import(
-        '@/core/utils/unifiedKeyframeUtils'
-      )
-
       // 根据是执行还是撤销操作，确定参数顺序
       if (isUndo) {
         // 撤销操作：从新时长恢复到原时长

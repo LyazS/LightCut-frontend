@@ -77,8 +77,8 @@ export function createUnifiedTrackModule() {
     const affectedItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
 
     // 删除该轨道上的所有时间轴项目
-    affectedItems.forEach((item: any) => {
-      store.removeTimelineItem(item.id)
+    affectedItems.forEach(async (item: any) => {
+      await store.removeTimelineItem(item.id)
     })
 
     // 删除轨道

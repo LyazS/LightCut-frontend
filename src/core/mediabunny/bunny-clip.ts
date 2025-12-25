@@ -22,6 +22,7 @@ import { BunnyMedia } from './bunny-media'
  * 媒体播放器核心类 - 统一管理视频和音频播放状态
  */
 export class BunnyClip implements IClip {
+  private bunnyMedia: BunnyMedia
   private needResetVideo: boolean = false
   private needResetAudio: boolean = false
 
@@ -56,6 +57,7 @@ export class BunnyClip implements IClip {
   public durationN: bigint = 0n
 
   constructor(bunnyMedia: BunnyMedia) {
+    this.bunnyMedia = bunnyMedia
     this.duration = bunnyMedia.duration
     this.durationN = bunnyMedia.durationN
     this.videoSampleAtTSFunc = bunnyMedia.videoSamplesAtTimestamps()
@@ -257,12 +259,7 @@ export class BunnyClip implements IClip {
   }
 
   // ==================== 公共接口 ====================
-  setTimeRange(timeRange: {
-    clipStart?: bigint
-    clipEnd?: bigint
-    timelineStart?: bigint
-    timelineEnd?: bigint
-  }): void {
+  setTimeRange(timeRange: Partial<TimeRange>): void {
     // 计算新的时间范围值
     const newClipStart = timeRange.clipStart ?? this.timeRange.clipStart
     const newClipEnd = timeRange.clipEnd ?? this.timeRange.clipEnd
@@ -375,6 +372,16 @@ export class BunnyClip implements IClip {
     } else {
       yield { frame: null, state: false }
     }
+  }
+
+  /**
+   * 克隆当前 Clip 实例
+   * @returns 克隆后的新 Clip 实例
+   */
+  clone(): BunnyClip {
+    const newClip = new BunnyClip(this.bunnyMedia)
+    newClip.setTimeRange(this.timeRange)
+    return newClip
   }
 
   /**

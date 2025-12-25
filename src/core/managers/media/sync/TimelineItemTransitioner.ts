@@ -14,7 +14,7 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
 import type { TransitionOptions } from './types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { createSpriteFromUnifiedMediaItem } from '@/core/utils/spriteFactory'
 import { createSpriteForTextTimelineItem } from '@/core/utils/textTimelineUtils'
@@ -25,8 +25,7 @@ import {
 import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 import { markRaw } from 'vue'
-import { textToImageBitmap } from '@/core/bunnyUtils/ToBitmap'
-import { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 /**
  * 时间轴项目状态转换器（增强版 - 支持文本类型）
  */
@@ -112,13 +111,14 @@ export class TimelineItemTransitioner {
     if (this.setupTimelineItemSprite) {
       await this.setupTimelineItemSprite(timelineItem)
     }
-    const bmap = await textToImageBitmap(timelineItem.config.text, timelineItem.config.style)
-    timelineItem.runtime.textBitmap = bmap
 
-    // 4. 设置轨道属性
+    // 4. 使用 setupTimelineItemBunny 创建 textBitmap
+    await setupTimelineItemBunny(timelineItem)
+
+    // 5. 设置轨道属性
     this.applyTrackProperties(timelineItem)
 
-    // 5. 应用动画（如果有）
+    // 6. 应用动画（如果有）
     await this.applyAnimation(timelineItem)
 
     console.log(`✅ [TimelineItemTransitioner] 文本时间轴项目转换完成: ${timelineItem.id}`)
@@ -142,10 +142,6 @@ export class TimelineItemTransitioner {
 
     await this.createBunny(timelineItem)
 
-    if (options.scenario === 'projectLoad') {
-      await this.applyConfig(timelineItem)
-    }
-
     this.applyTrackProperties(timelineItem)
     await this.applyAnimation(timelineItem)
   }
@@ -168,13 +164,12 @@ export class TimelineItemTransitioner {
         const startTime = timelineItem.timeRange.timelineStartTime
 
         // 更新时间范围，保持开始时间不变，更新结束时间
-        timelineItem.timeRange = {
+        TimelineItemFactory.setTimeRange(timelineItem, {
           ...timelineItem.timeRange,
           timelineEndTime: startTime + duration,
           clipStartTime: 0,
           clipEndTime: duration,
-        }
-
+        })
         console.log(`⏱️ [TimelineItemTransitioner] 已更新时间范围: ${timelineItem.id}`, {
           duration,
           startTime,
@@ -237,135 +232,15 @@ export class TimelineItemTransitioner {
     try {
       console.log(`🔄 [TimelineItemTransitioner] 为时间轴项目创建Sprite: ${this.timelineItemId}`)
 
-      if (this.mediaItem.runtime.bunny?.bunnyMedia) {
-        const bunnyclip = new BunnyClip(this.mediaItem.runtime.bunny.bunnyMedia)
-        bunnyclip.setTimeRange({
-          clipStart: BigInt(timelineItem.timeRange.clipStartTime),
-          clipEnd: BigInt(timelineItem.timeRange.clipEndTime),
-          timelineStart: BigInt(timelineItem.timeRange.timelineStartTime),
-          timelineEnd: BigInt(timelineItem.timeRange.timelineEndTime),
-        })
-        timelineItem.runtime.bunnyClip = markRaw(bunnyclip)
-      }
+      // 使用 setupTimelineItemBunny 创建 bunny 对象
+      await setupTimelineItemBunny(timelineItem, this.mediaItem)
+
       console.log(
         `✅ [TimelineItemTransitioner] Sprite创建成功并存储到runtime: ${this.timelineItemId}`,
       )
     } catch (error) {
-      console.error(
-        `❌ [TimelineItemTransitioner] 创建Sprite失败: ${this.timelineItemId}`,
-        error,
-      )
+      console.error(`❌ [TimelineItemTransitioner] 创建Sprite失败: ${this.timelineItemId}`, error)
       // Sprite创建失败不影响后续操作
-    }
-  }
-
-  /**
-   * 将时间轴项目的配置应用到sprite中
-   */
-  private async applyConfig(timelineItem: UnifiedTimelineItemData): Promise<void> {
-    try {
-      // 检查sprite是否存在
-      if (!timelineItem.runtime.sprite) {
-        console.warn(`⚠️ [TimelineItemTransitioner] Sprite不存在，无法应用配置: ${timelineItem.id}`)
-        return
-      }
-
-      const sprite = timelineItem.runtime.sprite
-      const config = timelineItem.config as any // 使用 any 来避免类型检查问题
-
-      console.log(
-        `🎨 [TimelineItemTransitioner] 将时间轴项目配置应用到sprite: ${timelineItem.id}`,
-        {
-          mediaType: timelineItem.mediaType,
-          hasAnimation: !!(timelineItem.animation && timelineItem.animation.keyframes.length > 0),
-        },
-      )
-
-      // 设置sprite的基本属性（仅对视频和图片类型）
-      if (
-        TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
-        TimelineItemQueries.isImageTimelineItem(timelineItem)
-      ) {
-        if (config.width !== undefined) sprite.rect.w = config.width
-        if (config.height !== undefined) sprite.rect.h = config.height
-        if (config.rotation !== undefined) sprite.rect.angle = config.rotation
-        if (config.opacity !== undefined) sprite.opacity = config.opacity
-        if (config.zIndex !== undefined) sprite.zIndex = config.zIndex
-      }
-
-      // 对于有音频属性的类型
-      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-        const audioSprite = sprite as any
-        if (config.volume !== undefined) audioSprite.volume = config.volume
-        if (config.isMuted !== undefined) audioSprite.isMuted = config.isMuted
-      }
-
-      // 使用坐标转换系统设置位置属性（仅对视频和图片类型）
-      if (
-        (TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
-          TimelineItemQueries.isImageTimelineItem(timelineItem)) &&
-        (config.x !== undefined || config.y !== undefined)
-      ) {
-        try {
-          const store = useUnifiedStore()
-          const visualSprite = sprite as any
-
-          // 获取当前配置值，如果未定义则使用sprite的当前值
-          const x = config.x !== undefined ? config.x : visualSprite.x
-          const y = config.y !== undefined ? config.y : visualSprite.y
-          const width = config.width !== undefined ? config.width : visualSprite.width
-          const height = config.height !== undefined ? config.height : visualSprite.height
-
-          // 使用坐标转换系统将项目坐标转换为WebAV坐标
-          const webavCoords = projectToWebavCoords(
-            x,
-            y,
-            width,
-            height,
-            store.videoResolution.width,
-            store.videoResolution.height,
-          )
-
-          // 设置转换后的坐标
-          sprite.rect.x = webavCoords.x
-          sprite.rect.y = webavCoords.y
-
-          console.log(
-            `🎯 [TimelineItemTransitioner] 已使用坐标转换系统设置位置: ${timelineItem.id}`,
-            {
-              projectCoords: { x, y },
-              webavCoords: { x: webavCoords.x, y: webavCoords.y },
-              size: { width, height },
-              canvasSize: {
-                width: store.videoResolution.width,
-                height: store.videoResolution.height,
-              },
-            },
-          )
-        } catch (coordError) {
-          console.error(
-            `❌ [TimelineItemTransitioner] 坐标转换失败: ${timelineItem.id}`,
-            coordError,
-          )
-          // 坐标转换失败时，尝试直接设置
-          const visualSprite = sprite as any
-          if (config.x !== undefined) visualSprite.x = config.x
-          if (config.y !== undefined) visualSprite.y = config.y
-        }
-      }
-
-      console.log(`✅ [TimelineItemTransitioner] 基本配置已应用到sprite: ${timelineItem.id}`, {
-        width: sprite.rect.w,
-        height: sprite.rect.h,
-        rotation: sprite.rect.angle,
-        opacity: sprite.opacity,
-        zIndex: sprite.zIndex,
-      })
-    } catch (error) {
-      console.error(
-        `❌ [TimelineItemTransitioner] 应用时间轴项目配置到sprite失败: ${timelineItem.id}`,
-        error,
-      )
     }
   }
 

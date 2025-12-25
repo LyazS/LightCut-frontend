@@ -117,7 +117,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       }
 
       // 2. 清理相关的时间轴项目
-      cleanupRelatedTimelineItems(mediaItemId)
+      await cleanupRelatedTimelineItems(mediaItemId)
 
       // 3. 清理命令同步
       cleanupCommandMediaSyncForMediaItem(mediaItemId)
@@ -436,7 +436,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    * 清理与媒体项目相关的时间轴项目
    * @param mediaItemId 媒体项目ID
    */
-  function cleanupRelatedTimelineItems(mediaItemId: string): void {
+  async function cleanupRelatedTimelineItems(mediaItemId: string): Promise<void> {
     try {
       // 获取统一存储实例
       const unifiedStore = useUnifiedStore()
@@ -450,9 +450,9 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       )
 
       // 清理每个相关的时间轴项目
-      relatedTimelineItems.forEach((timelineItem: any) => {
+      relatedTimelineItems.forEach(async (timelineItem: any) => {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
-        unifiedStore.removeTimelineItem(timelineItem.id)
+        await unifiedStore.removeTimelineItem(timelineItem.id)
       })
 
       console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)

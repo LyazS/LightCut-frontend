@@ -58,6 +58,12 @@ export interface IClip {
   ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }>
 
   /**
+   * 克隆当前 Clip 实例
+   * @returns 克隆后的新 Clip 实例
+   */
+  clone(): IClip
+
+  /**
    * 释放所有资源
    */
   dispose(): Promise<void>

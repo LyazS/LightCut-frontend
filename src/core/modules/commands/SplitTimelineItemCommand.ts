@@ -10,6 +10,7 @@ import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -145,6 +146,24 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       throw new Error(`重建第一个分割片段失败: ${firstRebuildResult.error}`)
     }
 
+    const firstItem = firstRebuildResult.timelineItem
+
+    // 获取关联的媒体项目
+    const firstMediaItem = this.mediaModule.getMediaItem(firstItem.mediaItemId)
+    if (!firstMediaItem) {
+      throw new Error(`找不到关联的媒体项目: ${firstItem.mediaItemId}`)
+    }
+
+    // 使用 setupTimelineItemBunny 创建 bunny 对象
+    await setupTimelineItemBunny(firstItem, firstMediaItem)
+
+    // 修改状态为 ready
+    firstItem.timelineStatus = 'ready'
+
+    console.log(
+      `✅ [SplitTimelineItemCommand] 第一个分割片段 bunny 对象创建完成，状态已设置为 ready`,
+    )
+
     // 使用 TimelineItemFactory.rebuildForCmd 创建第二个分割片段
     const secondRebuildResult = await TimelineItemFactory.rebuildForCmd({
       originalTimelineItemData: {
@@ -161,8 +180,23 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       throw new Error(`重建第二个分割片段失败: ${secondRebuildResult.error}`)
     }
 
-    const firstItem = firstRebuildResult.timelineItem
     const secondItem = secondRebuildResult.timelineItem
+
+    // 获取关联的媒体项目
+    const secondMediaItem = this.mediaModule.getMediaItem(secondItem.mediaItemId)
+    if (!secondMediaItem) {
+      throw new Error(`找不到关联的媒体项目: ${secondItem.mediaItemId}`)
+    }
+
+    // 使用 setupTimelineItemBunny 创建 bunny 对象
+    await setupTimelineItemBunny(secondItem, secondMediaItem)
+
+    // 修改状态为 ready
+    secondItem.timelineStatus = 'ready'
+
+    console.log(
+      `✅ [SplitTimelineItemCommand] 第二个分割片段 bunny 对象创建完成，状态已设置为 ready`,
+    )
 
     console.log('🔄 重建分割项目完成:', {
       firstItemId: firstItem.id,
@@ -221,29 +255,11 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       const { firstItem, secondItem } = await this.rebuildSplitItems()
 
       // 1. 删除原始项目
-      this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
+      await this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
 
-      // 2. 添加分割后的两个项目
+      // 2. 添加分割后的两个项目（已经是 ready 状态，不需要 MediaSync）
       await this.timelineModule.addTimelineItem(firstItem)
       await this.timelineModule.addTimelineItem(secondItem)
-
-      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
-      if (TimelineItemQueries.isLoading(firstItem)) {
-        MediaSyncFactory.forCommand(
-          this.id,
-          firstItem.mediaItemId,
-          firstItem.id,
-          this.timelineModule.setupTimelineItemSprite,
-        ).setup()
-      }
-      if (TimelineItemQueries.isLoading(secondItem)) {
-        MediaSyncFactory.forCommand(
-          this.id,
-          secondItem.mediaItemId,
-          secondItem.id,
-          this.timelineModule.setupTimelineItemSprite,
-        ).setup()
-      }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(
@@ -257,32 +273,36 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   }
 
   /**
-   * 撤销命令：恢复原始项目，删除分割后的项目
+   * 撤销命令：从原始素材重建原始项目，删除分割后的项目
    * 遵循"从源头重建"原则，从原始素材完全重新创建
    */
   async undo(): Promise<void> {
     try {
       console.log(`🔄 撤销分割操作：重建原始时间轴项目...`)
 
-      // 1. 删除分割后的两个项目
-      this.timelineModule.removeTimelineItem(this.firstItemId)
-      this.timelineModule.removeTimelineItem(this.secondItemId)
-
-      // 2. 从原始素材重新创建原始项目
+      // 1. 从原始素材重新创建原始项目
       const originalItem = await this.rebuildOriginalItem()
 
-      // 3. 添加原始项目到时间轴
-      await this.timelineModule.addTimelineItem(originalItem)
-
-      // 4. 针对loading状态的原始项目设置状态同步（确保时间轴项目已添加到store）
-      if (TimelineItemQueries.isLoading(originalItem)) {
-        MediaSyncFactory.forCommand(
-          this.id,
-          originalItem.mediaItemId,
-          originalItem.id,
-          this.timelineModule.setupTimelineItemSprite,
-        ).setup()
+      // 获取关联的媒体项目
+      const originalMediaItem = this.mediaModule.getMediaItem(originalItem.mediaItemId)
+      if (!originalMediaItem) {
+        throw new Error(`找不到关联的媒体项目: ${originalItem.mediaItemId}`)
       }
+
+      // 使用 setupTimelineItemBunny 创建 bunny 对象
+      await setupTimelineItemBunny(originalItem, originalMediaItem)
+
+      // 修改状态为 ready
+      originalItem.timelineStatus = 'ready'
+
+      console.log(`✅ [SplitTimelineItemCommand] 原始项目 bunny 对象创建完成，状态已设置为 ready`)
+
+      // 2. 删除分割后的两个项目
+      await this.timelineModule.removeTimelineItem(this.firstItemId)
+      await this.timelineModule.removeTimelineItem(this.secondItemId)
+
+      // 3. 添加原始项目到时间轴（已经是 ready 状态，不需要 MediaSync）
+      await this.timelineModule.addTimelineItem(originalItem)
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)

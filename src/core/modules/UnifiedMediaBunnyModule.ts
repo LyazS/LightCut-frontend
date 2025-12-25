@@ -75,7 +75,7 @@ export function createUnifiedMediaBunnyModule(
   let mPlaybackTimeAtStart: number = 0
 
   // 当前bunny播放帧数（整数）
-  const currentBunnyFrame = ref(0)
+  const mCurrentBunnyFrame = ref(0)
   // 项目时长（帧数）
   let mTimelineDuration: number = 0
 
@@ -296,7 +296,7 @@ export function createUnifiedMediaBunnyModule(
       }),
     )
 
-    currentBunnyFrame.value = currentTime
+    mCurrentBunnyFrame.value = currentTime
     mUpdatingClip = false
   }
 
@@ -504,6 +504,7 @@ export function createUnifiedMediaBunnyModule(
 
   // 创建节流函数，100ms内只执行一次
   const throttledSeekToFrame = throttle(async (frame: number) => {
+    console.log(`🎯 [MediaBunny] 帧数变化，已触发帧同步: ${mCurrentBunnyFrame} -> ${frame}`)
     seekToFrame(frame)
   }, 100)
   /**
@@ -512,9 +513,8 @@ export function createUnifiedMediaBunnyModule(
    */
   function setupPlaybackListeners(): void {
     // 监听帧数变化（用于 seek）
-    watch([playbackModule.currentFrame, currentBunnyFrame], ([new_cf, new_cbf]) => {
+    watch([playbackModule.currentFrame, mCurrentBunnyFrame], ([new_cf, new_cbf]) => {
       if (new_cf != new_cbf && !playbackModule.isPlaying.value) {
-        console.log(`🎯 [MediaBunny] 帧数变化，已触发帧同步: ${new_cf} -> ${new_cbf}`)
         throttledSeekToFrame(new_cf)
       }
     })
@@ -555,7 +555,7 @@ export function createUnifiedMediaBunnyModule(
     // 状态
     isMediaBunnyReady,
     mediaBunnyError,
-    currentBunnyFrame,
+    currentBunnyFrame: mCurrentBunnyFrame,
 
     // 画布管理
     setCanvas,

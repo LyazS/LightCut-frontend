@@ -35,7 +35,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
     timelineItem: UnifiedTimelineItemData<MediaType>,
     private timelineModule: {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-      removeTimelineItem: (id: string) => void
+      removeTimelineItem: (id: string) => Promise<void>
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
@@ -115,7 +115,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       }
 
       // 移除时间轴项目（这会自动处理sprite的清理）
-      this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
+      await this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
       console.log(`↩️ 已撤销添加时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
       console.error(`❌ 撤销添加时间轴项目失败: ${this.originalTimelineItemData.id}`, error)

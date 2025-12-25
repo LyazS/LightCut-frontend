@@ -1,4 +1,5 @@
 import { ref, type Raw, type Ref } from 'vue'
+import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
@@ -67,6 +68,7 @@ import {
   isAudioTimelineItem,
 } from '@/core/timelineitem/TimelineItemQueries'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
+import { TimelineItemFactory } from '../timelineitem'
 
 /**
  * 统一时间轴核心管理模块
@@ -287,7 +289,7 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
    * 移除时间轴项目
    * @param timelineItemId 要移除的时间轴项目ID
    */
-  function removeTimelineItem(timelineItemId: string) {
+  async function removeTimelineItem(timelineItemId: string) {
     const index = timelineItems.value.findIndex(
       (item: UnifiedTimelineItemData<MediaType>) => item.id === timelineItemId,
     )
@@ -315,6 +317,15 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
         } catch (error) {
           console.warn(`⚠️ 从WebAV画布移除sprite时出错: ${timelineItemId}`, error)
         }
+      }
+
+      // 🆕 清理 Bunny 相关资源
+      try {
+        console.log(`🧹 开始清理时间轴项目Bunny资源: ${timelineItemId}`)
+        await cleanupTimelineItemBunny(item)
+        console.log(`✅ 成功清理Bunny资源: ${timelineItemId}`)
+      } catch (error) {
+        console.warn(`⚠️ 清理Bunny资源时出错: ${timelineItemId}`, error)
       }
 
       // 检查时间轴项目状态
@@ -406,31 +417,11 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       }
 
       // 更新时间轴位置
-      if (TimelineItemQueries.isLoading(item) || TimelineItemQueries.hasError(item)) {
-        // 非就绪状态的时间轴项目：直接更新timeRange
-        const currentTimeRange = item.timeRange
-        const durationFrames = currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime
-
-        item.timeRange = {
-          ...item.timeRange,
-          timelineStartTime: clampedNewPositionFrames,
-          timelineEndTime: clampedNewPositionFrames + durationFrames,
-        }
-      } else if (TimelineItemQueries.isReady(item)) {
-        // 就绪状态的已知类型时间轴项目：通过sprite更新
-        const sprite = item.runtime.sprite
-        if (sprite) {
-          const currentTimeRange = sprite.getTimeRange()
-          const durationFrames =
-            currentTimeRange.timelineEndTime - currentTimeRange.timelineStartTime // 帧数
-
-          // 使用同步函数更新timeRange（使用帧数）
-          syncTimeRange(item, {
-            timelineStartTime: clampedNewPositionFrames, // 帧数
-            timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
-          })
-        }
-      }
+      const durationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime // 帧数
+      TimelineItemFactory.setTimeRange(item, {
+        timelineStartTime: clampedNewPositionFrames, // 帧数
+        timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
+      })
 
       unifiedDebugLog('更新时间轴项目位置', {
         timelineItemId,

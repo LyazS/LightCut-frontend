@@ -62,20 +62,6 @@ interface TransformProperties {
   gain?: number // 音频增益（dB）
 }
 
-// 关键帧命令执行器接口
-interface UnifiedKeyframeCommandExecutor {
-  /** 时间轴模块 */
-  timelineModule: KeyframeTimelineModule
-  /** WebAV动画管理器 */
-  webavAnimationManager: WebAVAnimationManager
-  /** 历史记录模块 */
-  historyModule: {
-    executeCommand: (command: any) => Promise<void>
-  }
-  /** 播放控制模块 */
-  playbackControls: PlaybackControls
-}
-
 /**
  * 历史记录操作相关方法
  * 包括时间轴项目和轨道相关的历史记录操作方法

@@ -35,7 +35,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     private timelineItemId: string,
     private timelineModule: {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-      removeTimelineItem: (id: string) => void
+      removeTimelineItem: (id: string) => Promise<void>
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
@@ -84,7 +84,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       }
 
       // 删除时间轴项目（这会自动处理sprite的清理和WebAV画布移除）
-      this.timelineModule.removeTimelineItem(this.timelineItemId)
+      await this.timelineModule.removeTimelineItem(this.timelineItemId)
       console.log(`↩️ 已删除时间轴项目: ${this.timelineItemId}`)
     } catch (error) {
       console.error(`❌ 删除时间轴项目失败: ${this.timelineItemId}`, error)

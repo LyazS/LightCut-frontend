@@ -67,7 +67,7 @@ export function hasAudioProperties(
  * 检查是否为就绪状态
  */
 export function isReady(data: UnifiedTimelineItemData<MediaType>): boolean {
-  return data.timelineStatus === 'ready' && !!data.runtime.sprite
+  return data.timelineStatus === 'ready'
 }
 
 /**

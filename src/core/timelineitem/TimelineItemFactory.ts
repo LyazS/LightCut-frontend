@@ -72,6 +72,23 @@ export function cloneTimelineItem<T extends MediaType>(
   return reactive(result) as UnifiedTimelineItemData<T>
 }
 
+export function setTimeRange(item: UnifiedTimelineItemData, timerange: Partial<UnifiedTimeRange>) {
+  if (timerange.timelineStartTime !== undefined && timerange.timelineStartTime !== null)
+    item.timeRange.timelineStartTime = timerange.timelineStartTime
+  if (timerange.timelineEndTime !== undefined && timerange.timelineEndTime !== null)
+    item.timeRange.timelineEndTime = timerange.timelineEndTime
+  if (timerange.clipStartTime !== undefined && timerange.clipStartTime !== null)
+    item.timeRange.clipStartTime = timerange.clipStartTime
+  if (timerange.clipEndTime !== undefined && timerange.clipEndTime !== null)
+    item.timeRange.clipEndTime = timerange.clipEndTime
+  item.runtime.bunnyClip?.setTimeRange({
+    clipStart: BigInt(item.timeRange.clipStartTime),
+    clipEnd: BigInt(item.timeRange.clipEndTime),
+    timelineStart: BigInt(item.timeRange.timelineStartTime),
+    timelineEnd: BigInt(item.timeRange.timelineEndTime),
+  })
+}
+
 /**
  * 复制时间轴项目到新轨道
  */
@@ -229,9 +246,9 @@ export async function rebuildTimelineItemForCmd(
     if (TimelineItemQueries.isTextTimelineItem(originalTimelineItemData)) {
       // 文本项目也创建 loading 状态，由 TimelineItemTransitioner 统一处理
       console.log(`🔄 [${logIdentifier}] 检测到文本时间轴项目，创建loading状态`)
-      
+
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
-        timelineStatus: 'loading'
+        timelineStatus: 'loading',
       })
 
       return {
@@ -241,9 +258,9 @@ export async function rebuildTimelineItemForCmd(
     } else {
       // 非文本项目：总是创建 loading 状态，不再根据媒体状态决定
       console.log(`🔄 [${logIdentifier}] 创建loading状态的时间轴项目`)
-      
+
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
-        timelineStatus: 'loading'
+        timelineStatus: 'loading',
       }) as UnifiedTimelineItemData<MediaType>
 
       console.log(`🔄 [${logIdentifier}] loading状态时间轴项目创建完成:`, {
@@ -495,6 +512,7 @@ export async function rebuildTextTimelineItem(
 export const TimelineItemFactory = {
   // 工具函数
   clone: cloneTimelineItem,
+  setTimeRange: setTimeRange,
   duplicate: duplicateTimelineItem,
   validate: validateTimelineItem,
   rebuildText: rebuildTextTimelineItem,
