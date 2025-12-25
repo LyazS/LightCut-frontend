@@ -47,7 +47,7 @@ export function useTimelineItemOperations() {
     try {
       // 等待WebAV初始化完成
       console.log('等待WebAV初始化完成...')
-      await unifiedStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
+      // await unifiedStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
 
       // 获取对应的MediaItem
       const storeMediaItem = unifiedStore.getMediaItem(mediaItemId)

@@ -35,10 +35,6 @@ export class UpdateTextCommand implements SimpleCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<'text'> | undefined
       setupBidirectionalSync: (timelineItem: UnifiedTimelineItemData<MediaType>) => void
     },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
-    },
     private configModule: {
       videoResolution: Ref<VideoResolution>
     },
@@ -178,15 +174,16 @@ export class UpdateTextCommand implements SimpleCommand {
     item.config.text = newText
     item.config.style = completeStyle
 
-    // 替换精灵引用
-    item.runtime.sprite = markRaw(newSprite)
+    // TODO:webav
+    // // 替换精灵引用
+    // item.runtime.sprite = markRaw(newSprite)
 
-    // 在WebAV画布中替换精灵
-    this.webavModule.removeSprite(oldSprite)
-    this.webavModule.addSprite(newSprite)
+    // // 在WebAV画布中替换精灵
+    // this.webavModule.removeSprite(oldSprite)
+    // this.webavModule.addSprite(newSprite)
 
-    // 🔄 重新设置双向数据绑定 - 这是关键步骤！
-    this.timelineModule.setupBidirectionalSync(item)
+    // // 🔄 重新设置双向数据绑定 - 这是关键步骤！
+    // this.timelineModule.setupBidirectionalSync(item)
 
     console.log('✅ [UpdateTextCommand] 文本精灵重新创建完成，数据绑定已重新建立')
   }

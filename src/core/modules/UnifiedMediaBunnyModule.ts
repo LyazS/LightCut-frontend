@@ -40,11 +40,13 @@ export interface FrameData {
   videoSample: VideoSample
 }
 
-export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
+export function createUnifiedMediaBunnyModule(
+  registry: ModuleRegistry,
+  totalDurationFrames: Ref<number>,
+) {
   const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
   const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
   const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
-  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
 
   // ==================== 状态定义 ====================
 
@@ -519,7 +521,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
 
     // 监听时间轴时长变化，自动更新 MediaBunny 播放器时长
     watch(
-      configModule.timelineDurationFrames,
+      totalDurationFrames,
       (newDurationFrames) => {
         updateTimelineDuration(newDurationFrames)
         console.log(`🎯 [MediaBunny] 时间轴时长变化，已更新播放器时长: ${newDurationFrames}帧`)

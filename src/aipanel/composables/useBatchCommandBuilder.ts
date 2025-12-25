@@ -43,7 +43,6 @@ import type {
 export function useBatchCommandBuilder(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
@@ -170,7 +169,6 @@ export function useBatchCommandBuilder(
     return new AddTimelineItemCommand(
       timelineItemData,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )

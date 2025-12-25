@@ -58,10 +58,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
       setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
-    },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },

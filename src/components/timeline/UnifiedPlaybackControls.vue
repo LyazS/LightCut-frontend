@@ -93,7 +93,7 @@ function handleSpeedSelect(key: number) {
   unifiedStore.setPlaybackRate(key)
 
   // 如果之前在播放，则恢复播放
-  if (wasPlaying && unifiedStore.isWebAVReadyGlobal()) {
+  if (wasPlaying) {
     unifiedStore.play()
   }
 }

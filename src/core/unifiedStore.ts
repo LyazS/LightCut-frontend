@@ -132,14 +132,13 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedUserModule = createUnifiedUserModule(registry)
   registry.register(MODULE_NAMES.USER, unifiedUserModule)
 
-  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry)
+  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, totalDurationFrames)
   registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
 
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
@@ -150,7 +149,6 @@ export const useUnifiedStore = defineStore('unified', () => {
   const { executeUserScript, list_medias, list_timelineitems } = useEditSDK(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
@@ -344,26 +342,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     setVideoResolution: unifiedConfigModule.setVideoResolution,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
-
-    // ==================== WebAV模块状态和方法 ====================
-
-    // WebAV管理方法
-    addSpriteToCanvas: unifiedWebavModule.addSprite,
-    removeSpriteFromCanvas: unifiedWebavModule.removeSprite,
-
-    // WebAV画布容器管理
-    createCanvasContainer: unifiedWebavModule.createCanvasContainer,
-    initializeCanvas: unifiedWebavModule.initializeCanvas,
-    getAVCanvas: unifiedWebavModule.getAVCanvas,
-    getCanvasContainer: unifiedWebavModule.getCanvasContainer,
-
-    // WebAV实例管理
-    isWebAVReadyGlobal: unifiedWebavModule.isWebAVReadyGlobal,
-    waitForWebAVReady: unifiedWebavModule.waitForWebAVReady,
-
-    // WebAV画布销毁和重建
-    destroyCanvas: unifiedWebavModule.destroyCanvas,
-    recreateCanvas: unifiedWebavModule.recreateCanvas,
 
     // ==================== MediaBunny模块状态和方法 ====================
 

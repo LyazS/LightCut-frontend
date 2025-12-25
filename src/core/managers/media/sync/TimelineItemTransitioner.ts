@@ -140,7 +140,7 @@ export class TimelineItemTransitioner {
       this.updateDimensions(timelineItem)
     }
 
-    await this.createSpriteAndBunny(timelineItem)
+    await this.createBunny(timelineItem)
 
     if (options.scenario === 'projectLoad') {
       await this.applyConfig(timelineItem)
@@ -226,7 +226,7 @@ export class TimelineItemTransitioner {
   /**
    * 创建 Sprite
    */
-  private async createSpriteAndBunny(timelineItem: UnifiedTimelineItemData): Promise<void> {
+  private async createBunny(timelineItem: UnifiedTimelineItemData): Promise<void> {
     if (!this.mediaItem) {
       console.warn(
         `⚠️ [TimelineItemTransitioner] 无法创建Sprite，mediaItem 不存在: ${this.timelineItemId}`,
@@ -236,14 +236,7 @@ export class TimelineItemTransitioner {
 
     try {
       console.log(`🔄 [TimelineItemTransitioner] 为时间轴项目创建Sprite: ${this.timelineItemId}`)
-      const sprite = await createSpriteFromUnifiedMediaItem(this.mediaItem)
 
-      // 将sprite存储到runtime中，并更新sprite时间
-      timelineItem.runtime.sprite = sprite
-      timelineItem.runtime.sprite.setTimeRange({ ...timelineItem.timeRange })
-
-      const store = useUnifiedStore()
-      await store.addSpriteToCanvas(timelineItem.runtime.sprite)
       if (this.mediaItem.runtime.bunny?.bunnyMedia) {
         const bunnyclip = new BunnyClip(this.mediaItem.runtime.bunny.bunnyMedia)
         bunnyclip.setTimeRange({
@@ -257,10 +250,10 @@ export class TimelineItemTransitioner {
       console.log(
         `✅ [TimelineItemTransitioner] Sprite创建成功并存储到runtime: ${this.timelineItemId}`,
       )
-    } catch (spriteError) {
+    } catch (error) {
       console.error(
         `❌ [TimelineItemTransitioner] 创建Sprite失败: ${this.timelineItemId}`,
-        spriteError,
+        error,
       )
       // Sprite创建失败不影响后续操作
     }

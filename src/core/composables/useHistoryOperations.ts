@@ -1,7 +1,4 @@
 import type { MediaType } from '@/core'
-import type { Ref } from 'vue'
-import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
   VideoMediaConfig,
@@ -10,12 +7,9 @@ import type {
 import type { AudioVisibleSprite, VideoVisibleSprite } from '@/core/visiblesprite'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { VideoResolution } from '@/core/types'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
-  UnifiedWebavModule,
   UnifiedMediaModule,
   UnifiedConfigModule,
   UnifiedTrackModule,
@@ -89,7 +83,6 @@ interface UnifiedKeyframeCommandExecutor {
 export function useHistoryOperations(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
@@ -198,7 +191,6 @@ export function useHistoryOperations(
     const command = new AddTimelineItemCommand(
       timelineItem,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -213,7 +205,6 @@ export function useHistoryOperations(
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -390,7 +381,6 @@ export function useHistoryOperations(
       timelineItem,
       splitTimeFrames,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -430,7 +420,6 @@ export function useHistoryOperations(
     const command = new AddTimelineItemCommand(
       duplicatedItem,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -627,7 +616,6 @@ export function useHistoryOperations(
               | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        unifiedWebavModule,
         unifiedConfigModule,
       )
 
@@ -696,7 +684,6 @@ export function useHistoryOperations(
               | undefined,
           setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        unifiedWebavModule,
         unifiedConfigModule,
       )
 
@@ -1000,16 +987,4 @@ export function useHistoryOperations(
     clearAllKeyframesWithHistory,
     toggleKeyframeWithHistory,
   }
-}
-
-// 导出类型定义供其他模块使用
-export type {
-  UnifiedHistoryModule,
-  UnifiedTimelineModule,
-  UnifiedWebavModule,
-  UnifiedMediaModule,
-  UnifiedConfigModule,
-  UnifiedTrackModule,
-  TransformProperties,
-  UnifiedKeyframeCommandExecutor,
 }

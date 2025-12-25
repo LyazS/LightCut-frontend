@@ -18,7 +18,6 @@ import type {
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
-  UnifiedWebavModule,
   UnifiedMediaModule,
   UnifiedConfigModule,
   UnifiedTrackModule,
@@ -153,7 +152,6 @@ export interface AgentTimelineItemInfo {
 export function useEditSDK(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
@@ -165,7 +163,6 @@ export function useEditSDK(
   const batchCommandBuilder = useBatchCommandBuilder(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
