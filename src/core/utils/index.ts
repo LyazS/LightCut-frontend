@@ -47,10 +47,7 @@ export {
   // 坐标转换函数
   frameToPixel,
   pixelToFrame,
-} from './coordinateUtils'
 
-// ==================== 坐标系转换工具 ====================
-export {
   // 坐标系转换函数
   webavToProjectCoords,
   projectToWebavCoords,
@@ -62,7 +59,7 @@ export {
   // 中心缩放计算
   calculateCenterScalePosition,
   debugCenterScaling,
-} from './coordinateTransform'
+} from './coordinateUtils'
 
 // ==================== 统一时间工具 ====================
 export {

@@ -80,7 +80,6 @@ import UnifiedPropertiesPanel from '@/components/panels/UnifiedPropertiesPanel.v
 import AIPanel from '@/aipanel/components/AIPanel.vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useKeyboardShortcuts } from '@/core/composables'
-import { logWebAVReadyStateChange, logComponentLifecycle } from '@/core/utils/webavDebug'
 import { useAppI18n } from '@/core/composables/useI18n'
 
 // 定义props和emit

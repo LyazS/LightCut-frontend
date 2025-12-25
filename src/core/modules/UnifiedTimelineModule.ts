@@ -17,7 +17,7 @@ import type {
 import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/core/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateTransform'
+import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import type { VideoResolution } from '@/core/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'

@@ -22,7 +22,6 @@ import {
   globalWebAVAnimationManager,
   updateWebAVAnimation,
 } from '@/core/utils/webavAnimationManager'
-import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
 import { markRaw } from 'vue'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'

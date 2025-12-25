@@ -105,7 +105,7 @@ export async function applyKeyframeSnapshot(
 
         // 恢复位置和尺寸
         if ('x' in visualProps && (visualProps.x !== undefined || visualProps.y !== undefined)) {
-          const { projectToWebavCoords } = await import('@/core/utils/coordinateTransform')
+          const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
           const { useUnifiedStore } = await import('@/core/unifiedStore')
           const store = useUnifiedStore()
 

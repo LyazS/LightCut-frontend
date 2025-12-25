@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateTransform'
+import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import { generateUUID4 } from '@/core/utils/idGenerator'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
 import type { TextMediaConfig, TextStyleConfig } from '@/core/timelineitem/TimelineItemData'

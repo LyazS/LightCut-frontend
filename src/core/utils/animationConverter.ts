@@ -11,7 +11,7 @@ import type {
 } from '@/core/timelineitem/AnimationTypes'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { framesToMicroseconds } from '@/core/utils/timeUtils'
-import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 // ==================== 转换核心函数 ====================
 

@@ -8,23 +8,6 @@ import {
   microsecondsToFrames,
   framesToTimecode,
 } from '@/core/utils/timeUtils'
-import {
-  logWebAVInitStart,
-  logWebAVInitStep,
-  logWebAVInitSuccess,
-  logWebAVInitError,
-  logContainerCreation,
-  logContainerCreated,
-  logCanvasDestroyStart,
-  logCanvasBackup,
-  logCanvasDestroyComplete,
-  logCanvasRecreateStart,
-  logSpriteRestore,
-  logCoordinateTransform,
-  logCanvasRecreateComplete,
-  createPerformanceTimer,
-  debugError,
-} from '@/core/utils/webavDebug'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { TimelineItemFactory } from '@/core/timelineitem'
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem/types'
@@ -222,15 +205,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     className?: string
     style?: Record<string, string>
   }): HTMLElement {
-    const containerTimer = createPerformanceTimer('Canvas Container Creation')
-
-    logContainerCreation({
-      width: options.width,
-      height: options.height,
-      className: options.className || 'default',
-      hasCustomStyle: !!options.style,
-    })
-
     // 创建容器元素
     const container = document.createElement('div')
     container.className = options.className || 'webav-canvas-container'
@@ -249,9 +223,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     // 存储全局引用
     globalCanvasContainer = container
 
-    const creationTime = containerTimer.end()
-    logContainerCreated(creationTime)
-
     return container
   }
 
@@ -268,92 +239,44 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
       bgColor: string
     },
   ): Promise<void> {
-    const initTimer = createPerformanceTimer('WebAV Canvas Initialization')
-
-    logWebAVInitStart({
-      hasContainer: !!container,
-      containerSize: `${container.clientWidth}x${container.clientHeight}`,
-    })
-
     try {
       // 清理现有的canvas
       if (globalAVCanvas) {
-        logWebAVInitStep(1, 'Cleaning up existing canvas')
         globalAVCanvas.destroy()
         globalAVCanvas = null
-        logWebAVInitStep(1, 'Existing canvas cleaned up')
       }
 
-      logWebAVInitStep(2, 'Validating container')
+      // 验证容器
       if (!container || !container.parentElement) {
         throw new Error('Invalid container: container must be attached to DOM')
       }
-      logWebAVInitStep(2, 'Container validation passed')
 
-      logWebAVInitStep(3, 'Preparing canvas options')
       const targetContainer = container
       const targetOptions = {
         width: options.width,
         height: options.height,
         bgColor: options.bgColor,
       }
-      logWebAVInitStep(3, 'Canvas options prepared', {
-        targetSize: `${targetOptions.width}x${targetOptions.height}`,
-        bgColor: targetOptions.bgColor,
-      })
-
-      logWebAVInitStep(4, 'Creating new AVCanvas instance')
-      const canvasTimer = createPerformanceTimer('AVCanvas Creation')
 
       // 创建AVCanvas实例 - 使用markRaw避免响应式包装
       globalAVCanvas = markRaw(new AVCanvas(targetContainer, targetOptions))
 
-      const canvasCreationTime = canvasTimer.end()
-      logWebAVInitStep(4, 'AVCanvas instance created successfully', {
-        creationTime: `${canvasCreationTime.toFixed(2)}ms`,
-        canvasSize: `${targetOptions.width}x${targetOptions.height}`,
-        backgroundColor: targetOptions.bgColor,
-      })
-
-      logWebAVInitStep(5, 'Setting AVCanvas to store')
       // 将AVCanvas实例设置到store中
       setAVCanvas(globalAVCanvas)
-      logWebAVInitStep(5, 'AVCanvas set to store successfully')
 
-      logWebAVInitStep(6, 'Setting up event listeners')
       // 设置事件监听器
       await setupEventListeners()
-      logWebAVInitStep(6, 'Event listeners setup completed')
 
-      logWebAVInitStep(7, 'Clearing error state')
+      // 清除错误状态
       setWebAVError(null)
-      logWebAVInitStep(7, 'Error state cleared')
 
-      logWebAVInitStep(8, 'Previewing first frame')
       // 预览第一帧
       globalAVCanvas.previewFrame(0)
-      logWebAVInitStep(8, 'First frame preview completed')
 
-      logWebAVInitStep(9, 'Marking WebAV as ready')
       // 标记WebAV为就绪状态
       setWebAVReady(true)
-      logWebAVInitStep(9, 'WebAV marked as ready in store')
-
-      const totalInitTime = initTimer.end()
-      logWebAVInitSuccess(totalInitTime, {
-        canvasSize: `${targetOptions.width}x${targetOptions.height}`,
-        containerAttached: !!targetContainer.parentElement,
-        isReady: isWebAVReady.value,
-      })
     } catch (error) {
-      const totalInitTime = initTimer.end()
       const errorMessage = error instanceof Error ? error.message : String(error)
-
-      logWebAVInitError(error as Error, totalInitTime, {
-        containerValid: !!container,
-        containerAttached: !!(container && container.parentElement),
-      })
-
       setWebAVError(`WebAV初始化失败: ${errorMessage}`)
       throw error
     }
@@ -550,13 +473,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
    * @param timelineItems 时间轴项目数据数组，用于重置runtime字段
    */
   async function destroyCanvas(timelineItems: UnifiedTimelineItemData[] = []) {
-    const destroyTimer = createPerformanceTimer('Canvas Destroy')
-
-    logCanvasDestroyStart({
-      hasCanvas: !!globalAVCanvas,
-      hasContainer: !!globalCanvasContainer,
-    })
-
     try {
       if (globalAVCanvas) {
         // 只重置runtime字段，sprite会被画布自动销毁
@@ -572,12 +488,8 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
       // 清理状态
       setAVCanvas(null)
       setWebAVReady(false)
-
-      const destroyTime = destroyTimer.end()
-      logCanvasDestroyComplete(destroyTime, timelineItems.length)
     } catch (error) {
-      const destroyTime = destroyTimer.end()
-      debugError('Canvas destroy failed', error as Error, destroyTime)
+      console.error('Canvas destroy failed:', error)
       throw error
     }
   }
@@ -600,13 +512,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
     },
   ): Promise<void> {
-    const recreateTimer = createPerformanceTimer('Canvas Recreate')
-
-    logCanvasRecreateStart({
-      containerSize: `${container.clientWidth}x${container.clientHeight}`,
-      canvasOptions: options,
-    })
-
     try {
       // 重新初始化画布
       await initializeCanvas(container, options)
@@ -642,8 +547,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
             await addSprite(rebuildResult.timelineItem.runtime.sprite)
           }
 
-          // 记录sprite恢复
-          logSpriteRestore(timelineItem.id, timelineItem.mediaType)
           restoredCount++
 
           console.log(`✅ [Canvas Recreate] 成功重建runtime字段: ${timelineItem.id}`)
@@ -656,16 +559,8 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
         const microseconds = framesToMicroseconds(playbackModule.currentFrame.value)
         await globalAVCanvas.previewFrame(microseconds)
       }
-
-      const recreateTime = recreateTimer.end()
-      logCanvasRecreateComplete(recreateTime, {
-        canvasSize: `${options.width}x${options.height}`,
-        restoredItems: restoredCount,
-        isReady: isWebAVReady.value,
-      })
     } catch (error) {
-      const recreateTime = recreateTimer.end()
-      debugError('Canvas recreate failed', error as Error, recreateTime)
+      console.error('Canvas recreate failed:', error)
       throw error
     }
   }

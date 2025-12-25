@@ -31,7 +31,7 @@ import {
   createTextTimelineItem as createTextTimelineItemFromUtils,
   createSpriteForTextTimelineItem,
 } from '@/core/utils/textTimelineUtils'
-import { projectToWebavCoords } from '@/core/utils/coordinateTransform'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 // ==================== 克隆和复制函数 ====================
 
