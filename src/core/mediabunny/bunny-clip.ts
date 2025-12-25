@@ -320,6 +320,8 @@ export class BunnyClip implements IClip {
    */
   async tickN(
     timeN: bigint,
+    needAudio: boolean = true,
+    needVideo: boolean = true,
   ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
     if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
       return this.tickInterceptor(timeN, {
@@ -329,8 +331,8 @@ export class BunnyClip implements IClip {
       })
     }
     const [audio, video] = await Promise.all([
-      this.audioSampleFunc ? this.findAudioBuffersN(timeN) : [],
-      this.videoSampleAtTSFunc ? this.findVideoFrameN(timeN) : null,
+      this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN) : [],
+      this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
     ])
     return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
   }

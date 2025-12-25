@@ -16,7 +16,8 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   // ==================== 状态定义 ====================
 
   // 播放相关状态
-  const currentFrame = ref(0) // 当前播放帧数（整数）
+  const currentFrame = ref(0) // 当前UI播放帧数（整数）
+  const currentBunnyFrame = ref(0) // 当前bunny播放帧数（整数）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
 
@@ -67,10 +68,10 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * @param frames 目标帧数
    */
   async function seekToFrame(frames: number): Promise<void> {
-    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
-    if (mediabunny.isMediaBunnyAvailable()) {
-      await mediabunny.seekToFrame(frames)
-    }
+    // const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+    // if (mediabunny.isMediaBunnyAvailable()) {
+    //   await mediabunny.seekToFrame(frames)
+    // }
     setCurrentFrame(frames)
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
   }
@@ -173,6 +174,7 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   return {
     // 状态
     currentFrame,
+    currentBunnyFrame,
     isPlaying,
     playbackRate,
 

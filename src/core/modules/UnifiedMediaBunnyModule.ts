@@ -20,7 +20,7 @@
 import { ref, markRaw, watch, type Ref } from 'vue'
 import { workerTimer } from '@/core/mediabunny/worker-timer'
 import { RENDERER_FPS, AUDIO_DEFAULT_SAMPLE_RATE } from '@/core/mediabunny/constant'
-import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import { throttle } from 'lodash'
 import type { VideoSample } from 'mediabunny'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
@@ -32,6 +32,11 @@ import type { MediaType } from '@/core/mediaitem/types'
 import type { AudioSample } from 'mediabunny'
 
 export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
+  const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
+  const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+  const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
+
   // ==================== 状态定义 ====================
 
   // 模块就绪状态
@@ -39,32 +44,30 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
   const mediaBunnyError = ref<string | null>(null)
 
   // Canvas 相关（由外部传入）
-  let canvas: HTMLCanvasElement | null = null
-  let ctx: CanvasRenderingContext2D | null = null
+  let mCanvas: HTMLCanvasElement | null = null
+  let mCtx: CanvasRenderingContext2D | null = null
 
   // 渲染循环相关
-  let renderLoopCleanup: (() => void) | null = null
-  let renderStart: number = 0
-  let renderRunCnt: number = 0
-  const expectFrameTime: number = 1000 / RENDERER_FPS
-  let updating: boolean = false
+  let mRenderLoopCleanup: (() => void) | null = null
+  const mExpectFrameTime: number = 1000 / RENDERER_FPS
+  let mUpdatingClip: boolean = false
 
   // Web Audio API 相关
-  let audioContext: AudioContext | null = null
-  let gainNode: GainNode | null = null
+  let mAudioContext: AudioContext | null = null
+  let mGainNode: GainNode | null = null
 
   // 音频调度相关
-  const queuedAudioNodes = new Set<AudioBufferSourceNode>()
+  const mQueuedAudioNodes = new Set<AudioBufferSourceNode>()
 
   // 时间同步锚点（用于音频调度）
-  let audioContextStartTime: number | null = null
-  let playbackTimeAtStart: number = 0
+  let mAudioContextStartTime: number | null = null
+  let mPlaybackTimeAtStart: number = 0
 
-  // 项目时长（帧数，number类型）
-  let timelineDuration: number = 0
+  // 项目时长（帧数）
+  let mTimelineDuration: number = 0
 
   // bunnyCurFrame 映射表（key: timelineItemId, value: VideoSample）
-  const bunnyCurFrameMap = new Map<string, VideoSample>()
+  const mBunnyCurFrameMap = new Map<string, VideoSample>()
 
   // ==================== 画布管理 ====================
 
@@ -79,24 +82,23 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
       }
 
       // 设置 Canvas 引用
-      canvas = canvasElement
-      ctx = canvas.getContext('2d')
+      mCanvas = canvasElement
+      mCtx = mCanvas.getContext('2d')
 
-      if (!ctx) {
+      if (!mCtx) {
         throw new Error('无法获取 Canvas 2D 上下文')
       }
 
       console.log('✅ Canvas 元素已设置', {
-        width: canvas.width,
-        height: canvas.height,
+        width: mCanvas.width,
+        height: mCanvas.height,
       })
 
       // 初始化音频系统
       initializeAudioSystem()
-
       // 设置播放监听器
       setupPlaybackListeners()
-
+      // 初始化就启动渲染循环
       startRenderLoop()
 
       // 标记为就绪
@@ -125,26 +127,26 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
     stopAllAudioNodes()
 
     // 清空 Canvas（如果存在）
-    if (canvas && ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (mCanvas && mCtx) {
+      mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height)
     }
 
     // 关闭 AudioContext
-    if (audioContext) {
-      await audioContext.close()
-      audioContext = null
+    if (mAudioContext) {
+      await mAudioContext.close()
+      mAudioContext = null
     }
 
     // 清理 bunnyCurFrameMap 中的所有 VideoSample
-    for (const [itemId, videoSample] of bunnyCurFrameMap) {
+    for (const [itemId, videoSample] of mBunnyCurFrameMap) {
       videoSample.close()
     }
-    bunnyCurFrameMap.clear()
+    mBunnyCurFrameMap.clear()
 
     // 清理引用（不删除 canvas 元素，由 Vue 组件管理）
-    canvas = null
-    ctx = null
-    gainNode = null
+    mCanvas = null
+    mCtx = null
+    mGainNode = null
 
     // 清理状态
     isMediaBunnyReady.value = false
@@ -158,25 +160,44 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 启动渲染循环
    */
   function startRenderLoop(): void {
-    if (renderLoopCleanup) {
+    if (mRenderLoopCleanup) {
       console.warn('⚠️ 渲染循环已在运行')
       return
     }
 
-    renderStart = performance.now()
-    renderRunCnt = 0
-
-    renderLoopCleanup = workerTimer(() => {
+    const renderStart = performance.now()
+    let renderRunCnt = 0
+    mRenderLoopCleanup = workerTimer(() => {
       // 使用真实时间作为基准，避免音画不同步
-      if ((performance.now() - renderStart) / (expectFrameTime * renderRunCnt) < 1) {
+      if ((performance.now() - renderStart) / (mExpectFrameTime * renderRunCnt) < 1) {
         return
       }
 
+      if (!mCanvas || !mCtx) {
+        return
+      }
+
+      // 从 playbackModule 获取播放状态
+      if (!playbackModule.isPlaying.value) {
+        return
+      }
+
+      // 基于真实时间getCurrentPlaybackTime获取当前播放时间（秒）
+      // 然后再来计算当前播放时间（帧数）
+      let currentTime = Math.floor(getCurrentPlaybackTime() * RENDERER_FPS)
+
+      // 检查是否播放结束
+      if (currentTime >= mTimelineDuration) {
+        playbackModule.setPlaying(false)
+        playbackModule.setCurrentFrame(mTimelineDuration)
+        console.log('✅ 播放结束')
+        return
+      }
       // 执行渲染帧
-      renderFrame()
+      renderFrame(currentTime, true)
 
       renderRunCnt++
-    }, expectFrameTime)
+    }, mExpectFrameTime)
 
     console.log('🎬 MediaBunny 渲染循环已启动')
   }
@@ -185,9 +206,9 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 停止渲染循环
    */
   function stopRenderLoop(): void {
-    if (renderLoopCleanup) {
-      renderLoopCleanup()
-      renderLoopCleanup = null
+    if (mRenderLoopCleanup) {
+      mRenderLoopCleanup()
+      mRenderLoopCleanup = null
       console.log('⏸️ MediaBunny 渲染循环已停止')
     }
   }
@@ -197,12 +218,11 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 使用 AudioContext 时钟作为基准，确保精确同步
    */
   function getCurrentPlaybackTime(): number {
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    if (!playbackModule.isPlaying.value || !audioContext || audioContextStartTime === null) {
-      return playbackTimeAtStart
+    if (!playbackModule.isPlaying.value || !mAudioContext || mAudioContextStartTime === null) {
+      return mPlaybackTimeAtStart
     }
 
-    return audioContext.currentTime - audioContextStartTime + playbackTimeAtStart
+    return mAudioContext.currentTime - mAudioContextStartTime + mPlaybackTimeAtStart
   }
 
   /**
@@ -210,43 +230,18 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 使用 bunnyCurFrameMap 和 timelineItem.runtime 中的数据进行渲染
    * 从 playbackModule 获取播放状态
    */
-  function renderFrame(): void {
-    if (!canvas || !ctx) {
-      return
-    }
-
-    // 获取依赖模块
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
-    const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
-
-    // 从 playbackModule 获取播放状态
-    const isPlaying = playbackModule.isPlaying.value
-
-    if (!isPlaying) {
-      return
-    }
-
-    // 基于真实时间getCurrentPlaybackTime计算当前播放时间（秒）
-    // 计算当前播放时间（帧数）
-    let currentTime = Math.floor(getCurrentPlaybackTime() * RENDERER_FPS)
-
-    // 检查是否播放结束
-    if (currentTime >= timelineDuration) {
-      playbackModule.setPlaying(false)
-      currentTime = timelineDuration
-      console.log('✅ 播放结束')
-      return
-    }
-
+  function renderFrame(currentTime: number, playAudio: boolean): void {
     // 更新所有 clips（调用 tickN 更新 bunnyCurFrameMap）
-    updateClips(timelineModule.timelineItems.value, currentTime)
+    void updateClips(timelineModule.timelineItems.value, currentTime, playAudio)
 
     // 渲染到 Canvas（使用 bunnyCurFrameMap 和 runtime 中的数据）
-    renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTime)
+    renderToCanvas(timelineModule.timelineItems.value, currentTime)
 
-    // 更新 playbackModule.currentFrame
-    playbackModule.setCurrentFrame(currentTime)
+    // 更新播放状态
+    playbackModule.currentBunnyFrame.value = currentTime
+    if (playbackModule.isPlaying.value) {
+      playbackModule.setCurrentFrame(currentTime)
+    }
   }
 
   /**
@@ -256,39 +251,43 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
   async function updateClips(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
     currentTimeN: number,
+    playAudio: boolean,
   ): Promise<void> {
-    if (updating) return
-    updating = true
+    if (mUpdatingClip) return
+    mUpdatingClip = true
     await Promise.all(
       timelineItems.map(async (item) => {
         // 处理视频/音频
         if (item.mediaType === 'video' || item.mediaType === 'audio') {
           const bunnyClip = item.runtime.bunnyClip
           if (bunnyClip) {
-            const { audio, video, state } = await bunnyClip.tickN(BigInt(currentTimeN))
+            const { audio, video, state } = await bunnyClip.tickN(
+              BigInt(currentTimeN),
+              playAudio, //按需请求音频
+              true, //总是请求视频帧
+            )
 
             if (state === 'success') {
               // 更新 bunnyCurFrameMap
               if (video) {
-                // 先关闭旧帧
-                const oldFrame = bunnyCurFrameMap.get(item.id)
+                const oldFrame = mBunnyCurFrameMap.get(item.id)
                 oldFrame?.close()
-                bunnyCurFrameMap.set(item.id, video)
+                mBunnyCurFrameMap.set(item.id, video)
               }
 
               // 调度音频
-              scheduleAudioBuffers(audio, bunnyClip.getPlaybackRate())
+              if (playAudio) scheduleAudioBuffers(audio, bunnyClip.getPlaybackRate())
             } else {
               // 清理无效帧
-              const oldFrame = bunnyCurFrameMap.get(item.id)
+              const oldFrame = mBunnyCurFrameMap.get(item.id)
               oldFrame?.close()
-              bunnyCurFrameMap.delete(item.id)
+              mBunnyCurFrameMap.delete(item.id)
             }
           }
         }
       }),
     )
-    updating = false
+    mUpdatingClip = false
   }
 
   /**
@@ -298,18 +297,16 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * - runtime.textBitmap (文本)
    * - mediaItem.runtime.bunny.imageClip (图片)
    * @param timelineItems 时间轴项目列表
-   * @param mediaModule 媒体模块
    * @param currentTimeN 当前播放时间（帧数，bigint类型）
    */
   function renderToCanvas(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
-    mediaModule: UnifiedMediaModule,
     currentTimeN: number,
   ): void {
-    if (!canvas || !ctx) return
+    if (!mCanvas || !mCtx) return
 
     // 清空画布
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height)
 
     // 收集所有可渲染的项目（需要同时满足：可渲染 + 在当前时间范围内）
     const renderableItems = timelineItems.filter((item) => {
@@ -324,7 +321,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
 
       // 检查是否可渲染
       if (item.mediaType === 'video') {
-        return bunnyCurFrameMap.has(item.id)
+        return mBunnyCurFrameMap.has(item.id)
       } else if (item.mediaType === 'text') {
         return item.runtime.textBitmap !== undefined
       } else if (item.mediaType === 'image') {
@@ -342,8 +339,8 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
     const rows = Math.ceil(itemCount / cols)
 
     // 计算每个单元格的宽高
-    const cellWidth = canvas.width / cols
-    const cellHeight = canvas.height / rows
+    const cellWidth = mCanvas.width / cols
+    const cellHeight = mCanvas.height / rows
 
     // 绘制所有项目
     renderableItems.forEach((item, index) => {
@@ -354,22 +351,19 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
 
       try {
         if (item.mediaType === 'video') {
-          // 渲染视频帧
-          const videoSample = bunnyCurFrameMap.get(item.id)
+          const videoSample = mBunnyCurFrameMap.get(item.id)
           if (videoSample) {
             const videoFrame = videoSample.toVideoFrame()
-            ctx!.drawImage(videoFrame, x, y, cellWidth, cellHeight)
+            mCtx!.drawImage(videoFrame, x, y, cellWidth, cellHeight)
             videoFrame.close()
           }
         } else if (item.mediaType === 'text' && item.runtime.textBitmap) {
-          // 渲染文本
-          ctx!.drawImage(item.runtime.textBitmap, x, y, cellWidth, cellHeight)
+          mCtx!.drawImage(item.runtime.textBitmap, x, y, cellWidth, cellHeight)
         } else if (item.mediaType === 'image') {
-          // 渲染图片
           const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
           const imageClip = mediaItem?.runtime.bunny?.imageClip
           if (imageClip) {
-            ctx!.drawImage(imageClip, x, y, cellWidth, cellHeight)
+            mCtx!.drawImage(imageClip, x, y, cellWidth, cellHeight)
           }
         }
       } catch (error) {
@@ -384,40 +378,36 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 初始化音频系统
    */
   function initializeAudioSystem(): void {
-    audioContext = new AudioContext({
+    mAudioContext = new AudioContext({
       sampleRate: AUDIO_DEFAULT_SAMPLE_RATE,
     })
-    gainNode = audioContext.createGain()
-    gainNode.connect(audioContext.destination)
-    console.log(`🎧 AudioContext 已创建，采样率: ${audioContext.sampleRate}Hz`)
+    mGainNode = mAudioContext.createGain()
+    mGainNode.connect(mAudioContext.destination)
+    console.log(`🎧 AudioContext 已创建，采样率: ${mAudioContext.sampleRate}Hz`)
   }
 
   /**
    * 调度音频缓冲
    */
   function scheduleAudioBuffers(audioSamples: AudioSample[], rate: number): void {
-    if (!audioContext || !gainNode) return
+    if (!mAudioContext || !mGainNode) return
 
     for (const sample of audioSamples) {
-      const node = audioContext.createBufferSource()
+      const node = mAudioContext.createBufferSource()
       node.buffer = sample.toAudioBuffer()
       node.playbackRate.value = rate
-      node.connect(gainNode)
+      node.connect(mGainNode)
 
-      const startTimestamp = audioContextStartTime! + sample.timestamp - playbackTimeAtStart
-
-      const curTime = audioContext.currentTime
+      const startTimestamp = mAudioContextStartTime! + sample.timestamp - mPlaybackTimeAtStart
+      const curTime = mAudioContext.currentTime
       if (startTimestamp >= curTime) {
         node.start(startTimestamp)
       } else {
-        const offset = curTime - startTimestamp
-        node.start(curTime, offset)
+        node.start(curTime, curTime - startTimestamp)
       }
-
-      queuedAudioNodes.add(node)
-
+      mQueuedAudioNodes.add(node)
       node.onended = () => {
-        queuedAudioNodes.delete(node)
+        mQueuedAudioNodes.delete(node)
       }
 
       sample.close()
@@ -428,14 +418,14 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 停止所有音频节点
    */
   function stopAllAudioNodes(): void {
-    for (const node of queuedAudioNodes) {
+    for (const node of mQueuedAudioNodes) {
       try {
         node.stop()
       } catch (err) {
         // 忽略已停止的节点
       }
     }
-    queuedAudioNodes.clear()
+    mQueuedAudioNodes.clear()
   }
 
   // ==================== 播放控制 ====================
@@ -445,18 +435,18 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 由 UnifiedPlaybackModule 调用
    */
   async function startPlayback(): Promise<void> {
-    if (!audioContext) {
-      initializeAudioSystem()
+    if (!mAudioContext) {
+      console.error('未初始化 AudioContext')
+      return
     }
 
-    if (audioContext && audioContext.state === 'suspended') {
-      await audioContext.resume()
+    if (mAudioContext && mAudioContext.state === 'suspended') {
+      await mAudioContext.resume()
     }
 
     // 设置音频时间锚点
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    audioContextStartTime = audioContext!.currentTime
-    playbackTimeAtStart = playbackModule.currentFrame.value / RENDERER_FPS
+    mAudioContextStartTime = mAudioContext!.currentTime
+    mPlaybackTimeAtStart = playbackModule.currentFrame.value / RENDERER_FPS
 
     console.log('▶️ MediaBunny 开始播放')
   }
@@ -470,8 +460,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
     stopAllAudioNodes()
 
     // 更新播放时间锚点
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    playbackTimeAtStart = playbackModule.currentFrame.value / RENDERER_FPS
+    mPlaybackTimeAtStart = playbackModule.currentFrame.value / RENDERER_FPS
 
     console.log('⏸️ MediaBunny 停止播放')
   }
@@ -481,23 +470,11 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * 由 UnifiedPlaybackModule 调用
    */
   async function seekToFrame(frames: number): Promise<void> {
-    // 停止所有音频
     stopAllAudioNodes()
 
-    // 限制帧数范围
-    const clampedFrames = Math.max(0, Math.min(timelineDuration, frames))
-
-    // 获取依赖模块
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
-    const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
-
-    // 更新所有 clips
-    const currentTimeN = clampedFrames
-    await updateClips(timelineModule.timelineItems.value, currentTimeN)
-
-    // 渲染到 Canvas
-    renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTimeN)
+    const clampedFrames = Math.max(0, Math.min(mTimelineDuration, frames))
+    mPlaybackTimeAtStart = clampedFrames / RENDERER_FPS
+    renderFrame(clampedFrames, false)
 
     console.log(`⏩ MediaBunny Seek 到: ${clampedFrames}帧`)
   }
@@ -507,34 +484,27 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * @param newDurationN 项目时长（帧数，number类型）
    */
   function updateTimelineDuration(newDurationN: number): void {
-    timelineDuration = newDurationN
+    mTimelineDuration = newDurationN
     const durationSeconds = newDurationN / RENDERER_FPS
     console.log(`🎯 更新项目时长: ${durationSeconds.toFixed(2)}s ${newDurationN}帧`)
   }
 
   // ==================== 事件监听 ====================
 
+  // 创建节流函数，50ms内只执行一次
+  const throttledSeekToFrame = throttle(async (frame: number) => {
+    seekToFrame(frame)
+  }, 50)
   /**
    * 设置播放监听器
    * 监听 UnifiedPlaybackModule 的状态变化
    */
   function setupPlaybackListeners(): void {
-    const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-    const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
-    const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
-    const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
-
-    // 初始化时同步时间轴时长到播放器
-    updateTimelineDuration(configModule.timelineDurationFrames.value)
-    console.log(`🎯 [MediaBunny] 初始化播放器时长: ${configModule.timelineDurationFrames.value}帧`)
-
     // 监听帧数变化（用于 seek）
-    watch(playbackModule.currentFrame, (newFrame, oldFrame) => {
-      if (!playbackModule.isPlaying.value && newFrame !== oldFrame) {
-        // 非播放状态下的帧数变化，需要更新渲染
-        const currentTimeN = newFrame
-        updateClips(timelineModule.timelineItems.value, currentTimeN)
-        renderToCanvas(timelineModule.timelineItems.value, mediaModule, currentTimeN)
+    watch([playbackModule.currentFrame, playbackModule.currentBunnyFrame], ([new_cf, new_cbf]) => {
+      if (new_cf != new_cbf && !playbackModule.isPlaying.value) {
+        console.log(`🎯 [MediaBunny] 帧数变化，已触发帧同步: ${new_cf} -> ${new_cbf}`)
+        throttledSeekToFrame(new_cf)
       }
     })
 
@@ -558,7 +528,7 @@ export function createUnifiedMediaBunnyModule(registry: ModuleRegistry) {
    * @returns 是否可用
    */
   function isMediaBunnyAvailable(): boolean {
-    return !!(canvas && ctx && isMediaBunnyReady.value && !mediaBunnyError.value)
+    return !!(mCanvas && mCtx && isMediaBunnyReady.value && !mediaBunnyError.value)
   }
 
   /**
