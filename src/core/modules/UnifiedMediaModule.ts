@@ -14,6 +14,7 @@ import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedProjectModule } from '@/core/modules/UnifiedProjectModule'
 import { getDataSourceRegistry } from '@/core/datasource/registry'
+import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 
 // ==================== 统一媒体项目调试工具 ====================
 
@@ -124,9 +125,6 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
       // 🆕 4. 删除硬盘文件（媒体文件 + Meta文件）
       try {
-        const { globalMetaFileManager } = await import(
-          '@/core/managers/media/globalMetaFileManager'
-        )
         const deleteResult = await globalMetaFileManager.deleteMediaFiles(mediaItemId)
 
         if (deleteResult.success) {

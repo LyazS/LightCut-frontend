@@ -14,8 +14,6 @@ import type { MediaType, MediaTypeOrUnknown } from '@/core/mediaitem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { AnimationConfig } from './animationtypes'
 import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
-import type { TimeRange as TimeRangeN } from '@/core/mediabunny/types'
-import { VideoSample } from 'mediabunny'
 
 // ==================== 从 types/index.ts 复制的类型定义 ====================
 /**

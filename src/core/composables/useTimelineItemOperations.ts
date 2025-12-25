@@ -13,6 +13,7 @@ import type {
   AudioMediaConfig,
   TextMediaConfig,
 } from '@/core/timelineitem/type'
+import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
 
 /**
  * 时间轴项目操作模块
@@ -335,9 +336,6 @@ export function useTimelineItemOperations() {
   async function createTextAtPosition(trackId: string, timePosition: number) {
     try {
       console.log('🔄 [UnifiedTimeline] 开始创建文本项目:', { trackId })
-
-      // 导入统一架构的文本时间轴工具函数
-      const { createTextTimelineItem } = await import('../utils/textTimelineUtils')
 
       // 创建文本时间轴项目（使用工具函数，对齐旧架构）
       const textItem = await createTextTimelineItem(

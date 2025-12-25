@@ -18,6 +18,7 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem/factory'
 import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/core/timelineitem'
+import { projectToWebavCoords } from '@/core/utils'
 
 export class UpdateTextCommand implements SimpleCommand {
   public readonly id: string
@@ -128,7 +129,6 @@ export class UpdateTextCommand implements SimpleCommand {
     const completeStyle = { ...item.config.style, ...newStyle }
 
     // 创建新的文本精灵
-    const { TextVisibleSprite } = await import('@/core/visiblesprite/TextVisibleSprite')
     const newSprite = await TextVisibleSprite.create(newText, completeStyle)
 
     // 🎯 更新TimelineItem的原始宽高为新sprite的尺寸
@@ -148,7 +148,6 @@ export class UpdateTextCommand implements SimpleCommand {
     })
 
     // 🎯 通过TimelineItem的xywh转换为sprite的rect坐标
-    const { projectToWebavCoords } = await import('@/core/utils')
     const webavCoords = projectToWebavCoords(
       item.config.x,
       item.config.y,

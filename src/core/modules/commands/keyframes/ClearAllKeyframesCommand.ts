@@ -13,6 +13,7 @@ import {
   createSnapshot,
   applyKeyframeSnapshot,
 } from './shared'
+import { clearAllKeyframes, relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
 
 export class ClearAllKeyframesCommand implements SimpleCommand {
   public readonly id: string
@@ -47,9 +48,6 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { clearAllKeyframes } = await import('@/core/utils/unifiedKeyframeUtils')
-
       // 清除所有关键帧
       clearAllKeyframes(item)
 
@@ -89,9 +87,6 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
         const firstKeyframe = this.beforeSnapshot.animationConfig.keyframes[0]
         if (firstKeyframe && item.timeRange) {
           // 将帧位置转换为绝对帧数
-          const { relativeFrameToAbsoluteFrame } = await import(
-            '@/core/utils/unifiedKeyframeUtils'
-          )
           const absoluteFrame = relativeFrameToAbsoluteFrame(
             firstKeyframe.framePosition,
             item.timeRange,

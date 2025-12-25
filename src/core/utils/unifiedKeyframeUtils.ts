@@ -19,6 +19,7 @@ import {
   isTextTimelineItem,
   isAudioTimelineItem,
 } from '@/core/timelineitem/queries'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
@@ -413,7 +414,6 @@ export async function updatePropertiesBatchViaWebAV(
 
     if (hasWidth && hasHeight && hasVisualProperties(item)) {
       // 🎯 批量处理尺寸更新：一次性计算位置，避免重复计算
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
       const { useUnifiedStore } = await import('@/core/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
@@ -490,7 +490,6 @@ async function updatePropertyViaWebAV(
   try {
     if (property === 'x' || property === 'y') {
       // 位置更新需要坐标转换
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
       const { useUnifiedStore } = await import('@/core/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
@@ -513,7 +512,6 @@ async function updatePropertyViaWebAV(
       sprite.rect.y = webavCoords.y
     } else if (property === 'width') {
       // 中心缩放：保持中心位置不变，更新宽度
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
       const { useUnifiedStore } = await import('@/core/unifiedStore')
       const unifiedStore = useUnifiedStore()
 
@@ -551,7 +549,6 @@ async function updatePropertyViaWebAV(
       }
     } else if (property === 'height') {
       // 中心缩放：保持中心位置不变，更新高度
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
       const { useUnifiedStore } = await import('@/core/unifiedStore')
       const unifiedStore = useUnifiedStore()
 

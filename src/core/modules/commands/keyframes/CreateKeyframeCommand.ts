@@ -15,6 +15,7 @@ import {
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { createKeyframe, enableAnimation, initializeAnimation, sortKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 
 export class CreateKeyframeCommand implements SimpleCommand {
   public readonly id: string
@@ -68,11 +69,6 @@ export class CreateKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { createKeyframe, enableAnimation, initializeAnimation } = await import(
-        '@/core/utils/unifiedKeyframeUtils'
-      )
-
       // 1. 确保动画已启用
       if (!item.animation) {
         initializeAnimation(item)
@@ -84,7 +80,6 @@ export class CreateKeyframeCommand implements SimpleCommand {
       ;(item.animation!.keyframes as any[]).push(keyframe)
 
       // 3. 排序关键帧
-      const { sortKeyframes } = await import('@/core/utils/unifiedKeyframeUtils')
       sortKeyframes(item)
 
       // 4. 动画更新已迁移到 Bunny 组件，无需手动更新

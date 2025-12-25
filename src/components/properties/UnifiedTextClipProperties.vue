@@ -446,6 +446,8 @@ import type { TextStyleConfig } from '@/core/timelineitem/type'
 import { framesToTimecode, timecodeToFrames } from '@/core/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables'
 import { IconComponents } from '@/constants/iconComponents'
+import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
+import { syncTimeRange } from '@/core/utils/timeRangeUtils'
 import NumberInput from '@/components/base/NumberInput.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
 import TimecodeInput from '@/components/base/TimecodeInput.vue'
@@ -941,9 +943,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
     props.selectedTimelineItem.animation &&
     props.selectedTimelineItem.animation.keyframes.length > 0
   ) {
-    const { adjustKeyframesForDurationChange } = await import(
-      '@/core/utils/unifiedKeyframeUtils'
-    )
     adjustKeyframesForDurationChange(
       props.selectedTimelineItem,
       oldDurationFrames,
@@ -963,7 +962,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 
   // 更新timelineItem的timeRange（使用专用工具函数）
   if (props.selectedTimelineItem) {
-    const { syncTimeRange } = await import('@/core/utils/timeRangeUtils')
     syncTimeRange(props.selectedTimelineItem)
   }
 

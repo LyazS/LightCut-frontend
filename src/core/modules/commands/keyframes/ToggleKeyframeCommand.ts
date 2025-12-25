@@ -16,6 +16,7 @@ import {
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { toggleKeyframe } from '@/core/utils/unifiedKeyframeUtils'
 
 export class ToggleKeyframeCommand implements SimpleCommand {
   public readonly id: string
@@ -69,9 +70,6 @@ export class ToggleKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { toggleKeyframe } = await import('@/core/utils/unifiedKeyframeUtils')
-
       // 使用统一的关键帧切换逻辑
       toggleKeyframe(item, this.frame)
 

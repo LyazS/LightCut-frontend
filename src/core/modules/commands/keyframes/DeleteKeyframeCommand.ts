@@ -15,6 +15,7 @@ import {
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { removeKeyframeAtFrame, disableAnimation } from '@/core/utils/unifiedKeyframeUtils'
 
 export class DeleteKeyframeCommand implements SimpleCommand {
   public readonly id: string
@@ -68,11 +69,6 @@ export class DeleteKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { removeKeyframeAtFrame, disableAnimation } = await import(
-        '@/core/utils/unifiedKeyframeUtils'
-      )
-
       // 1. 删除指定帧的关键帧
       removeKeyframeAtFrame(item, this.frame)
 

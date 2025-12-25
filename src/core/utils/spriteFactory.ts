@@ -33,6 +33,7 @@ import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
 
 // 导入 WebAV Clip 工具函数
 import { cloneMP4Clip, cloneImgClip, cloneAudioClip } from '@/core/utils/webavClipUtils'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 /**
  * 从统一媒体项目数据创建对应的 Sprite 实例
@@ -273,9 +274,6 @@ export async function createSpriteFromUnifiedTimelineItem(
   // 4. 应用变换属性（使用坐标转换）
   if (hasVisualProperties(timelineItemData)) {
     const config = timelineItemData.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-
-    // 导入坐标转换工具
-    const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
 
     // 使用坐标转换将项目坐标系转换为 WebAV 坐标系
     if (

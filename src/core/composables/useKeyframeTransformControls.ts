@@ -10,6 +10,7 @@ import { useUnifiedKeyframeUI } from '@/core/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
+import { debugKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -194,7 +195,6 @@ export function useUnifiedKeyframeTransformControls(
     }
 
     try {
-      const { debugKeyframes } = await import('../utils/unifiedKeyframeUtils')
       debugKeyframes(selectedTimelineItem.value)
     } catch (error) {
       console.error('🎬 [Unified Debug] 调试失败:', error)

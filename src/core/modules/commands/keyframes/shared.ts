@@ -15,6 +15,7 @@ import { hasVisualProperties } from '@/core/timelineitem/queries'
 import { generateCommandId as generateId } from '@/core/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 // ==================== 关键帧数据快照接口 ====================
 
@@ -97,7 +98,6 @@ export async function applyKeyframeSnapshot(
 
         // 恢复位置和尺寸
         if ('x' in visualProps && (visualProps.x !== undefined || visualProps.y !== undefined)) {
-          const { projectToWebavCoords } = await import('@/core/utils/coordinateUtils')
           const { useUnifiedStore } = await import('@/core/unifiedStore')
           const store = useUnifiedStore()
 

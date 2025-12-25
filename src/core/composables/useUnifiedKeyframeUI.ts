@@ -22,6 +22,8 @@ import {
 } from '@/core/utils/unifiedKeyframeUtils'
 // 关键帧命令已经迁移到 unifiedStore
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
+import { UpdatePropertyCommand } from '@/core/modules/commands/keyframes'
+import { BatchUpdatePropertiesCommand } from '@/core/modules/commands/batchCommands'
 
 /**
  * 统一关键帧UI管理 Composable（新架构版本）
@@ -247,12 +249,6 @@ export function useUnifiedKeyframeUI(
     if (!timelineItem.value || currentFrame.value == null) return
 
     try {
-      // 动态导入命令系统
-      const { UpdatePropertyCommand } = await import('@/core/modules/commands/keyframes')
-      const { BatchUpdatePropertiesCommand } = await import(
-        '@/core/modules/commands/batchCommands'
-      )
-
       // 创建多个属性更新命令
       const updateCommands = Object.entries(properties).map(([property, value]) => {
         return new UpdatePropertyCommand(

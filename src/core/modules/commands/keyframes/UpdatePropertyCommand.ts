@@ -18,6 +18,7 @@ import {
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { handlePropertyChange } from '@/core/utils/unifiedKeyframeUtils'
 
 export class UpdatePropertyCommand implements SimpleCommand {
   public readonly id: string
@@ -75,9 +76,6 @@ export class UpdatePropertyCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { handlePropertyChange } = await import('@/core/utils/unifiedKeyframeUtils')
-
       // 使用统一的属性修改处理逻辑
       const actionType = await handlePropertyChange(item, this.frame, this.property, this.newValue)
 
