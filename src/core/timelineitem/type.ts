@@ -71,17 +71,17 @@ export interface TextStyleConfig {
 /**
  * 基础媒体属性（所有媒体类型共享）
  */
-export interface BaseMediaProps<T extends MediaType = MediaType> {
+export interface BaseMediaProps {
   /** 层级控制 */
   zIndex: number
   /** 动画配置（可选） */
-  animation?: AnimationConfig<T>
+  // animation?: AnimationConfig<T>
 }
 
 /**
  * 视觉媒体属性（video 和 image 共享）
  */
-interface VisualMediaProps<T extends MediaType = MediaType> extends BaseMediaProps<T> {
+interface VisualMediaProps extends BaseMediaProps {
   /** 水平位置 */
   x: number
   /** 垂直位置 */
@@ -115,7 +115,7 @@ interface AudioMediaProps {
 /**
  * 视频媒体配置：同时具有视觉和音频属性
  */
-export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaProps {
+export interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
   // 视频特有属性（预留）
   // playbackRate?: number // 倍速可能在 timeRange 中更合适
 }
@@ -123,7 +123,7 @@ export interface VideoMediaConfig extends VisualMediaProps<'video'>, AudioMediaP
 /**
  * 图片媒体配置：只有视觉属性
  */
-export interface ImageMediaConfig extends VisualMediaProps<'image'> {
+export interface ImageMediaConfig extends VisualMediaProps {
   // 图片特有属性（预留）
   // filters?: ImageFilterConfig[]
 }
@@ -131,7 +131,7 @@ export interface ImageMediaConfig extends VisualMediaProps<'image'> {
 /**
  * 音频媒体配置：只有音频属性
  */
-export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaProps {
+export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
   /** 增益（dB） */
   gain: number
   // 音频特有属性（预留）
@@ -142,7 +142,7 @@ export interface AudioMediaConfig extends BaseMediaProps<'audio'>, AudioMediaPro
 /**
  * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
  */
-export interface TextMediaConfig extends VisualMediaProps<'text'> {
+export interface TextMediaConfig extends VisualMediaProps {
   /** 文本内容 */
   text: string
   /** 文本样式配置 */
