@@ -17,7 +17,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
 
   // 播放相关状态
   const currentFrame = ref(0) // 当前UI播放帧数（整数）
-  const currentBunnyFrame = ref(0) // 当前bunny播放帧数（整数）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
 
@@ -174,7 +173,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   return {
     // 状态
     currentFrame,
-    currentBunnyFrame,
     isPlaying,
     playbackRate,
 

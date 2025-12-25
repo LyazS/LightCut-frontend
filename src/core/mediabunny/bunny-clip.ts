@@ -140,6 +140,7 @@ export class BunnyClip implements IClip {
 
       // 情况3：帧在时间点之后（未来帧）
       // nextFrameN 保持不变，跳出循环，等待下一次调用
+      console.log(`🎞️ [视频] 未来帧 - 当前: ${timeN}帧, 上次: ${this.videoInTimeN}帧`)
       return null
     }
   }

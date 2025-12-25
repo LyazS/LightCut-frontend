@@ -30,19 +30,9 @@ import type { UnifiedViewportModule } from '@/core/modules/UnifiedViewportModule
 import type { UnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
 import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
 import {
-  getTimelineItemAtFrames,
   getTimelineItemsByTrack,
-  findTimelineItemBySprite,
-  getTimelineItemsAtFrames,
-  getTimelineItemAtTrackAndFrames,
   isPlayheadInTimelineItem,
-  getTimelineItemsByMediaType,
-  getTimelineItemsByStatus,
-  getTimelineItemDuration,
-  sortTimelineItemsByTime,
   findOverlappingTimelineItems,
-  findOverlappingTimelineItemsOnTrack,
-  findOrphanedTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
 import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/TimelineItemFactory'
 
@@ -488,8 +478,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     clearMultiSelection: unifiedSelectionModule.clearMultiSelection,
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
 
-    // ==================== 系统状态方法 ====================
-
     // ==================== 坐标转换方法 ====================
     frameToPixel: (frames: number, timelineWidth: number) =>
       frameToPixel(
@@ -509,46 +497,16 @@ export const useUnifiedStore = defineStore('unified', () => {
       ),
 
     // ==================== 时间轴搜索工具函数 ====================
-    getTimelineItemAtFrames: (frames: number) =>
-      getTimelineItemAtFrames(frames, unifiedTimelineModule.timelineItems.value),
     getTimelineItemsByTrack: (trackId: string) =>
       getTimelineItemsByTrack(trackId, unifiedTimelineModule.timelineItems.value),
-    findTimelineItemBySprite: (sprite: any) =>
-      findTimelineItemBySprite(sprite, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemsAtFrames: (frames: number) =>
-      getTimelineItemsAtFrames(frames, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemAtTrackAndFrames: (trackId: string, frames: number) =>
-      getTimelineItemAtTrackAndFrames(trackId, frames, unifiedTimelineModule.timelineItems.value),
     isPlayheadInTimelineItem: (item: UnifiedTimelineItemData, currentFrame: number) =>
       isPlayheadInTimelineItem(item, currentFrame),
-    getTimelineItemsByMediaType: (mediaType: MediaTypeOrUnknown) =>
-      getTimelineItemsByMediaType(mediaType, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemsByStatus: (status: 'ready' | 'loading' | 'error') =>
-      getTimelineItemsByStatus(status, unifiedTimelineModule.timelineItems.value),
     findOverlappingTimelineItems: (startTime: number, endTime: number, excludeItemId?: string) =>
       findOverlappingTimelineItems(
         startTime,
         endTime,
         unifiedTimelineModule.timelineItems.value,
         excludeItemId,
-      ),
-    findOverlappingTimelineItemsOnTrack: (
-      trackId: string,
-      startTime: number,
-      endTime: number,
-      excludeItemId?: string,
-    ) =>
-      findOverlappingTimelineItemsOnTrack(
-        trackId,
-        startTime,
-        endTime,
-        unifiedTimelineModule.timelineItems.value,
-        excludeItemId,
-      ),
-    findOrphanedTimelineItems: () =>
-      findOrphanedTimelineItems(
-        unifiedTimelineModule.timelineItems.value,
-        unifiedMediaModule.mediaItems.value,
       ),
 
     // ==================== 统一自动保存模块状态和方法 ====================

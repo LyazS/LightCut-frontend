@@ -23,6 +23,7 @@ import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedWebavModule } from './UnifiedWebavModule'
+import type { UnifiedMediaBunnyModule } from './UnifiedMediaBunnyModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 
 /**
@@ -302,6 +303,8 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
       updateLoadingProgress(t('project.progress.contentComplete'), 100)
       isProjectTimelineReady.value = true
+      const mediabunnyModule = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+      mediabunnyModule.seekToFrame(0)
     } catch (error) {
       console.error('❌ [Content Load] 加载项目内容失败:', error)
       throw error

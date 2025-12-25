@@ -9,6 +9,7 @@ import { framesToTimecode } from '@/core/utils/timeUtils'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
 
 // ==================== 新架构类型导入 ====================
 import type {
@@ -30,6 +31,7 @@ import type { UnifiedTimeRange } from '@/core/types/timeRange'
 // ==================== 新架构工具导入 ====================
 
 import { TimelineItemFactory } from '@/core/timelineitem'
+import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
 
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 
@@ -229,6 +231,24 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       await this.timelineModule.addTimelineItem(firstItem)
       await this.timelineModule.addTimelineItem(secondItem)
 
+      // 3. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(firstItem)) {
+        MediaSyncFactory.forCommand(
+          this.id,
+          firstItem.mediaItemId,
+          firstItem.id,
+          this.timelineModule.setupTimelineItemSprite,
+        ).setup()
+      }
+      if (TimelineItemQueries.isLoading(secondItem)) {
+        MediaSyncFactory.forCommand(
+          this.id,
+          secondItem.mediaItemId,
+          secondItem.id,
+          this.timelineModule.setupTimelineItemSprite,
+        ).setup()
+      }
+
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(
         `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`,
@@ -258,6 +278,16 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       // 3. 添加原始项目到时间轴
       await this.timelineModule.addTimelineItem(originalItem)
 
+      // 4. 针对loading状态的原始项目设置状态同步（确保时间轴项目已添加到store）
+      if (TimelineItemQueries.isLoading(originalItem)) {
+        MediaSyncFactory.forCommand(
+          this.id,
+          originalItem.mediaItemId,
+          originalItem.id,
+          this.timelineModule.setupTimelineItemSprite,
+        ).setup()
+      }
+
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
       console.log(`↩️ 已撤销分割时间轴项目: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
@@ -283,6 +313,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     this._isDisposed = true
+    // 清理媒体同步
+    cleanupCommandMediaSync(this.id)
     console.log(`🗑️ [SplitTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }
