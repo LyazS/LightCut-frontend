@@ -3,7 +3,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { TextMediaConfig } from '@/core/timelineitem/type'
 import { BunnyClip } from '@/core/mediabunny/bunny-clip'
-import { textToImageBitmap } from './ToBitmap'
+import { textToImageBitmap, textToImageBitmap2 } from './ToBitmap'
 
 /**
  * 为时间轴项目设置对应的 Bunny 对象
@@ -28,7 +28,7 @@ export async function setupTimelineItemBunny(
       case 'text': {
         // 文本类型：创建 textBitmap
         const textConfig = timelineItem.config as TextMediaConfig
-        const bmap = await textToImageBitmap(textConfig.text, textConfig.style)
+        const bmap = await textToImageBitmap2(textConfig.text, textConfig.style)
         timelineItem.runtime.textBitmap = bmap
         console.log(`✅ [timelineItemSetup] 文本 bunny 对象创建完成`)
         break

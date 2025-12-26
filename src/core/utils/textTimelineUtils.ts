@@ -7,7 +7,6 @@ import type { TextMediaConfig } from '@/core/timelineitem/type'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/texttype'
-import type { TimeRange as TimeRangeN } from '@/core/mediabunny/types'
 
 /**
  * 统一架构下的文本时间轴工具函数
@@ -179,12 +178,6 @@ export async function createTextTimelineItem(
       clipStartTime: -1, // 文本不使用此属性
       clipEndTime: -1, // 文本不使用此属性
     }
-    const timeRangeN: TimeRangeN = {
-      timelineStart: BigInt(startTimeFrames),
-      timelineEnd: BigInt(startTimeFrames + duration),
-      clipStart: -1n,
-      clipEnd: -1n,
-    }
 
     // 8. 创建文本媒体配置（适配新架构）
     const textConfig: TextMediaConfig = {
@@ -214,7 +207,6 @@ export async function createTextTimelineItem(
       trackId,
       mediaType: 'text',
       timeRange,
-      timeRangeN,
       config: textConfig,
       animation: undefined, // 新创建的文本项目默认没有动画
       property: {

@@ -154,12 +154,6 @@ export function useBatchCommandBuilder(
         clipStartTime: 0,
         clipEndTime: availableDuration,
       },
-      timeRangeN:{
-        timelineStart: BigInt(positionFrames),
-        timelineEnd: BigInt(positionFrames + availableDuration),
-        clipStart: 0n,
-        clipEnd: BigInt(availableDuration),
-      },
       config: config,
       animation: undefined, // 新创建的项目默认没有动画
       property: createEnhancedDefaultProperty(knownMediaType, originalResolution),

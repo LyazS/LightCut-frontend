@@ -185,3 +185,165 @@ export async function fileToImageBitmap(
   // 注意：createImageBitmap 已完成解码，此处只保证行为稳定
   return bitmap // ✅ CanvasImageSource
 }
+
+/**
+ * 创建一个新的 HTML 元素
+ * @param tagName - 要创建的元素的标签名
+ * @returns 新创建的 HTML 元素
+ */
+function createEl(tagName: string): HTMLElement {
+  return document.createElement(tagName)
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  var binary = ''
+  var bytes = new Uint8Array(buffer)
+  var len = bytes.byteLength
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return window.btoa(binary)
+}
+
+/**
+ * 将文本渲染为图片
+ * @param txt - 要渲染的文本
+ * @param cssText - 应用于文本的 CSS 样式
+ * @returns 渲染后的图片元素
+ */
+async function renderTxt2Img(
+  txt: string,
+  cssText: string,
+  opts: {
+    font?: { name: string; url: string }
+    onCreated?: (el: HTMLElement) => void
+  } = {},
+): Promise<HTMLImageElement> {
+  const div = createEl('pre')
+  div.style.cssText = `margin: 0; ${cssText}; position: fixed;`
+  div.textContent = txt
+  document.body.appendChild(div)
+  opts.onCreated?.(div)
+
+  const { width, height } = div.getBoundingClientRect()
+  // 计算出 rect，立即从dom移除
+  div.remove()
+
+  const img = new Image()
+  img.width = width
+  img.height = height
+  const fontFaceStr =
+    opts.font == null
+      ? ''
+      : `
+    @font-face {
+      font-family: '${opts.font.name}';
+      src: url('data:font/woff2;base64,${arrayBufferToBase64(await (await fetch(opts.font.url)).arrayBuffer())}') format('woff2');
+    }
+  `
+  const svgStr = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <style>
+        ${fontFaceStr}
+      </style>
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml">${div.outerHTML}</div>
+      </foreignObject>
+    </svg>
+  `
+    .replace(/\t/g, '')
+    .replace(/#/g, '%23')
+
+  img.src = `data:image/svg+xml;charset=utf-8,${svgStr}`
+
+  await new Promise((resolve) => {
+    img.onload = resolve
+  })
+  return img
+}
+
+/**
+ * 将文本渲染为 ImageBitmap（使用 SVG + foreignObject 方式）
+ * @param text - 要渲染的文本
+ * @param styleConfig - 文本样式配置
+ * @returns Promise<ImageBitmap>
+ *
+ * @example
+ * ```typescript
+ * const bitmap = await textToImageBitmap2(
+ *   '水印',
+ *   {
+ *     fontSize: 40,
+ *     fontFamily: 'Arial, sans-serif',
+ *     color: 'white',
+ *     textShadow: '2px 2px 6px red',
+ *     customFont: {
+ *       name: 'CustomFont',
+ *       url: '/CustomFont.ttf',
+ *     },
+ *   },
+ * )
+ * ```
+ */
+export async function textToImageBitmap2(
+  text: string,
+  styleConfig: TextStyleConfig,
+): Promise<ImageBitmap> {
+  if (!text) {
+    throw new Error('text is empty')
+  }
+
+  // 将 TextStyleConfig 转换为 CSS 字符串
+  const cssParts: string[] = []
+
+  // 基础字体属性
+  cssParts.push(`font-size: ${styleConfig.fontSize}px`)
+  cssParts.push(`font-family: ${styleConfig.customFont?.name || styleConfig.fontFamily}`)
+  cssParts.push(`font-weight: ${styleConfig.fontWeight}`)
+  cssParts.push(`font-style: ${styleConfig.fontStyle}`)
+
+  // 颜色属性
+  cssParts.push(`color: ${styleConfig.color}`)
+  if (styleConfig.backgroundColor) {
+    cssParts.push(`background-color: ${styleConfig.backgroundColor}`)
+  }
+
+  // 文本效果
+  if (styleConfig.textShadow) {
+    cssParts.push(`text-shadow: ${styleConfig.textShadow}`)
+  }
+  if (styleConfig.textStroke) {
+    cssParts.push(`-webkit-text-stroke: ${styleConfig.textStroke.width}px ${styleConfig.textStroke.color}`)
+  }
+  if (styleConfig.textGlow) {
+    const { color, blur, spread = 0 } = styleConfig.textGlow
+    const glowShadows = [
+      `0 0 ${blur}px ${color}`,
+      `0 0 ${blur * 2}px ${color}`,
+      `0 0 ${blur * 3}px ${color}`,
+    ]
+    if (spread > 0) {
+      glowShadows.push(`0 0 ${spread}px ${color}`)
+    }
+    cssParts.push(`text-shadow: ${glowShadows.join(', ')}`)
+  }
+
+  // 布局属性
+  cssParts.push(`text-align: ${styleConfig.textAlign}`)
+  if (styleConfig.lineHeight) {
+    cssParts.push(`line-height: ${styleConfig.lineHeight}`)
+  }
+  if (styleConfig.maxWidth) {
+    cssParts.push(`max-width: ${styleConfig.maxWidth}px`)
+  }
+
+  const cssText = cssParts.join('; ')
+
+  const imgEl = await renderTxt2Img(text, cssText, {
+    font: styleConfig.customFont,
+  })
+  const cvs = new OffscreenCanvas(imgEl.width, imgEl.height)
+  const ctx = cvs.getContext('2d')
+  ctx?.drawImage(imgEl, 0, 0, imgEl.width, imgEl.height)
+  return await createImageBitmap(cvs)
+}
