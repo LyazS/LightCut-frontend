@@ -494,77 +494,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     }
   }
 
-  /**
-   * 重新创建画布并恢复内容
-   */
-  async function recreateCanvas(
-    container: HTMLElement,
-    options: {
-      width: number
-      height: number
-      bgColor: string
-    },
-    timelineModule: {
-      timelineItems: UnifiedTimelineItemData<MediaType>[]
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-    },
-    mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-    },
-  ): Promise<void> {
-    try {
-      // 重新初始化画布
-      await initializeCanvas(container, options)
-
-      // 确保WebAV已经准备好
-      await waitForWebAVReady()
-
-      // 重建所有时间轴项目的runtime字段
-      let restoredCount = 0
-
-      for (const timelineItem of timelineModule.timelineItems) {
-        try {
-          console.log(`🔧 [Canvas Recreate] 重建时间轴项目runtime字段: ${timelineItem.id}`)
-
-          // 使用TimelineItemFactory.rebuildKnown重建runtime字段
-          const rebuildResult = await TimelineItemFactory.rebuildInplace({
-            originalTimelineItemData: timelineItem,
-            getMediaItem: mediaModule.getMediaItem,
-            setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
-            logIdentifier: 'Canvas Recreate',
-          })
-
-          if (!rebuildResult.success) {
-            console.error(
-              `❌ [Canvas Recreate] 重建runtime字段失败: ${timelineItem.id}`,
-              rebuildResult.error,
-            )
-            continue
-          }
-
-          // 添加sprite到WebAV画布
-          if (rebuildResult.timelineItem.runtime.sprite) {
-            await addSprite(rebuildResult.timelineItem.runtime.sprite)
-          }
-
-          restoredCount++
-
-          console.log(`✅ [Canvas Recreate] 成功重建runtime字段: ${timelineItem.id}`)
-        } catch (error) {
-          console.error(`❌ [Canvas Recreate] 重建runtime字段失败: ${timelineItem.id}`, error)
-        }
-      }
-
-      if (globalAVCanvas) {
-        const microseconds = framesToMicroseconds(playbackModule.currentFrame.value)
-        await globalAVCanvas.previewFrame(microseconds)
-      }
-    } catch (error) {
-      console.error('Canvas recreate failed:', error)
-      throw error
-    }
-  }
-
   // ==================== 导出接口 ====================
 
   return {
@@ -594,7 +523,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
 
     // 画布销毁和重建
     destroyCanvas,
-    recreateCanvas,
   }
 }
 

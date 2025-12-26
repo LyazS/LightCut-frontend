@@ -10,10 +10,13 @@ export type {
   TimelineItemStatus,
   TransformData,
   UnknownMediaConfig,
-  TextStyleConfig,
   VideoMediaConfig,
   AudioMediaConfig,
 } from './type'
+
+// 从 texttype.ts 导出文本相关类型
+export type { TextStyleConfig } from './texttype'
+export { DEFAULT_TEXT_STYLE } from './texttype'
 
 // 动画类型导出
 export type {

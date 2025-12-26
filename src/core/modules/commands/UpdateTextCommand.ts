@@ -17,7 +17,7 @@ import type { MediaType } from '@/core/mediaitem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem/factory'
 import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
-import type { TextStyleConfig } from '@/core/timelineitem'
+import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import { projectToWebavCoords } from '@/core/utils'
 
 export class UpdateTextCommand implements SimpleCommand {

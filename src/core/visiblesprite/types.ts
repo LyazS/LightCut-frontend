@@ -19,7 +19,7 @@ export type ExtendedSpriteEvents = {
       opacity: number
       textUpdate?: {
         text: string
-        style: import('@/core/timelineitem/type').TextStyleConfig
+        style: import('@/core/timelineitem/texttype').TextStyleConfig
         needsRecreation: boolean
       }
     }>,
@@ -32,6 +32,6 @@ export type ExtendedSpriteEvents = {
 export type TextSpriteEvents = {
   textUpdated: (
     text: string,
-    style: import('@/core/timelineitem/type').TextStyleConfig,
+    style: import('@/core/timelineitem/texttype').TextStyleConfig,
   ) => void
 }

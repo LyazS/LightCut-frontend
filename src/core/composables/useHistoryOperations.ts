@@ -33,7 +33,7 @@ import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchComma
 import { TimelineItemQueries } from '@/core/timelineitem/'
 import { duplicateTimelineItem } from '@/core/timelineitem/factory'
 import { UpdateTextCommand } from '@/core/modules/commands/UpdateTextCommand'
-import type { TextStyleConfig } from '@/core/timelineitem'
+import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,

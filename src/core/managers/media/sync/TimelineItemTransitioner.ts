@@ -96,17 +96,6 @@ export class TimelineItemTransitioner {
   ): Promise<void> {
     console.log(`🎨 [TimelineItemTransitioner] 转换文本时间轴项目: ${timelineItem.id}`)
 
-    // 1. 使用 textTimelineUtils 中的工具函数创建精灵
-    const newSprite = await createSpriteForTextTimelineItem(timelineItem)
-
-    // 2. 将精灵添加到 runtime
-    timelineItem.runtime.sprite = markRaw(newSprite)
-
-    // 3. 设置sprite属性
-    if (this.setupTimelineItemSprite) {
-      await this.setupTimelineItemSprite(timelineItem)
-    }
-
     // 4. 使用 setupTimelineItemBunny 创建 textBitmap
     await setupTimelineItemBunny(timelineItem)
 

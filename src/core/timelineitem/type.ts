@@ -14,59 +14,9 @@ import type { MediaType, MediaTypeOrUnknown } from '@/core/mediaitem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { AnimationConfig } from './animationtypes'
 import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
-
-// ==================== 从 types/index.ts 复制的类型定义 ====================
-/**
- * 默认文本样式配置
- */
-export const DEFAULT_TEXT_STYLE: TextStyleConfig = {
-  fontSize: 48,
-  fontFamily: 'Arial, sans-serif',
-  fontWeight: 'normal',
-  fontStyle: 'normal',
-  color: '#ffffff',
-  textAlign: 'center',
-  lineHeight: 1.2,
-}
-/**
- * 文本样式配置接口
- */
-export interface TextStyleConfig {
-  // 基础字体属性
-  fontSize: number // 字体大小 (px)
-  fontFamily: string // 字体族
-  fontWeight: string | number // 字重
-  fontStyle: 'normal' | 'italic' // 字体样式
-
-  // 颜色属性
-  color: string // 文字颜色
-  backgroundColor?: string // 背景颜色
-
-  // 文本效果
-  textShadow?: string // 文字阴影
-  textStroke?: {
-    // 文字描边
-    width: number
-    color: string
-  }
-  textGlow?: {
-    // 文字发光
-    color: string
-    blur: number
-    spread?: number
-  }
-
-  // 布局属性
-  textAlign: 'left' | 'center' | 'right' // 文本对齐
-  lineHeight?: number // 行高
-  maxWidth?: number // 最大宽度
-
-  // 自定义字体
-  customFont?: {
-    name: string
-    url: string
-  }
-}
+import type { TextStyleConfig } from './texttype'
+import type { GetConfigs } from './bunnytype'
+import { DEFAULT_TEXT_STYLE } from './texttype'
 
 /**
  * 基础媒体属性（所有媒体类型共享）
@@ -289,6 +239,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   // ==================== 动画配置（类型安全） ====================
   animation?: T extends MediaType ? AnimationConfig<T> : undefined
 
+  // 专用于bunny渲染使用的配置
+  config2: GetConfigs<T>
   // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime
 }

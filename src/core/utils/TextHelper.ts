@@ -1,6 +1,6 @@
 import { ImgClip, renderTxt2ImgBitmap } from '@webav/av-cliper'
-import type { TextStyleConfig } from '@/core/timelineitem'
-import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/type'
+import type { TextStyleConfig } from '@/core/timelineitem/texttype'
+import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/texttype'
 
 /**
  * 文本渲染工具类
