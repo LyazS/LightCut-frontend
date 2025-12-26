@@ -395,127 +395,36 @@ export function toggleKeyframe(item: UnifiedTimelineItemData, currentFrame: numb
 
 /**
  * 通过WebAV更新属性值（遵循正确的数据流向）
+ * 直接设置进 item.config 的对应位置
  */
-async function updatePropertyViaWebAV(
+async function updateProperty(
   item: UnifiedTimelineItemData,
   property: string,
   value: any,
 ): Promise<void> {
-  const sprite = item.runtime.sprite
-  if (!sprite) {
-    console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
-    return
-  }
-
   try {
-    if (property === 'x' || property === 'y') {
-      // 位置更新需要坐标转换
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      // 类型安全的配置访问（使用类型守卫）
-      if (!hasVisualProperties(item)) {
-        console.warn('🎬 [Unified Keyframe] Item does not have visual properties:', item.mediaType)
-        return
-      }
-
-      const config = item.config
-      const webavCoords = projectToWebavCoords(
-        property === 'x' ? value : config.x,
-        property === 'y' ? value : config.y,
-        config.width,
-        config.height,
-        unifiedStore.videoResolution.width,
-        unifiedStore.videoResolution.height,
-      )
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
-    } else if (property === 'width') {
-      // 中心缩放：保持中心位置不变，更新宽度
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      if (hasVisualProperties(item)) {
-        // 获取当前中心位置（项目坐标系）
-        const config = item.config
-        const currentCenterX = config.x
-        const currentCenterY = config.y
-        const newWidth = value
-        const currentHeight = config.height
-
-        // 更新尺寸
-        sprite.rect.w = newWidth
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          newWidth,
-          currentHeight,
-          unifiedStore.videoResolution.width,
-          unifiedStore.videoResolution.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-
-        console.log('🎯 [Center Scale] Width adjustment:', {
-          itemId: item.id,
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          oldSize: { w: config.width, h: currentHeight },
-          newSize: { w: newWidth, h: currentHeight },
-          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
-        })
-      }
-    } else if (property === 'height') {
-      // 中心缩放：保持中心位置不变，更新高度
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      if (hasVisualProperties(item)) {
-        // 获取当前中心位置（项目坐标系）
-        const config = item.config
-        const currentCenterX = config.x
-        const currentCenterY = config.y
-        const currentWidth = config.width
-        const newHeight = value
-
-        // 更新尺寸
-        sprite.rect.h = newHeight
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          currentWidth,
-          newHeight,
-          unifiedStore.videoResolution.width,
-          unifiedStore.videoResolution.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-
-        console.log('🎯 [Center Scale] Height adjustment:', {
-          itemId: item.id,
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          oldSize: { w: currentWidth, h: config.height },
-          newSize: { w: currentWidth, h: newHeight },
-          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
-        })
-      }
-    } else if (property === 'rotation') {
-      sprite.rect.angle = value
-    } else if (property === 'opacity') {
-      sprite.opacity = value
+    // 验证 property 是否在 config 中存在
+    const config = item.config as Record<string, any>
+    if (!(property in config)) {
+      console.warn('🎬 [Unified Keyframe] Property not found in item.config:', {
+        itemId: item.id,
+        mediaType: item.mediaType,
+        property,
+        availableProperties: Object.keys(config),
+      })
+      return
     }
 
-    // 触发渲染更新
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const unifiedStore = useUnifiedStore()
-    unifiedStore.seekToFrame(unifiedStore.currentFrame)
+    // 直接更新 item.config 的对应属性
+    config[property] = value
+
+    console.log('🎬 [Unified Keyframe] Updated property in item.config:', {
+      itemId: item.id,
+      property,
+      value,
+    })
   } catch (error) {
-    console.error('🎬 [Unified Keyframe] Failed to update property via WebAV:', error)
+    console.error('🎬 [Unified Keyframe] Failed to update property:', error)
   }
 }
 
@@ -528,7 +437,7 @@ async function handlePropertyChange_NoAnimation(
   value: any,
 ): Promise<void> {
   // 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
-  await updatePropertyViaWebAV(item, property, value)
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Property updated without animation via WebAV:', {
     itemId: item.id,
@@ -568,7 +477,7 @@ async function handlePropertyChange_OnKeyframe(
   }
 
   // 2. 立即更新当前属性值到sprite（确保立即生效）
-  await updatePropertyViaWebAV(item, property, value)
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Updated keyframe property:', {
     itemId: item.id,
@@ -610,7 +519,7 @@ async function handlePropertyChange_BetweenKeyframes(
   })
 
   // 2. 立即更新当前属性值到sprite（确保立即生效）
-  await updatePropertyViaWebAV(item, property, value)
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Created keyframe for property change:', {
     itemId: item.id,

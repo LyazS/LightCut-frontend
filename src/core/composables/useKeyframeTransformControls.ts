@@ -410,26 +410,30 @@ export function useUnifiedKeyframeTransformControls(
    * 实现对齐功能（基于项目坐标系：中心为原点）
    */
   const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-    if (!selectedTimelineItem.value || !selectedTimelineItem.value.runtime.sprite) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
-    const sprite = selectedTimelineItem.value.runtime.sprite
+    const config = selectedTimelineItem.value.config
     const canvasWidth = unifiedStore.videoResolution.width
-    const spriteWidth = sprite.rect.w || canvasWidth
+    const elementWidth = config.width
 
     try {
       let newProjectX = 0
       switch (alignment) {
         case 'left':
-          // 左对齐：sprite左边缘贴画布左边缘
-          newProjectX = -canvasWidth / 2 + spriteWidth / 2
+          // 左对齐：元素左边缘贴画布左边缘
+          newProjectX = -canvasWidth / 2 + elementWidth / 2
           break
         case 'center':
-          // 居中：sprite中心对齐画布中心
+          // 居中：元素中心对齐画布中心
           newProjectX = 0
           break
         case 'right':
-          // 右对齐：sprite右边缘贴画布右边缘
-          newProjectX = canvasWidth / 2 - spriteWidth / 2
+          // 右对齐：元素右边缘贴画布右边缘
+          newProjectX = canvasWidth / 2 - elementWidth / 2
           break
       }
 
@@ -442,26 +446,30 @@ export function useUnifiedKeyframeTransformControls(
   }
 
   const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-    if (!selectedTimelineItem.value) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
-    const sprite = selectedTimelineItem.value.runtime.sprite!
+    const config = selectedTimelineItem.value.config
     const canvasHeight = unifiedStore.videoResolution.height
-    const spriteHeight = sprite.rect.h || canvasHeight
+    const elementHeight = config.height
 
     try {
       let newProjectY = 0
       switch (alignment) {
         case 'top':
-          // 顶对齐：sprite上边缘贴画布上边缘
-          newProjectY = -canvasHeight / 2 + spriteHeight / 2
+          // 顶对齐：元素上边缘贴画布上边缘
+          newProjectY = -canvasHeight / 2 + elementHeight / 2
           break
         case 'middle':
-          // 居中：sprite中心对齐画布中心
+          // 居中：元素中心对齐画布中心
           newProjectY = 0
           break
         case 'bottom':
-          // 底对齐：sprite下边缘贴画布下边缘
-          newProjectY = canvasHeight / 2 - spriteHeight / 2
+          // 底对齐：元素下边缘贴画布下边缘
+          newProjectY = canvasHeight / 2 - elementHeight / 2
           break
       }
 

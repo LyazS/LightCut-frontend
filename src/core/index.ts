@@ -186,7 +186,6 @@ export {
 // ==================== 统一工具函数 ====================
 export {
   // 时间范围工具
-  syncTimeRange,
   calculateDuration,
 } from './utils'
 

@@ -443,11 +443,8 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { isTextTimelineItem } from '@/core/timelineitem/queries'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
-import { framesToTimecode, timecodeToFrames } from '@/core/utils/timeUtils'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables'
 import { IconComponents } from '@/constants/iconComponents'
-import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
-import { syncTimeRange } from '@/core/utils/timeRangeUtils'
 import NumberInput from '@/components/base/NumberInput.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
 import TimecodeInput from '@/components/base/TimecodeInput.vue'
@@ -631,7 +628,6 @@ const timelineDurationFrames = computed(() => {
   const timeRange = props.selectedTimelineItem.timeRange
   return Math.round(timeRange.timelineEndTime - timeRange.timelineStartTime)
 })
-
 
 // 计算属性：获取当前选中文本片段的文本内容
 const localText = computed(() => {
@@ -928,59 +924,7 @@ const handleTimecodeError = (errorMessage: string) => {
 
 // 更新目标时长（帧数版本）
 const updateTargetDurationFrames = async (newDurationFrames: number) => {
-  if (!props.selectedTimelineItem) {
-    return
-  }
-
-  const alignedDurationFrames = Math.max(1, newDurationFrames) // 最少1帧
-  const sprite = props.selectedTimelineItem.runtime.sprite!
-  const timeRange = props.selectedTimelineItem.timeRange
-  const oldDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 计算旧时长
-  const newTimelineEndTime = timeRange.timelineStartTime + alignedDurationFrames // 帧数相加，不需要转换
-
-  // 🎯 关键帧位置调整：在更新timeRange之前调整关键帧位置
-  if (
-    props.selectedTimelineItem.animation &&
-    props.selectedTimelineItem.animation.keyframes.length > 0
-  ) {
-    adjustKeyframesForDurationChange(
-      props.selectedTimelineItem,
-      oldDurationFrames,
-      alignedDurationFrames,
-    )
-    console.log('🎬 [UnifiedTextClipProperties] Keyframes adjusted for duration change:', {
-      oldDuration: oldDurationFrames,
-      newDuration: alignedDurationFrames,
-    })
-  }
-
-  // 更新sprite时间范围（文本使用ImageTimeRange格式）
-  sprite.setTimeRange({
-    timelineStartTime: timeRange.timelineStartTime,
-    timelineEndTime: newTimelineEndTime,
-  })
-
-  // 更新timelineItem的timeRange（使用专用工具函数）
-  if (props.selectedTimelineItem) {
-    syncTimeRange(props.selectedTimelineItem)
-  }
-
-  // 如果有动画，需要重新设置WebAV动画时长
-  if (
-    props.selectedTimelineItem.animation &&
-    props.selectedTimelineItem.animation.keyframes.length > 0
-  ) {
-    // 动画时长更新已迁移到 Bunny 组件，无需手动更新
-    console.log(
-      '🎬 [UnifiedTextClipProperties] Animation duration updated after clip duration change',
-    )
-  }
-
-  console.log('✅ [UnifiedTextClipProperties] 帧数时长更新成功:', {
-    inputFrames: newDurationFrames,
-    alignedFrames: alignedDurationFrames,
-    timecode: framesToTimecode(alignedDurationFrames),
-  })
+  throw new Error('TODO')
 }
 </script>
 
@@ -1015,7 +959,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   color: var(--color-text-hint);
   font-style: italic;
 }
-
 
 /* 字体控制样式 */
 .font-controls {

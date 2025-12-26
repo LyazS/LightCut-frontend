@@ -128,10 +128,7 @@ import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { isAudioTimelineItem, hasAudioProperties } from '@/core/timelineitem/queries'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-import { framesToTimecode, timecodeToFrames } from '@/core/utils/timeUtils'
 import { getMuteIcon } from '@/constants/iconComponents'
-import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
-import { syncTimeRange } from '@/core/utils/timeRangeUtils'
 import NumberInput from '@/components/base/NumberInput.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
 import TimecodeInput from '@/components/base/TimecodeInput.vue'
@@ -262,60 +259,7 @@ const handleTimecodeError = (errorMessage: string) => {
 
 // 更新目标时长（帧数版本）
 const updateTargetDurationFrames = async (newDurationFrames: number) => {
-  if (!props.selectedTimelineItem || !selectedMediaItem.value) {
-    return
-  }
-
-  const alignedDurationFrames = Math.max(1, newDurationFrames) // 最少1帧
-  const sprite = props.selectedTimelineItem.runtime.sprite!
-  const timeRange = props.selectedTimelineItem.timeRange
-  const oldDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime // 计算旧时长
-  const newTimelineEndTime = timeRange.timelineStartTime + alignedDurationFrames // 帧数相加，不需要转换
-
-  // 🎯 关键帧位置调整：在更新timeRange之前调整关键帧位置
-  if (
-    props.selectedTimelineItem.animation &&
-    props.selectedTimelineItem.animation.keyframes.length > 0
-  ) {
-    adjustKeyframesForDurationChange(
-      props.selectedTimelineItem,
-      oldDurationFrames,
-      alignedDurationFrames,
-    )
-    console.log('🎬 [Duration Update] Keyframes adjusted for duration change:', {
-      oldDuration: oldDurationFrames,
-      newDuration: alignedDurationFrames,
-    })
-  }
-
-  if (isAudioTimelineItem(props.selectedTimelineItem)) {
-    sprite.setTimeRange({
-      clipStartTime: timeRange.clipStartTime,
-      clipEndTime: timeRange.clipEndTime,
-      timelineStartTime: timeRange.timelineStartTime,
-      timelineEndTime: newTimelineEndTime,
-    })
-  }
-
-  // 更新timelineItem的timeRange（使用专用工具函数）
-  if (props.selectedTimelineItem) {
-    syncTimeRange(props.selectedTimelineItem)
-  }
-
-  // 如果有动画，需要重新设置WebAV动画时长
-  if (
-    props.selectedTimelineItem.animation &&
-    props.selectedTimelineItem.animation.keyframes.length > 0
-  ) {
-    // 动画时长更新已迁移到 Bunny 组件，无需手动更新
-    console.log('🎬 [Duration Update] Animation duration updated after clip duration change')
-  }
-
-  console.log('✅ 音频帧数时长更新成功:', {
-    inputFrames: newDurationFrames,
-    alignedFrames: alignedDurationFrames,
-    timecode: framesToTimecode(alignedDurationFrames),
-  })
+  throw new Error("TODO")
 }
 
 // 更新归一化速度

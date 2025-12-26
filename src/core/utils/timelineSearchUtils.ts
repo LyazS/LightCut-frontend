@@ -58,23 +58,7 @@ export function findOrphanedTimelineItems(
   )
 }
 
-/**
- * 根据sprite查找时间轴项目
- * @param sprite Sprite实例
- * @param timelineItems 时间轴项目数组
- * @returns 对应的时间轴项目或null
- */
-export function findTimelineItemBySprite(
-  sprite: Raw<UnifiedSprite>,
-  timelineItems: UnifiedTimelineItemData[],
-): UnifiedTimelineItemData | null {
-  // 只有就绪状态的时间轴项目才会有sprite
-  return (
-    timelineItems.find(
-      (item) => item.timelineStatus === 'ready' && item.runtime.sprite === sprite,
-    ) || null
-  )
-}
+
 
 /**
  * 根据时间查找所有重叠的时间轴项目（帧数版本）

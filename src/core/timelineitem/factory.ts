@@ -23,9 +23,7 @@ import type {
 import type { AnimationConfig } from './animationtypes'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
-import {
-  createTextTimelineItem as createTextTimelineItemFromUtils,
-} from '@/core/utils/textTimelineUtils'
+import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
 // ==================== 克隆和复制函数 ====================
@@ -279,117 +277,6 @@ export async function rebuildTimelineItemForCmd(
   }
 }
 
-/**
- * 重建文本时间轴项目
- * 从原始配置重新创建文本TimelineItem和sprite
- *
- * @param options 重建选项
- * @returns 重建结果
- */
-export async function rebuildTextTimelineItem(
-  options: RebuildTextTimelineItemOptions,
-): Promise<RebuildTextTimelineItemResult> {
-  const { originalTimelineItemData, videoResolution, logIdentifier } = options
-
-  try {
-    if (!originalTimelineItemData) {
-      throw new Error('文本时间轴项目数据不存在')
-    }
-
-    if (originalTimelineItemData.mediaType !== 'text') {
-      throw new Error('不是文本项目，无法使用文本重建方法')
-    }
-
-    console.log(`🔄 [${logIdentifier}] 开始重建文本时间轴项目...`)
-
-    const originalConfig = originalTimelineItemData.config as TextMediaConfig
-    const originalTimeRange = originalTimelineItemData.timeRange
-
-    // 计算duration（显示时长）
-    const duration = originalTimeRange.timelineEndTime - originalTimeRange.timelineStartTime
-
-    // 直接使用 createTextTimelineItemFromUtils 重建，传入原始ID以保持一致性
-    const newTimelineItem = await createTextTimelineItemFromUtils(
-      originalConfig.text,
-      originalConfig.style,
-      originalTimeRange.timelineStartTime,
-      originalTimelineItemData.trackId || '',
-      duration,
-      videoResolution,
-      originalTimelineItemData.id, // 传入原始ID
-    )
-
-    // 恢复原始的位置、尺寸和其他属性（createTextTimelineItemFromUtils 创建的是默认位置）
-    newTimelineItem.config.x = originalConfig.x
-    newTimelineItem.config.y = originalConfig.y
-    newTimelineItem.config.width = originalConfig.width
-    newTimelineItem.config.height = originalConfig.height
-    newTimelineItem.config.rotation = originalConfig.rotation
-    newTimelineItem.config.opacity = originalConfig.opacity
-    newTimelineItem.config.zIndex = originalConfig.zIndex
-    newTimelineItem.config.originalWidth = originalConfig.originalWidth
-    newTimelineItem.config.originalHeight = originalConfig.originalHeight
-    newTimelineItem.config.proportionalScale = originalConfig.proportionalScale
-
-    // 恢复动画配置（如果存在）
-    if (originalTimelineItemData.animation) {
-      newTimelineItem.animation = originalTimelineItemData.animation
-    }
-
-    // 同步更新sprite的属性以匹配配置（使用坐标转换）
-    if (newTimelineItem.runtime.sprite) {
-      const sprite = newTimelineItem.runtime.sprite as any
-
-      // 获取画布分辨率
-      const canvasWidth = videoResolution.width
-      const canvasHeight = videoResolution.height
-
-      // 使用坐标转换将项目坐标系转换为WebAV坐标系
-      const webavCoords = projectToWebavCoords(
-        originalConfig.x,
-        originalConfig.y,
-        originalConfig.width,
-        originalConfig.height,
-        canvasWidth,
-        canvasHeight,
-      )
-
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
-      sprite.rect.w = originalConfig.width
-      sprite.rect.h = originalConfig.height
-      sprite.rect.angle = originalConfig.rotation
-      sprite.opacity = originalConfig.opacity
-      sprite.zIndex = originalConfig.zIndex
-
-      // 恢复时间范围
-      sprite.setTimeRange(originalTimeRange)
-    }
-
-    console.log(`🔄 [${logIdentifier}] 重建文本时间轴项目完成:`, {
-      id: newTimelineItem.id,
-      text: originalConfig.text.substring(0, 20) + '...',
-      timeRange: originalTimeRange,
-      position: { x: originalConfig.x, y: originalConfig.y },
-      size: { w: originalConfig.width, h: originalConfig.height },
-    })
-
-    return {
-      timelineItem: newTimelineItem,
-      success: true,
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error(`❌ [${logIdentifier}] 重建文本时间轴项目失败:`, errorMessage)
-
-    return {
-      timelineItem: originalTimelineItemData,
-      success: false,
-      error: errorMessage,
-    }
-  }
-}
-
 // ==================== 导出工厂对象 ====================
 
 export const TimelineItemFactory = {
@@ -398,6 +285,5 @@ export const TimelineItemFactory = {
   setTimeRange: setTimeRange,
   duplicate: duplicateTimelineItem,
   validate: validateTimelineItem,
-  rebuildText: rebuildTextTimelineItem,
   rebuildForCmd: rebuildTimelineItemForCmd,
 }

@@ -1,19 +1,12 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type {
-  UnifiedTimelineItemData,
-  UnknownMediaConfig,
-} from '@/core/timelineitem/type'
+import type { UnifiedTimelineItemData, UnknownMediaConfig } from '@/core/timelineitem/type'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { MediaType } from '@/core/mediaitem/types'
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  TextMediaConfig,
-} from '@/core/timelineitem/type'
+import type { VideoMediaConfig, ImageMediaConfig, TextMediaConfig } from '@/core/timelineitem/type'
 import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'
 import { ImageVisibleSprite } from '@/core/visiblesprite/ImageVisibleSprite'
 import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
@@ -55,14 +48,7 @@ function unifiedDebugLog(operation: string, details: any) {
     console.log(`🎬 [UnifiedTimelineModule] ${operation}:`, details)
   }
 }
-import { syncTimeRange } from '@/core/utils/timeRangeUtils'
-import { microsecondsToFrames, framesToTimecode } from '@/core/utils/timeUtils'
-import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
-import {
-  isReady,
-  isVideoTimelineItem,
-  isAudioTimelineItem,
-} from '@/core/timelineitem/queries'
+import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/core/timelineitem/queries'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 import { TimelineItemFactory } from '../timelineitem'
 
@@ -124,17 +110,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       if (selectionModule.isTimelineItemSelected(timelineItemId)) {
         selectionModule.removeFromMultiSelection(timelineItemId)
         console.log(`🗑️ 已从选择集合中移除已删除的项目: ${timelineItemId}`)
-      }
-
-      // 🆕 增强的清理逻辑：无论状态如何，都检查并清理sprite
-      if (item.runtime.sprite) {
-        try {
-          console.log(`🧹 开始清理时间轴项目sprite: ${timelineItemId}`)
-          webavModule.removeSprite(item.runtime.sprite)
-          console.log(`✅ 成功从WebAV画布移除sprite: ${timelineItemId}`)
-        } catch (error) {
-          console.warn(`⚠️ 从WebAV画布移除sprite时出错: ${timelineItemId}`, error)
-        }
       }
 
       // 🆕 清理 Bunny 相关资源
@@ -220,19 +195,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       // 确保新位置不为负数
       const clampedNewPositionFrames = Math.max(0, newPositionFrames)
 
-      // 如果指定了新轨道，更新轨道ID
-      if (newTrackId !== undefined) {
-        item.trackId = newTrackId
-
-        // 根据新轨道的可见性设置sprite的visible属性（仅就绪状态的已知类型时间轴项目）
-        if (TimelineItemQueries.isReady(item)) {
-          const newTrack = trackModule.tracks.value.find((t) => t.id === newTrackId)
-          if (newTrack && item.runtime.sprite) {
-            item.runtime.sprite.visible = newTrack.isVisible
-          }
-        }
-      }
-
       // 更新时间轴位置
       const durationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime // 帧数
       TimelineItemFactory.setTimeRange(item, {
@@ -258,8 +220,8 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
   }
 
   /**
-   * 更新UnifiedTimelineItem的VisibleSprite变换属性
-   * 这会触发propsChange事件，自动同步到TimelineItem，然后更新属性面板显示
+   * 更新UnifiedTimelineItem的变换属性
+   * 直接设置到 item.config 中，不设置到 sprite
    */
   function updateTimelineItemTransform(
     timelineItemId: string,
@@ -274,88 +236,40 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
     },
   ) {
     const item = getReadyTimelineItem(timelineItemId)
-    if (!item || !item.runtime.sprite) return
-
-    // 直接使用registry.get获取所需模块
-    const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
-
-    const sprite = item.runtime.sprite
+    if (!item) return
 
     try {
-      // 更新尺寸时使用中心缩放 - 仅对视觉媒体有效
-      if (
-        (transform.width !== undefined || transform.height !== undefined) &&
-        TimelineItemQueries.hasVisualProperties(item)
-      ) {
-        // 获取当前中心位置（项目坐标系）
-        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+      // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+      if (TimelineItemQueries.hasVisualProperties(item)) {
         const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-        const currentCenterX = config.x
-        const currentCenterY = config.y
-        const newWidth = transform.width !== undefined ? transform.width : config.width
-        const newHeight = transform.height !== undefined ? transform.height : config.height
 
-        // 中心缩放：保持中心位置不变，更新尺寸
-        sprite.rect.w = newWidth
-        sprite.rect.h = newHeight
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          newWidth,
-          newHeight,
-          configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
+        // 直接更新 config 中的属性
+        if (transform.x !== undefined) {
+          config.x = transform.x
+        }
+        if (transform.y !== undefined) {
+          config.y = transform.y
+        }
+        if (transform.width !== undefined) {
+          config.width = transform.width
+        }
+        if (transform.height !== undefined) {
+          config.height = transform.height
+        }
+        if (transform.rotation !== undefined) {
+          config.rotation = transform.rotation
+        }
+        if (transform.opacity !== undefined) {
+          config.opacity = transform.opacity
+        }
       }
 
-      // 更新位置（需要坐标系转换）- 仅对视觉媒体有效
-      if (
-        (transform.x !== undefined || transform.y !== undefined) &&
-        TimelineItemQueries.hasVisualProperties(item)
-      ) {
-        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-        const newX = transform.x !== undefined ? transform.x : config.x
-        const newY = transform.y !== undefined ? transform.y : config.y
-
-        // 🔧 使用当前的尺寸（可能已经在上面更新过）
-        const currentWidth = transform.width !== undefined ? transform.width : config.width
-        const currentHeight = transform.height !== undefined ? transform.height : config.height
-
-        const webavCoords = projectToWebavCoords(
-          newX,
-          newY,
-          currentWidth,
-          currentHeight,
-          configModule.videoResolution.value.width,
-          configModule.videoResolution.value.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-      }
-
-      // 更新其他属性
-      if (transform.opacity !== undefined && TimelineItemQueries.hasVisualProperties(item)) {
-        sprite.opacity = transform.opacity
-        // 🔧 手动同步opacity到timelineItem（因为opacity没有propsChange回调）
-        // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
-        config.opacity = transform.opacity
-      }
+      // zIndex 不需要视觉属性守卫
       if (transform.zIndex !== undefined) {
-        sprite.zIndex = transform.zIndex
-        // zIndex有propsChange回调，会自动同步到timelineItem
-      }
-      // 更新旋转角度（WebAV的rect.angle支持旋转）
-      if (transform.rotation !== undefined) {
-        sprite.rect.angle = transform.rotation
+        item.config.zIndex = transform.zIndex
       }
     } catch (error) {
-      console.error('更新VisibleSprite变换属性失败:', error)
+      console.error('更新时间轴项目变换属性失败:', error)
     }
   }
 
@@ -391,50 +305,14 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
         }
       }
 
-      // 更新sprite的播放速度（这会自动更新sprite内部的timeRange）
-      // 视频和音频sprite都有setPlaybackRate方法
-      if (isReady(item) && item.runtime.sprite) {
-        if (isVideoTimelineItem(item)) {
-          ;(item.runtime.sprite as VideoVisibleSprite).setPlaybackRate(clampedRate)
-        } else if (isAudioTimelineItem(item)) {
-          ;(item.runtime.sprite as AudioVisibleSprite).setPlaybackRate(clampedRate)
-        }
-      }
+      // 🎯 直接计算新的时间范围并使用 TimelineItemFactory.setTimeRange 设置
+      const clipDurationFrames = item.timeRange.clipEndTime - item.timeRange.clipStartTime
+      const newTimelineDurationFrames = Math.round(clipDurationFrames / clampedRate)
+      const newTimelineEndTime = item.timeRange.timelineStartTime + newTimelineDurationFrames
 
-      // 使用同步函数更新TimelineItem的timeRange
-      syncTimeRange(item)
-
-      // 如果有动画，需要重新设置WebAV动画时长
-      if (item.animation && item.animation.keyframes.length > 0) {
-        // 动画时长更新已迁移到 Bunny 组件，无需手动更新
-        console.log('🎬 [Playback Rate] Animation duration updated after playback rate change')
-      }
-
-      // 只有视频才记录详细的时间范围信息
-      if (isVideoTimelineItem(item)) {
-        const clipDurationFrames = microsecondsToFrames(
-          item.timeRange.clipEndTime - item.timeRange.clipStartTime,
-        )
-        const timelineDurationFrames = microsecondsToFrames(
-          item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
-        )
-
-        console.log('🎬 播放速度更新:', {
-          timelineItemId,
-          newRate: clampedRate,
-          timeRange: {
-            clipDuration: framesToTimecode(clipDurationFrames),
-            timelineDuration: framesToTimecode(timelineDurationFrames),
-          },
-        })
-      } else if (isAudioTimelineItem(item)) {
-        console.log('🎬 [ClipOperations] 音频播放速度调整:', {
-          timelineItemId,
-          newRate: clampedRate,
-        })
-      } else {
-        console.log('🎬 [ClipOperations] 图片不支持播放速度调整:', { timelineItemId })
-      }
+      TimelineItemFactory.setTimeRange(item, {
+        timelineEndTime: newTimelineEndTime,
+      })
     }
   }
 

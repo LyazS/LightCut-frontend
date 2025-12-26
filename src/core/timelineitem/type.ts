@@ -202,7 +202,7 @@ export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemCo
  */
 export interface UnifiedTimelineItemRuntime {
   /** 与时间轴项目生命周期一致 */
-  sprite?: Raw<UnifiedSprite> // 旧的webav的sprite对象
+  // sprite?: Raw<UnifiedSprite> // 旧的webav的sprite对象
   bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
   textBitmap?: ImageBitmap // 专门用于文本渲染的ImageBitmap
 }

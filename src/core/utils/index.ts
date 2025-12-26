@@ -23,13 +23,9 @@ export {
 
 // ==================== 统一时间范围工具 ====================
 export {
-  // 同步工具
-  syncTimeRange,
-
   // 计算工具
   calculateDuration,
 } from './timeRangeUtils'
-
 
 // ==================== 坐标转换工具 ====================
 export {
@@ -111,9 +107,6 @@ export {
 
   // 查找孤立的时间轴项目
   findOrphanedTimelineItems,
-
-  // 根据sprite查找时间轴项目
-  findTimelineItemBySprite,
 
   // 根据时间查找所有重叠的时间轴项目
   getTimelineItemsAtFrames,

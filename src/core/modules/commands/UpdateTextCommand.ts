@@ -66,9 +66,7 @@ export class UpdateTextCommand implements SimpleCommand {
       // 保存原始项目数据用于撤销
       this.originalTimelineItemData = TimelineItemFactory.clone(item)
 
-      // 重新创建文本精灵（遵循"从源头重建"原则）
-      await this.rebuildTextSprite(item, this.newText, this.newStyle)
-
+      throw new Error('TODO 要实现textclip的重建')
       console.log(`✅ 文本更新成功:`, {
         id: this.timelineItemId,
         oldText: this.oldText.substring(0, 20) + '...',
@@ -78,109 +76,6 @@ export class UpdateTextCommand implements SimpleCommand {
       console.error(`❌ 更新文本失败:`, error)
       throw error
     }
-  }
-
-  /**
-   * 重新创建文本精灵
-   * 遵循"从源头重建"原则，复用 rebuildTextTimelineItem 方法
-   */
-  /**
-   * 重新创建文本精灵
-   * 遵循"从源头重建"原则，完全重新创建sprite实例
-   */
-  private async rebuildTextSprite(
-    item: UnifiedTimelineItemData<'text'>,
-    newText: string,
-    newStyle: Partial<TextStyleConfig>,
-  ): Promise<void> {
-    // 保存旧精灵的状态
-    const oldSprite = item.runtime.sprite as TextVisibleSprite
-    const oldState = {
-      rect: {
-        x: oldSprite.rect.x,
-        y: oldSprite.rect.y,
-        w: oldSprite.rect.w,
-        h: oldSprite.rect.h,
-        angle: oldSprite.rect.angle,
-      },
-      opacity: oldSprite.opacity,
-      zIndex: oldSprite.zIndex,
-      timeRange: oldSprite.getTimeRange(),
-    }
-
-    // 🎯 先保存TimelineItem的宽高和原始宽高，计算缩放系数
-    const currentWidth = item.config.width
-    const currentHeight = item.config.height
-    const originalWidth = item.config.originalWidth
-    const originalHeight = item.config.originalHeight
-
-    // 计算当前的缩放系数
-    const scaleX = originalWidth > 0 ? currentWidth / originalWidth : 1
-    const scaleY = originalHeight > 0 ? currentHeight / originalHeight : 1
-
-    console.log('🔄 [TextCommands] 保存缩放系数:', {
-      current: { width: currentWidth, height: currentHeight },
-      original: { width: originalWidth, height: originalHeight },
-      scale: { x: scaleX, y: scaleY },
-    })
-
-    // 合并新样式
-    const completeStyle = { ...item.config.style, ...newStyle }
-
-    // 创建新的文本精灵
-    const newSprite = await TextVisibleSprite.create(newText, completeStyle)
-
-    // 🎯 更新TimelineItem的原始宽高为新sprite的尺寸
-    item.config.originalWidth = newSprite.rect.w
-    item.config.originalHeight = newSprite.rect.h
-
-    // 🎯 使用缩放系数重新计算TimelineItem的宽高
-    const newWidth = item.config.originalWidth * scaleX
-    const newHeight = item.config.originalHeight * scaleY
-    item.config.width = newWidth
-    item.config.height = newHeight
-
-    console.log('🔄 [TextCommands] 应用缩放系数:', {
-      newOriginal: { width: item.config.originalWidth, height: item.config.originalHeight },
-      newSize: { width: newWidth, height: newHeight },
-      appliedScale: { x: scaleX, y: scaleY },
-    })
-
-    // 🎯 通过TimelineItem的xywh转换为sprite的rect坐标
-    const webavCoords = projectToWebavCoords(
-      item.config.x,
-      item.config.y,
-      newWidth,
-      newHeight,
-      this.configModule.videoResolution.value.width,
-      this.configModule.videoResolution.value.height,
-    )
-
-    // 设置新sprite的位置和尺寸
-    newSprite.rect.x = webavCoords.x
-    newSprite.rect.y = webavCoords.y
-    newSprite.rect.w = newWidth
-    newSprite.rect.h = newHeight
-    newSprite.rect.angle = oldState.rect.angle
-    newSprite.opacity = oldState.opacity
-    newSprite.zIndex = oldState.zIndex
-
-    // 恢复时间范围
-    newSprite.setTimeRange(oldState.timeRange)
-
-    // 更新配置
-    item.config.text = newText
-    item.config.style = completeStyle
-
-    // TODO:webav
-    // // 替换精灵引用
-    // item.runtime.sprite = markRaw(newSprite)
-
-    // // 在WebAV画布中替换精灵
-    // this.webavModule.removeSprite(oldSprite)
-    // this.webavModule.addSprite(newSprite)
-
-    console.log('✅ [UpdateTextCommand] 文本精灵重新创建完成，数据绑定已重新建立')
   }
 
   /**
@@ -197,8 +92,7 @@ export class UpdateTextCommand implements SimpleCommand {
           throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
         }
 
-        // 重新创建文本精灵（恢复到旧状态）
-        await this.rebuildTextSprite(item, this.oldText, this.oldStyle)
+        throw new Error('TODO 要实现textclip的重建')
 
         console.log(`✅ 文本撤销成功: ${this.timelineItemId}`)
       }

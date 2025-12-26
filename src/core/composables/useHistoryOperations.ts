@@ -300,12 +300,13 @@ export function useHistoryOperations(
         TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
         TimelineItemQueries.isAudioTimelineItem(timelineItem)
       ) {
-        const sprite = timelineItem.runtime.sprite as
-          | VideoVisibleSprite
-          | AudioVisibleSprite
-          | undefined
-        if (sprite) {
-          oldTransform.playbackRate = sprite.getPlaybackRate()
+        // 使用 timeRange 计算 playbackRate
+        // playbackRate = (clipEndTime - clipStartTime) / (timelineEndTime - timelineStartTime)
+        const timeRange = timelineItem.timeRange
+        const clipDuration = timeRange.clipEndTime - timeRange.clipStartTime
+        const timelineDuration = timeRange.timelineEndTime - timeRange.timelineStartTime
+        if (timelineDuration > 0) {
+          oldTransform.playbackRate = clipDuration / timelineDuration
         }
       }
     }

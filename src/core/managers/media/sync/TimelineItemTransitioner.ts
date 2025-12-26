@@ -93,12 +93,6 @@ export class TimelineItemTransitioner {
     // 4. 使用 setupTimelineItemBunny 创建 textBitmap
     await setupTimelineItemBunny(timelineItem)
 
-    // 5. 设置轨道属性
-    this.applyTrackProperties(timelineItem)
-
-    // 6. 应用动画（如果有）
-    await this.applyAnimation(timelineItem)
-
     console.log(`✅ [TimelineItemTransitioner] 文本时间轴项目转换完成: ${timelineItem.id}`)
   }
 
@@ -119,9 +113,6 @@ export class TimelineItemTransitioner {
     }
 
     await this.createBunny(timelineItem)
-
-    this.applyTrackProperties(timelineItem)
-    await this.applyAnimation(timelineItem)
   }
 
   /**
@@ -219,62 +210,6 @@ export class TimelineItemTransitioner {
     } catch (error) {
       console.error(`❌ [TimelineItemTransitioner] 创建Sprite失败: ${this.timelineItemId}`, error)
       // Sprite创建失败不影响后续操作
-    }
-  }
-
-  /**
-   * 为sprite设置轨道属性
-   */
-  private applyTrackProperties(timelineItem: UnifiedTimelineItemData): void {
-    try {
-      const store = useUnifiedStore()
-      const track = store.tracks.find((t) => t.id === timelineItem.trackId)
-
-      if (track && timelineItem.runtime.sprite) {
-        // 设置可见性
-        timelineItem.runtime.sprite.visible = track.isVisible
-
-        // 为具有音频功能的片段设置静音状态
-        if (hasAudioCapabilities(timelineItem.runtime.sprite)) {
-          timelineItem.runtime.sprite.setTrackMuted(track.isMuted)
-        }
-
-        console.log(`✅ [TimelineItemTransitioner] 已设置轨道属性到sprite: ${timelineItem.id}`, {
-          trackId: track.id,
-          trackName: track.name,
-          isVisible: track.isVisible,
-          isMuted: track.isMuted,
-        })
-      }
-    } catch (trackError) {
-      console.error(
-        `❌ [TimelineItemTransitioner] 设置轨道属性到sprite失败: ${timelineItem.id}`,
-        trackError,
-      )
-      // 轨道属性设置失败不影响后续操作
-    }
-  }
-
-  /**
-   * 应用动画配置到sprite
-   */
-  private async applyAnimation(timelineItem: UnifiedTimelineItemData): Promise<void> {
-    if (timelineItem.animation && timelineItem.animation.keyframes.length > 0) {
-      try {
-        console.log(`🎬 [TimelineItemTransitioner] 应用动画配置到sprite: ${timelineItem.id}`, {
-          keyframeCount: timelineItem.animation.keyframes.length,
-        })
-
-        // 动画配置已迁移到 Bunny 组件，无需手动应用
-
-        console.log(`✅ [TimelineItemTransitioner] 动画配置应用成功: ${timelineItem.id}`)
-      } catch (animationError) {
-        console.error(
-          `❌ [TimelineItemTransitioner] 应用动画配置失败: ${timelineItem.id}`,
-          animationError,
-        )
-        // 动画应用失败不影响后续操作
-      }
     }
   }
 }

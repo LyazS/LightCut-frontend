@@ -468,32 +468,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
 
   // ==================== 画布销毁和重建 ====================
 
-  /**
-   * 销毁画布并备份内容
-   * @param timelineItems 时间轴项目数据数组，用于重置runtime字段
-   */
-  async function destroyCanvas(timelineItems: UnifiedTimelineItemData[] = []) {
-    try {
-      if (globalAVCanvas) {
-        // 只重置runtime字段，sprite会被画布自动销毁
-        timelineItems.forEach((item) => {
-          item.runtime.sprite = undefined
-        })
-
-        // 销毁AVCanvas
-        globalAVCanvas.destroy()
-        globalAVCanvas = null
-      }
-
-      // 清理状态
-      setAVCanvas(null)
-      setWebAVReady(false)
-    } catch (error) {
-      console.error('Canvas destroy failed:', error)
-      throw error
-    }
-  }
-
   // ==================== 导出接口 ====================
 
   return {
@@ -520,9 +494,6 @@ export function createUnifiedWebavModule(registry: ModuleRegistry) {
     // 实例管理
     isWebAVReadyGlobal,
     waitForWebAVReady,
-
-    // 画布销毁和重建
-    destroyCanvas,
   }
 }
 
