@@ -37,7 +37,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => Promise<void>
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -70,7 +69,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const rebuildResult = await TimelineItemFactory.rebuildForCmd({
         originalTimelineItemData: this.originalTimelineItemData,
         getMediaItem: this.mediaModule.getMediaItem,
-        setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
         logIdentifier: 'AddTimelineItemCommand execute',
       })
 
@@ -89,7 +87,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
           this.id,
           newTimelineItem.mediaItemId,
           newTimelineItem.id,
-          this.timelineModule.setupTimelineItemSprite, // 支持文本类型
         ).setup()
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)

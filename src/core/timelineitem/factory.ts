@@ -25,7 +25,6 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import {
   createTextTimelineItem as createTextTimelineItemFromUtils,
-  createSpriteForTextTimelineItem,
 } from '@/core/utils/textTimelineUtils'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 
@@ -178,8 +177,6 @@ export interface RebuildKnownTimelineItemOptions {
   originalTimelineItemData: UnifiedTimelineItemData<MediaType>
   /** 获取媒体项目的函数 */
   getMediaItem: (id: string) => UnifiedMediaItemData | undefined
-  /** 设置精灵的函数 */
-  setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
   /** 日志标识符，用于区分不同调用方的日志 */
   logIdentifier: string
 }
@@ -230,7 +227,7 @@ export interface RebuildTextTimelineItemResult {
 export async function rebuildTimelineItemForCmd(
   options: RebuildKnownTimelineItemOptions,
 ): Promise<RebuildKnownTimelineItemResult> {
-  const { originalTimelineItemData, getMediaItem, setupTimelineItemSprite, logIdentifier } = options
+  const { originalTimelineItemData, getMediaItem, logIdentifier } = options
 
   try {
     if (!originalTimelineItemData) {

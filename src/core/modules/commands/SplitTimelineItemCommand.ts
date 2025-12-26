@@ -57,7 +57,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -138,7 +137,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         timeRange: firstTimeRange,
       },
       getMediaItem: this.mediaModule.getMediaItem,
-      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
       logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems first',
     })
 
@@ -172,7 +170,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         timeRange: secondTimeRange,
       },
       getMediaItem: this.mediaModule.getMediaItem,
-      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
       logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems second',
     })
 
@@ -220,7 +217,6 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     const rebuildResult = await TimelineItemFactory.rebuildForCmd({
       originalTimelineItemData: this.originalTimelineItemData,
       getMediaItem: this.mediaModule.getMediaItem,
-      setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
       logIdentifier: 'SplitTimelineItemCommand rebuildOriginalItem',
     })
 

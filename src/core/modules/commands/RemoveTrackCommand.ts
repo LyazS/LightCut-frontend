@@ -36,7 +36,6 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private mediaModule: {
@@ -135,7 +134,6 @@ export class RemoveTrackCommand implements SimpleCommand {
         const rebuildResult = await TimelineItemFactory.rebuildForCmd({
           originalTimelineItemData: itemData,
           getMediaItem: this.mediaModule.getMediaItem,
-          setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
           logIdentifier: 'RemoveTrackCommand',
         })
 
@@ -154,7 +152,6 @@ export class RemoveTrackCommand implements SimpleCommand {
             this.id,
             newTimelineItem.mediaItemId,
             newTimelineItem.id,
-            this.timelineModule.setupTimelineItemSprite, // 支持文本类型
           ).setup()
         }
         console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)

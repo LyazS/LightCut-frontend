@@ -289,6 +289,7 @@ export function useTimelineItemOperations() {
             rotation: 0,
             opacity: 1,
             proportionalScale: true,
+            zIndex: 0,
           },
           animation: undefined,
         }
@@ -313,6 +314,7 @@ export function useTimelineItemOperations() {
             rotation: 0,
             opacity: 1,
             proportionalScale: true,
+            zIndex: 0,
             text: '新文本',
             style: {
               fontSize: 48,

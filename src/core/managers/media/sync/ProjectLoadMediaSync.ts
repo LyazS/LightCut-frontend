@@ -19,7 +19,6 @@ export class ProjectLoadMediaSync extends BaseMediaSync {
   constructor(
     mediaItemId: string,
     timelineItemId: string, // 项目加载场景必须有 timelineItemId
-    private setupTimelineItemSprite?: (item: any) => Promise<void>, // 支持文本类型
   ) {
     super(mediaItemId, timelineItemId)
   }
@@ -55,7 +54,6 @@ export class ProjectLoadMediaSync extends BaseMediaSync {
     const transitioner = new TimelineItemTransitioner(
       this.timelineItemId,
       undefined,
-      this.setupTimelineItemSprite
     )
 
     await transitioner.transitionToReady({
@@ -141,17 +139,8 @@ export class ProjectLoadMediaSync extends BaseMediaSync {
     // 根据时间轴项目类型创建不同的 transitioner
     let transitioner: TimelineItemTransitioner
     
-    if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
-      // 文本类型需要 setupTimelineItemSprite 函数
-      transitioner = new TimelineItemTransitioner(
-        this.timelineItemId,
-        undefined,
-        this.setupTimelineItemSprite
-      )
-    } else {
-      // 媒体类型需要 mediaItem
-      transitioner = new TimelineItemTransitioner(this.timelineItemId, mediaItem)
-    }
+    // 媒体类型需要 mediaItem
+    transitioner = new TimelineItemTransitioner(this.timelineItemId, mediaItem)
 
     await transitioner.transitionToReady({
       scenario: 'projectLoad',

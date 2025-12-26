@@ -598,7 +598,6 @@ export function useHistoryOperations(
             unifiedTimelineModule.getTimelineItem(id) as
               | UnifiedTimelineItemData<'text'>
               | undefined,
-          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
         unifiedConfigModule,
       )
@@ -666,7 +665,6 @@ export function useHistoryOperations(
             unifiedTimelineModule.getTimelineItem(id) as
               | UnifiedTimelineItemData<'text'>
               | undefined,
-          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
         unifiedConfigModule,
       )

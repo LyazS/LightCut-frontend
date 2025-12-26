@@ -10,6 +10,7 @@ export interface VisualProps {
   opacity: number
   /** 等比缩放状态（每个clip独立） */
   proportionalScale: boolean
+  zIndex: number
 }
 
 export interface AudioProps {

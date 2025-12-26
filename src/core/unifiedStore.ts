@@ -263,10 +263,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
     getTimelineItem: unifiedTimelineModule.getTimelineItem,
     getReadyTimelineItem: unifiedTimelineModule.getReadyTimelineItem,
-    setupBidirectionalSync: unifiedTimelineModule.setupBidirectionalSync,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
-    setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
 
     // 时间轴项目工厂函数
     cloneTimelineItemData: cloneTimelineItem,

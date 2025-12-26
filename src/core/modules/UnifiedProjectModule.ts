@@ -528,7 +528,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
             const rebuildResult = await TimelineItemFactory.rebuildForCmd({
               originalTimelineItemData: itemData,
               getMediaItem: mediaModule.getMediaItem,
-              setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
               logIdentifier: 'restoreTimelineItems',
             })
 
@@ -547,7 +546,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
               MediaSyncFactory.forProjectLoad(
                 newTimelineItem.mediaItemId,
                 newTimelineItem.id,
-                timelineModule.setupTimelineItemSprite, // 支持文本类型
               ).setup()
             }
 

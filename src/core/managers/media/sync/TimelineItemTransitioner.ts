@@ -16,9 +16,7 @@ import type { TransitionOptions } from './types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { createSpriteForTextTimelineItem } from '@/core/utils/textTimelineUtils'
 import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
-import { markRaw } from 'vue'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 /**
  * 时间轴项目状态转换器（增强版 - 支持文本类型）
@@ -27,7 +25,6 @@ export class TimelineItemTransitioner {
   constructor(
     private timelineItemId: string,
     private mediaItem?: UnifiedMediaItemData, // 文本类型时为 undefined
-    private setupTimelineItemSprite?: (item: UnifiedTimelineItemData) => Promise<void>, // 文本类型需要
   ) {}
 
   /**
@@ -73,8 +70,6 @@ export class TimelineItemTransitioner {
 
       // 通用的后续处理
       timelineItem.timelineStatus = 'ready'
-      store.setupBidirectionalSync(timelineItem)
-      // 动画管理器已迁移到 Bunny 组件，无需手动初始化
 
       console.log(`🎉 [TimelineItemTransitioner] 时间轴项目状态转换完成: ${this.timelineItemId}`)
     } catch (error) {
