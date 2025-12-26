@@ -13,6 +13,7 @@ import type {
   AudioMediaConfig,
   TextMediaConfig,
 } from '@/core/timelineitem/type'
+import type { GetConfigs } from '@/core/timelineitem/bunnytype'
 import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
 
 /**
@@ -118,6 +119,7 @@ export function useTimelineItemOperations() {
         },
         config: config,
         animation: undefined, // 新创建的项目默认没有动画
+        property: createEnhancedDefaultProperty(knownMediaType, originalResolution),
         timelineStatus: timelineStatus, // 根据素材状态设置时间轴项目状态
         runtime: {}, // 添加必需的 runtime 字段
       }
@@ -237,6 +239,93 @@ export function useTimelineItemOperations() {
           // 基础属性
           zIndex: 0,
         } as TextMediaConfig
+
+      default:
+        // 由于类型系统已经约束为 MediaType，不应该到达这里
+        throw new Error(`不支持的媒体类型: ${mediaType}`)
+    }
+  }
+
+  /**
+   * 创建增强的默认 config2 配置 - 用于 Bunny 渲染
+   * @param mediaType 媒体类型
+   * @param originalResolution 原始分辨率
+   * @returns Bunny 渲染所需的 config2 配置
+   */
+  function createEnhancedDefaultProperty(
+    mediaType: MediaType,
+    originalResolution: { width: number; height: number } | null,
+  ): GetConfigs<MediaType> {
+    // 根据媒体类型创建对应的 config2 配置
+    switch (mediaType) {
+      case 'video': {
+        const defaultWidth = originalResolution?.width || 1920
+        const defaultHeight = originalResolution?.height || 1080
+        return {
+          config: {
+            x: 0,
+            y: 0,
+            width: defaultWidth,
+            height: defaultHeight,
+            rotation: 0,
+            opacity: 1,
+            proportionalScale: true,
+            volume: 1,
+            isMuted: false,
+          },
+          animation: undefined,
+        }
+      }
+
+      case 'image': {
+        const defaultWidth = originalResolution?.width || 1920
+        const defaultHeight = originalResolution?.height || 1080
+        return {
+          config: {
+            x: 0,
+            y: 0,
+            width: defaultWidth,
+            height: defaultHeight,
+            rotation: 0,
+            opacity: 1,
+            proportionalScale: true,
+          },
+          animation: undefined,
+        }
+      }
+
+      case 'audio':
+        return {
+          config: {
+            volume: 1,
+            isMuted: false,
+          },
+          animation: undefined,
+        }
+
+      case 'text':
+        return {
+          config: {
+            x: 0,
+            y: 0,
+            width: 400,
+            height: 100,
+            rotation: 0,
+            opacity: 1,
+            proportionalScale: true,
+            text: '新文本',
+            style: {
+              fontSize: 48,
+              fontFamily: 'Arial, sans-serif',
+              fontWeight: 'normal',
+              fontStyle: 'normal',
+              color: '#ffffff',
+              textAlign: 'center',
+              lineHeight: 1.2,
+            },
+          },
+          animation: undefined,
+        }
 
       default:
         // 由于类型系统已经约束为 MediaType，不应该到达这里
@@ -368,6 +457,7 @@ export function useTimelineItemOperations() {
     // 方法
     createMediaClipFromMediaItem,
     createEnhancedDefaultConfig,
+    createEnhancedDefaultProperty,
     moveSingleItem,
     moveMultipleItems,
     handleTimelineItemPositionUpdate,

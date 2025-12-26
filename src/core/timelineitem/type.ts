@@ -240,7 +240,7 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   animation?: T extends MediaType ? AnimationConfig<T> : undefined
 
   // 专用于bunny渲染使用的配置
-  config2: GetConfigs<T>
+  property: GetConfigs<T>
   // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime
 }

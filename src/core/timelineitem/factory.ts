@@ -24,10 +24,6 @@ import type { AnimationConfig } from './animationtypes'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import {
-  createSpriteFromUnifiedTimelineItem,
-  createSpriteFromUnifiedMediaItem,
-} from '@/core/utils/spriteFactory'
-import {
   createTextTimelineItem as createTextTimelineItemFromUtils,
   createSpriteForTextTimelineItem,
 } from '@/core/utils/textTimelineUtils'

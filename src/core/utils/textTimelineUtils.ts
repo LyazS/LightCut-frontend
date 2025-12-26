@@ -217,6 +217,20 @@ export async function createTextTimelineItem(
       timeRangeN,
       config: textConfig,
       animation: undefined, // 新创建的文本项目默认没有动画
+      property: {
+        config: {
+          x: textConfig.x,
+          y: textConfig.y,
+          width: textConfig.width,
+          height: textConfig.height,
+          rotation: textConfig.rotation,
+          opacity: textConfig.opacity,
+          proportionalScale: textConfig.proportionalScale,
+          text: textConfig.text,
+          style: textConfig.style,
+        },
+        animation: undefined,
+      },
       timelineStatus: 'ready', // 文本项目创建后即为就绪状态
       runtime: {}, // 不包含 sprite，需要单独创建
     })

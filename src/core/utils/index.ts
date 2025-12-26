@@ -30,14 +30,6 @@ export {
   calculateDuration,
 } from './timeRangeUtils'
 
-// ==================== 统一Sprite工厂 ====================
-export {
-  // 主要工厂函数
-  createSpriteFromUnifiedMediaItem,
-
-  // 辅助函数
-  canCreateSpriteFromUnifiedMediaItem,
-} from './spriteFactory'
 
 // ==================== 坐标转换工具 ====================
 export {
