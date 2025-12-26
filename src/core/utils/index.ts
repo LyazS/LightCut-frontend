@@ -175,7 +175,6 @@ export {
   toggleKeyframe,
 
   // 属性修改处理
-  updatePropertiesBatchViaWebAV,
   handlePropertyChange,
 
   // 关键帧导航

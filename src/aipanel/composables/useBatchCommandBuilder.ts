@@ -50,7 +50,7 @@ export function useBatchCommandBuilder(
 ) {
   // 使用统一存储
   const unifiedStore = useUnifiedStore()
-  const { createEnhancedDefaultConfig, createEnhancedDefaultProperty } = useTimelineItemOperations()
+  const { createEnhancedDefaultConfig } = useTimelineItemOperations()
 
   /**
    * 构建批量操作命令
@@ -156,7 +156,6 @@ export function useBatchCommandBuilder(
       },
       config: config,
       animation: undefined, // 新创建的项目默认没有动画
-      property: createEnhancedDefaultProperty(knownMediaType, originalResolution),
       timelineStatus: timelineStatus,
       runtime: {}, // 添加必需的 runtime 字段
     }

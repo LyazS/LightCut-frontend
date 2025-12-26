@@ -30,10 +30,12 @@ export interface VisualAnimatableProps {
   height: number
   rotation: number
   opacity: number
+  zIndex: number
 }
 
 export interface AudioAnimatableProps {
   volume: number
+  zIndex: number
 }
 
 export type KeyframePropertiesMap = {
@@ -56,22 +58,17 @@ export interface AnimationProps<T extends MediaType> {
 }
 
 type GetConfigMap = {
-  video: {
-    config: VisualProps & AudioProps
-    animation?: AnimationProps<'video'>
-  }
-  image: {
-    config: VisualProps
-    animation?: AnimationProps<'image'>
-  }
-  audio: {
-    config: AudioProps
-    animation?: AnimationProps<'audio'>
-  }
-  text: {
-    config: VisualProps & TextProps
-    animation?: AnimationProps<'text'>
-  }
+  video: VisualProps & AudioProps
+  image: VisualProps
+  audio: AudioProps
+  text: VisualProps & TextProps
+}
+type GetAnimationMap = {
+  video: AnimationProps<'video'>
+  image: AnimationProps<'image'>
+  audio: AnimationProps<'audio'>
+  text: AnimationProps<'text'>
 }
 
 export type GetConfigs<T extends MediaType> = GetConfigMap[T]
+export type GetAnimation<T extends MediaType> = GetAnimationMap[T]
