@@ -6,7 +6,6 @@
 import { ref } from 'vue'
 import { throttle } from 'lodash'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-import type { UnifiedMediaItemData } from '@/core/mediaitem'
 import type {
   ThumbnailLayoutItem,
   ThumbnailBatchRequest,
@@ -18,7 +17,7 @@ import {
   createThumbnailCanvas,
   createCanvasWithSize,
   drawImageOnCanvas,
-} from '@/core/utils/thumbnailGenerator'
+} from '@/core/bunnyUtils/thumbUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
 import type { ModuleRegistry } from './ModuleRegistry'

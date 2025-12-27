@@ -4,32 +4,9 @@
  * 以及单个素材导出功能
  */
 
-import { Combinator } from '@webav/av-cliper'
-import type { MP4Clip } from '@webav/av-cliper'
-import {
-  VideoOffscreenSprite,
-  ImageOffscreenSprite,
-  AudioOffscreenSprite,
-  // TextOffscreenSprite,
-} from '@/core/offscreensprite'
-import type { UnifiedOffscreenSprite } from '@/core/offscreensprite'
-import type { UnifiedSprite } from '@/core/visiblesprite'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import {
-  isVideoTimelineItem,
-  isImageTimelineItem,
-  isAudioTimelineItem,
-  isTextTimelineItem,
-  hasVisualProperties,
-  hasAudioProperties,
-} from '@/core/timelineitem/queries'
-import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
-import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
-import { generateThumbnailForUnifiedMediaItem } from '@/core/utils/thumbnailGenerator'
-import { ThumbnailMode } from '@/constants/ThumbnailConstants'
-import { useUnifiedStore } from '@/core/unifiedStore'
 
 /**
  * 导出项目参数接口

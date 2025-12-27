@@ -4,7 +4,6 @@ import type {
   VideoMediaConfig,
   AudioMediaConfig,
 } from '@/core/timelineitem'
-import type { AudioVisibleSprite, VideoVisibleSprite } from '@/core/visiblesprite'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type {

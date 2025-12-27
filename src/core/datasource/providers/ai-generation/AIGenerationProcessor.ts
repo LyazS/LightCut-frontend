@@ -547,11 +547,11 @@ export class AIGenerationProcessor extends DataSourceProcessor {
 
       // 6. WebAV 处理
       this.transitionMediaStatus(mediaItem, 'decoding')
-      const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
+      // const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
       const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
 
       // 7. 直接设置元数据
-      mediaItem.runtime.webav = webavResult.webavObjects
+      // mediaItem.runtime.webav = webavResult.webavObjects
       // mediaItem.duration = webavResult.duration
       mediaItem.runtime.bunny = bunnyResult.bunnyObjects
       mediaItem.duration = Number(bunnyResult.durationN)

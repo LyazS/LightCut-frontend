@@ -66,12 +66,7 @@
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
-      <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息">
-         <template #icon>
-            <RemixIcon name="tools-line" size="1x" />
-          </template>
-        调试
-      </HoverButton>
+      <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息"> 调试 </HoverButton>
       <!-- <HoverButton @click="debugHistory" title="在控制台打印历史操作记录信息">
         <template #icon>
           <RemixIcon name="history-line" size="1x" />

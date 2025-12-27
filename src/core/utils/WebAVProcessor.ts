@@ -6,8 +6,6 @@
 import pLimit from 'p-limit'
 import type { UnifiedMediaItemData, MediaType, WebAVObjects } from '@/core/mediaitem/types'
 import { microsecondsToFrames, secondsToFrames } from '@/core/utils/timeUtils'
-import { generateThumbnailForUnifiedMediaItem } from '@/core/utils/thumbnailGenerator'
-import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { WEBAV_CONCURRENCY } from '@/constants/ConcurrencyConstants'
 import { createMP4Clip, createImgClip, createAudioClip } from '@/core/utils/webavClipUtils'
 

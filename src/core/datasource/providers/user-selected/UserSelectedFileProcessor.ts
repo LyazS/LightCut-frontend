@@ -117,11 +117,11 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
       this.transitionMediaStatus(mediaItem, 'decoding')
 
       // 4. WebAV处理器负责具体处理
-      const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
+      // const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
       const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
-
+      
       // 5. 直接设置元数据
-      mediaItem.runtime.webav = webavResult.webavObjects
+      // mediaItem.runtime.webav = webavResult.webavObjects
       // mediaItem.duration = webavResult.duration
       mediaItem.runtime.bunny = bunnyResult.bunnyObjects
       mediaItem.duration = Number(bunnyResult.durationN)

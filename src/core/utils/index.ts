@@ -82,21 +82,6 @@ export {
   countOverlappingItems,
 } from './timeOverlapUtils'
 
-// ==================== 统一缩略图生成器 ====================
-export {
-  // 视频缩略图生成
-  generateVideoThumbnail,
-
-  // 图片缩略图生成
-  generateImageThumbnail,
-
-  // Canvas转Blob URL
-  canvasToBlob,
-
-  // 统一媒体项目缩略图生成
-  generateThumbnailForUnifiedMediaItem,
-} from './thumbnailGenerator'
-
 // ==================== 统一时间轴搜索工具 ====================
 export {
   // 根据时间查找时间轴项目

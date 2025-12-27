@@ -16,9 +16,7 @@ import type { MediaType } from '@/core/mediaitem'
 // ==================== 新架构工具导入 ====================
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem/factory'
-import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
-import { projectToWebavCoords } from '@/core/utils'
 import { textToImageBitmap2 } from '@/core/bunnyUtils/ToBitmap'
 
 export class UpdateTextCommand implements SimpleCommand {

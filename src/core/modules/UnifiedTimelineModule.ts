@@ -1,17 +1,9 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { VideoMediaConfig, ImageMediaConfig, TextMediaConfig } from '@/core/timelineitem/type'
-import { VideoVisibleSprite } from '@/core/visiblesprite/VideoVisibleSprite'
-import { ImageVisibleSprite } from '@/core/visiblesprite/ImageVisibleSprite'
-import { AudioVisibleSprite } from '@/core/visiblesprite/AudioVisibleSprite'
-import { webavToProjectCoords, projectToWebavCoords } from '@/core/utils/coordinateUtils'
-import type { VideoResolution } from '@/core/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedWebavModule } from './UnifiedWebavModule'
@@ -19,35 +11,6 @@ import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedSelectionModule } from './UnifiedSelectionModule'
 
-/**
- * 扩展的WebAV属性变化事件类型
- * 在原有PropsChangeEvent基础上添加opacity属性支持
- */
-interface ExtendedPropsChangeEvent {
-  rect?: {
-    x?: number
-    y?: number
-    w?: number
-    h?: number
-    angle?: number
-  }
-  zIndex?: number
-  opacity?: number
-  // 文本更新事件数据
-  textUpdate?: {
-    text: string
-    style: any
-    needsRecreation: boolean
-  }
-  // 未来可扩展其他属性
-}
-
-// 临时调试函数，适用于统一类型
-function unifiedDebugLog(operation: string, details: any) {
-  if (import.meta.env.DEV) {
-    console.log(`🎬 [UnifiedTimelineModule] ${operation}:`, details)
-  }
-}
 import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/core/timelineitem/queries'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 import { TimelineItemFactory } from '../timelineitem'
@@ -74,18 +37,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItem(timelineItem: UnifiedTimelineItemData<MediaType>) {
-    // 检查时间轴项目状态
-    if (TimelineItemQueries.isLoading(timelineItem)) {
-      // 加载中的时间轴项目不需要sprite相关的设置
-      unifiedDebugLog('添加加载中的时间轴项目', { timelineItemId: timelineItem.id })
-    } else if (TimelineItemQueries.isReady(timelineItem)) {
-      // 设置sprite属性
-      // await setupTimelineItemSprite(timelineItem)
-    } else {
-      // 错误状态的时间轴项目
-      unifiedDebugLog('添加错误状态的时间轴项目', { timelineItemId: timelineItem.id })
-    }
-
     timelineItems.value.push(timelineItem)
   }
 
@@ -99,12 +50,9 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
     )
     if (index > -1) {
       // 直接使用registry.get获取所需模块
-      const webavModule = registry.get<UnifiedWebavModule>(MODULE_NAMES.WEBAV)
-      const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
       const selectionModule = registry.get<UnifiedSelectionModule>(MODULE_NAMES.SELECTION)
 
       const item = timelineItems.value[index]
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
 
       // 🆕 同步清理选择集合中的对应ID
       if (selectionModule.isTimelineItemSelected(timelineItemId)) {
@@ -113,38 +61,10 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       }
 
       // 🆕 清理 Bunny 相关资源
-      try {
-        console.log(`🧹 开始清理时间轴项目Bunny资源: ${timelineItemId}`)
-        await cleanupTimelineItemBunny(item)
-        console.log(`✅ 成功清理Bunny资源: ${timelineItemId}`)
-      } catch (error) {
-        console.warn(`⚠️ 清理Bunny资源时出错: ${timelineItemId}`, error)
-      }
-
-      // 检查时间轴项目状态
-      if (TimelineItemQueries.isLoading(item) || TimelineItemQueries.hasError(item)) {
-        // 加载中或错误状态的时间轴项目不需要额外清理sprite相关资源
-        // （已经在上面统一处理）
-        unifiedDebugLog('移除非就绪状态的时间轴项目', {
-          timelineItemId,
-          status: item.timelineStatus,
-        })
-      } else if (TimelineItemQueries.isReady(item)) {
-        // 动画管理器已迁移到 Bunny 组件，无需清理
-      }
+      await cleanupTimelineItemBunny(item)
 
       // 从数组中移除
       timelineItems.value.splice(index, 1)
-
-      unifiedDebugLog('从时间轴删除素材', {
-        timelineItemId,
-        mediaItemId: item.mediaItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        trackId: item.trackId,
-        position: item.timeRange.timelineStartTime / 30, // timelineStartTime 是帧数，除以30得到秒数
-        status: item.timelineStatus,
-        mediaType: item.mediaType,
-      })
     }
   }
 
@@ -184,14 +104,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
   ) {
     const item = getTimelineItem(timelineItemId)
     if (item) {
-      // 直接使用registry.get获取所需模块
-      const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
-      const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
-
-      const oldPositionFrames = item.timeRange.timelineStartTime // 帧数
-      const oldTrackId = item.trackId
-      const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-
       // 确保新位置不为负数
       const clampedNewPositionFrames = Math.max(0, newPositionFrames)
 
@@ -202,20 +114,10 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
         timelineEndTime: clampedNewPositionFrames + durationFrames, // 帧数
       })
 
-      unifiedDebugLog('更新时间轴项目位置', {
-        timelineItemId,
-        mediaItemName: mediaItem?.name || '未知',
-        oldPositionFrames: oldPositionFrames,
-        newPositionFrames: clampedNewPositionFrames,
-        originalNewPositionFrames: newPositionFrames,
-        oldTrackId,
-        newTrackId: item.trackId,
-        positionChanged: oldPositionFrames !== clampedNewPositionFrames,
-        trackChanged: oldTrackId !== item.trackId,
-        positionClamped: newPositionFrames !== clampedNewPositionFrames,
-        status: item.timelineStatus,
-        mediaType: item.mediaType,
-      })
+      // 如果指定了新轨道，更新轨道ID
+      if (newTrackId !== undefined) {
+        item.trackId = newTrackId
+      }
     }
   }
 
@@ -238,36 +140,32 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
     const item = getReadyTimelineItem(timelineItemId)
     if (!item) return
 
-    try {
-      // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-      if (TimelineItemQueries.hasVisualProperties(item)) {
-        const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
+    if (TimelineItemQueries.hasVisualProperties(item)) {
+      const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
 
-        // 直接更新 config 中的属性
-        if (transform.x !== undefined) {
-          config.x = transform.x
-        }
-        if (transform.y !== undefined) {
-          config.y = transform.y
-        }
-        if (transform.width !== undefined) {
-          config.width = transform.width
-        }
-        if (transform.height !== undefined) {
-          config.height = transform.height
-        }
-        if (transform.rotation !== undefined) {
-          config.rotation = transform.rotation
-        }
-        if (transform.opacity !== undefined) {
-          config.opacity = transform.opacity
-        }
-        if (transform.zIndex !== undefined) {
-          item.config.zIndex = transform.zIndex
-        }
+      // 直接更新 config 中的属性
+      if (transform.x !== undefined) {
+        config.x = transform.x
       }
-    } catch (error) {
-      console.error('更新时间轴项目变换属性失败:', error)
+      if (transform.y !== undefined) {
+        config.y = transform.y
+      }
+      if (transform.width !== undefined) {
+        config.width = transform.width
+      }
+      if (transform.height !== undefined) {
+        config.height = transform.height
+      }
+      if (transform.rotation !== undefined) {
+        config.rotation = transform.rotation
+      }
+      if (transform.opacity !== undefined) {
+        config.opacity = transform.opacity
+      }
+      if (transform.zIndex !== undefined) {
+        item.config.zIndex = transform.zIndex
+      }
     }
   }
 
