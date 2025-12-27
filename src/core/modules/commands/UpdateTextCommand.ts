@@ -19,6 +19,7 @@ import { TimelineItemFactory } from '@/core/timelineitem/factory'
 import { TextVisibleSprite } from '@/core/visiblesprite/TextVisibleSprite'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import { projectToWebavCoords } from '@/core/utils'
+import { textToImageBitmap2 } from '@/core/bunnyUtils/ToBitmap'
 
 export class UpdateTextCommand implements SimpleCommand {
   public readonly id: string
@@ -66,12 +67,37 @@ export class UpdateTextCommand implements SimpleCommand {
       // 保存原始项目数据用于撤销
       this.originalTimelineItemData = TimelineItemFactory.clone(item)
 
-      throw new Error('TODO 要实现textclip的重建')
-      console.log(`✅ 文本更新成功:`, {
-        id: this.timelineItemId,
-        oldText: this.oldText.substring(0, 20) + '...',
-        newText: this.newText.substring(0, 20) + '...',
-      })
+      // 1. 保存原始数据
+      const oldConfigHeight = item.config.height
+      const oldConfigWidth = item.config.width
+      const oldBitmapHeight = item.runtime.textBitmap?.height ?? oldConfigHeight
+      const oldBitmapWidth = item.runtime.textBitmap?.width ?? oldConfigWidth
+
+      const bitmapHeightRatio = oldConfigHeight / oldBitmapHeight
+      const bitmapWidthRatio = oldConfigWidth / oldBitmapWidth
+
+      // 2. 合并新样式到旧样式
+      const mergedStyle: TextStyleConfig = {
+        ...item.config.style,
+        ...this.newStyle,
+      }
+
+      // 3. 使用 textToImageBitmap2 重建 textBitmap
+      const newTextBitmap = await textToImageBitmap2(this.newText, mergedStyle)
+      const newBitmapHeight = newTextBitmap.height
+      const newBitmapWidth = newTextBitmap.width
+
+      // 6. 更新 item 的配置
+      item.config.text = this.newText
+      item.config.style = mergedStyle
+
+      // 按比例调整宽高
+      item.config.height = newBitmapHeight * bitmapHeightRatio
+      item.config.width = newBitmapWidth * bitmapWidthRatio
+
+      // 7. 更新 runtime.textBitmap
+      item.runtime.textBitmap?.close()
+      item.runtime.textBitmap = newTextBitmap
     } catch (error) {
       console.error(`❌ 更新文本失败:`, error)
       throw error
@@ -92,9 +118,22 @@ export class UpdateTextCommand implements SimpleCommand {
           throw new Error(`文本项目不存在或类型错误: ${this.timelineItemId}`)
         }
 
-        throw new Error('TODO 要实现textclip的重建')
+        // 1. 使用原始数据重建 textBitmap
+        const originalStyle = this.originalTimelineItemData.config.style
+        const originalText = this.originalTimelineItemData.config.text
+        const newTextBitmap = await textToImageBitmap2(originalText, originalStyle)
 
-        console.log(`✅ 文本撤销成功: ${this.timelineItemId}`)
+        // 2. 批量恢复原始配置（保持响应式引用）
+        Object.assign(item.config, this.originalTimelineItemData.config)
+
+        // 3. 更新 runtime.textBitmap
+        item.runtime.textBitmap?.close()
+        item.runtime.textBitmap = newTextBitmap
+
+        console.log(`✅ 文本撤销成功: ${this.timelineItemId}`, {
+          restoredText: originalText.substring(0, 20) + '...',
+          restoredSize: { width: item.config.width, height: item.config.height },
+        })
       }
     } catch (error) {
       console.error(`❌ 撤销文本更新失败:`, error)
