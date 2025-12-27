@@ -255,6 +255,7 @@ export function createUnifiedMediaBunnyModule(
 
     await Promise.all(
       timelineItems.map(async (item) => {
+        // 这里处理各自的动画
         // 处理视频/音频
         if (item.mediaType === 'video' || item.mediaType === 'audio') {
           const bunnyClip = item.runtime.bunnyClip

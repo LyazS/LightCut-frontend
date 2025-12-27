@@ -112,8 +112,6 @@ export {
   createTextTimelineItem,
 } from './textTimelineUtils'
 
-export { TextHelper } from './TextHelper'
-
 // ==================== 统一关键帧工具 ====================
 export {
   // 关键帧位置转换工具函数
@@ -158,20 +156,7 @@ export {
 } from './unifiedKeyframeUtils'
 
 // ==================== 项目文件操作工具 ====================
-export * as ProjectFileOps from './ProjectFileOperations'
-
-// ==================== WebAV Clip工具 ====================
-export {
-  // Clip创建函数
-  createMP4Clip,
-  createImgClip,
-  createAudioClip,
-
-  // 克隆函数
-  cloneMP4Clip,
-  cloneImgClip,
-  cloneAudioClip,
-} from './webavClipUtils'
+export * as ProjectFileOps from './projectFileOperations'
 
 // ==================== 项目导出工具 ====================
 export {
