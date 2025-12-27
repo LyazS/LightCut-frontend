@@ -6,7 +6,7 @@ import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import { textToImageBitmap, textToImageBitmap2 } from './ToBitmap'
 
 /**
- * 为时间轴项目设置对应的 Bunny 对象
+ * 为时间轴项目设置对应的 Bunny 对象（会自动清理旧的对象）
  *
  * 根据不同的媒体类型，为 timelineItem 创建相应的 bunny 对象并存储到 runtime 中
  *
@@ -24,6 +24,12 @@ export async function setupTimelineItemBunny(
   })
 
   try {
+    // 检查并清理已存在的旧资源
+    if (timelineItem.runtime.bunnyClip || timelineItem.runtime.textBitmap) {
+      console.log(`🧹 [timelineItemSetup] 检测到已存在的 bunny 对象，先清理旧资源`)
+      await cleanupTimelineItemBunny(timelineItem)
+    }
+
     switch (timelineItem.mediaType) {
       case 'text': {
         // 文本类型：创建 textBitmap

@@ -3,19 +3,11 @@
  * 将操作配置转换为具体命令，专注于命令构建，不负责执行
  */
 
-import type { Ref } from 'vue'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { MediaType } from '@/core/mediaitem/types'
 import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-} from '@/core/timelineitem/type'
-import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
-  UnifiedWebavModule,
   UnifiedMediaModule,
   UnifiedConfigModule,
   UnifiedTrackModule,
@@ -50,7 +42,7 @@ export function useBatchCommandBuilder(
 ) {
   // 使用统一存储
   const unifiedStore = useUnifiedStore()
-  const { createEnhancedDefaultConfig } = useTimelineItemOperations()
+  const { createDefaultTimelineItemConfig } = useTimelineItemOperations()
 
   /**
    * 构建批量操作命令
@@ -126,6 +118,7 @@ export function useBatchCommandBuilder(
 
     // 现在 mediaType 已经确定不是 'unknown'，可以安全地转换为 MediaType
     const knownMediaType = mediaItem.mediaType as MediaType
+    if (knownMediaType === 'text') throw new Error('TODO')
 
     // 根据素材状态确定时间轴项目状态
     const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
@@ -140,9 +133,9 @@ export function useBatchCommandBuilder(
     }
 
     // 创建增强的默认配置
-    const config = createEnhancedDefaultConfig(knownMediaType, originalResolution)
+    const config = createDefaultTimelineItemConfig(knownMediaType, originalResolution)
 
-    // 创建时间轴项目数据 - 与 createMediaClipFromMediaItem 对齐
+    // 创建时间轴项目数据 - 与 createTimelineItemFromMediaItem 对齐
     const timelineItemData = {
       id: generateId(),
       mediaItemId: params.mediaItemId,

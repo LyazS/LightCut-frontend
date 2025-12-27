@@ -381,7 +381,7 @@ const updateSpeedFromInput = (newSpeed: number) => {
 }
 
 // 更新音量
-const updateVolume = (newVolume: number) => {
+const updateVolume = async (newVolume: number) => {
   if (!props.selectedTimelineItem || !isVideoTimelineItem(props.selectedTimelineItem)) return
 
   const clampedVolume = Math.max(0, Math.min(1, newVolume))
@@ -406,12 +406,12 @@ const updateVolume = (newVolume: number) => {
   // 使用历史记录系统更新音量
   if (clampedVolume === 0) {
     // 设为静音，但保留原音量值
-    unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+    await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
       isMuted: true,
     })
   } else {
     // 更新音量值并取消静音
-    unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+    await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
       volume: clampedVolume,
       isMuted: false,
     })
@@ -421,7 +421,7 @@ const updateVolume = (newVolume: number) => {
 }
 
 // 切换静音状态（类型安全版本）
-const toggleMute = () => {
+const toggleMute = async () => {
   if (!props.selectedTimelineItem || !hasAudioProperties(props.selectedTimelineItem)) return
 
   // 📝 数据流向说明：
@@ -441,7 +441,7 @@ const toggleMute = () => {
   const newMutedState = !config.isMuted
 
   // 使用历史记录系统切换静音状态
-  unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+  await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
     isMuted: newMutedState,
   })
 

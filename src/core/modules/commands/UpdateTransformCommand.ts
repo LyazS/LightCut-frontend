@@ -21,12 +21,6 @@ import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem'
 
-import {
-  isUnifiedVideoVisibleSprite,
-  isUnifiedAudioVisibleSprite,
-  hasAudioCapabilities,
-} from '@/core/utils/spriteTypeGuards'
-
 /**
  * 更新变换属性命令
  * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作

@@ -162,6 +162,7 @@ export function useHistoryOperations(
 
   /**
    * 带历史记录的添加时间轴项目方法
+   * 会在拖动素材到时间轴和右键添加文本的时候使用
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {

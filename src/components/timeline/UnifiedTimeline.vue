@@ -304,7 +304,7 @@ const {
 
 // 初始化项目操作模块
 const {
-  createMediaClipFromMediaItem,
+  createTimelineItemFromMediaItem,
   moveSingleItem,
   moveMultipleItems,
   handleTimelineItemRemove,
