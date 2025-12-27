@@ -62,10 +62,12 @@ export class CommandMediaSync extends BaseMediaSync {
     if (this.timelineItemId) {
       const store = useUnifiedStore()
       const timelineItem = store.getTimelineItem(this.timelineItemId)
-      
+
       if (timelineItem && TimelineItemQueries.isTextTimelineItem(timelineItem)) {
-        console.log(`🎨 [CommandMediaSync] 检测到文本类型，立即触发状态转换: ${this.timelineItemId}`)
-        
+        console.log(
+          `🎨 [CommandMediaSync] 检测到文本类型，立即触发状态转换: ${this.timelineItemId}`,
+        )
+
         // 文本类型立即转换，不需要等待媒体加载
         await this.transitionTextTimelineItem()
         return
@@ -82,10 +84,7 @@ export class CommandMediaSync extends BaseMediaSync {
   private async transitionTextTimelineItem(): Promise<void> {
     if (!this.timelineItemId) return
 
-    const transitioner = new TimelineItemTransitioner(
-      this.timelineItemId,
-      undefined,
-    )
+    const transitioner = new TimelineItemTransitioner(this.timelineItemId, undefined)
 
     await transitioner.transitionToReady({
       scenario: 'command',
@@ -111,6 +110,7 @@ export class CommandMediaSync extends BaseMediaSync {
           this.autoCleanup()
         } else if (this.isErrorStatus(newStatus)) {
           await this.handleMediaError(mediaItem, newStatus)
+          this.autoCleanup()
         }
       },
       { immediate: true },
@@ -126,11 +126,7 @@ export class CommandMediaSync extends BaseMediaSync {
     })
   }
 
-
-  private async handleMediaError(
-    mediaItem: UnifiedMediaItemData,
-    status: string,
-  ): Promise<void> {
+  private async handleMediaError(mediaItem: UnifiedMediaItemData, status: string): Promise<void> {
     if (this.timelineItemId) {
       const store = useUnifiedStore()
       const timelineItem = store.getTimelineItem(this.timelineItemId)
@@ -139,9 +135,6 @@ export class CommandMediaSync extends BaseMediaSync {
         console.log(`❌ [CommandMediaSync] 时间轴项目状态已设置为错误: ${this.timelineItemId}`)
       }
     }
-
-    // 自动清理
-    this.autoCleanup()
   }
 
   private async transitionTimelineItem(mediaItem: UnifiedMediaItemData): Promise<void> {
@@ -149,12 +142,12 @@ export class CommandMediaSync extends BaseMediaSync {
 
     const store = useUnifiedStore()
     const timelineItem = store.getTimelineItem(this.timelineItemId)
-    
+
     if (!timelineItem) return
 
     // 根据时间轴项目类型创建不同的 transitioner
     let transitioner: TimelineItemTransitioner
-    
+
     // 媒体类型需要 mediaItem
     transitioner = new TimelineItemTransitioner(this.timelineItemId, mediaItem)
 

@@ -18,22 +18,10 @@ export type { TextStyleConfig } from './texttype'
 export { DEFAULT_TEXT_STYLE } from './texttype'
 
 // 动画类型导出
-export type {
-  KeyframeButtonState,
-  KeyframeUIState,
-} from './animationtypes'
-
-// 从mediaitem模块导入MediaType
-export type { MediaType } from '../mediaitem'
-
-// ==================== 常量导出 ====================
-export { VALID_TIMELINE_TRANSITIONS, MEDIA_TO_TIMELINE_STATUS_MAP } from './type'
+export type { KeyframeButtonState, KeyframeUIState } from './animationtypes'
 
 // ==================== 工厂函数导出 ====================
-export {
-  // 工厂函数集合
-  TimelineItemFactory,
-} from './factory'
+export { TimelineItemFactory } from './factory'
 
 // ==================== 状态显示工具导出 ====================
 export {
@@ -46,7 +34,4 @@ export {
 export type { StatusDisplayInfo } from './statusdisplayutils'
 
 // ==================== 查询工具导出 ====================
-export {
-  // 查询工具集合
-  TimelineItemQueries,
-} from './queries'
+export { TimelineItemQueries } from './queries'

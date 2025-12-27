@@ -38,27 +38,6 @@ export type TimelineItemStatus =
   | 'loading' // 正在处理中，包含下载、解析、等待
   | 'error' // 不可用状态，包含错误、缺失、取消
 
-/**
- * 状态转换规则定义
- */
-export const VALID_TIMELINE_TRANSITIONS: Record<TimelineItemStatus, TimelineItemStatus[]> = {
-  loading: ['ready', 'error'],
-  ready: ['loading', 'error'],
-  error: ['loading'],
-} as const
-
-/**
- * 媒体状态到时间轴状态的映射表
- */
-export const MEDIA_TO_TIMELINE_STATUS_MAP = {
-  pending: 'loading', // 等待开始 → 加载中
-  asyncprocessing: 'loading', // 异步处理中 → 加载中
-  decoding: 'loading', // WebAV解析中 → 加载中
-  ready: 'ready', // 就绪 → 就绪
-  error: 'error', // 错误 → 错误
-  cancelled: 'error', // 已取消 → 错误
-  missing: 'error', // 文件缺失 → 错误
-} as const
 
 // ==================== 配置类型映射 ====================
 
