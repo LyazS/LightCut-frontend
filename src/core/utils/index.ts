@@ -180,12 +180,3 @@ export {
   // 导出项目参数接口
   type ExportProjectOptions,
 } from './projectExporter'
-
-// ==================== WebAV处理器 ====================
-export {
-  // WebAV处理器类
-  WebAVProcessor,
-
-  // 类型定义
-  type WebAVProcessingResult,
-} from './WebAVProcessor'

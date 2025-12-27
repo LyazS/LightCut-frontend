@@ -46,7 +46,6 @@ function printUnifiedDebugInfo(
       mediaStatus: item.mediaStatus,
       sourceType: item.source.type,
       sourceProgress: `${item.source.progress}%`,
-      hasWebAV: !!item.runtime.webav,
       createdAt: new Date(item.createdAt).toLocaleTimeString(),
     })),
   )
@@ -218,7 +217,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    */
   function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
-    if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.webav) {
+    if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.bunny) {
       const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size
@@ -235,7 +234,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    */
   function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
-    if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.webav) {
+    if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.bunny) {
       const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size

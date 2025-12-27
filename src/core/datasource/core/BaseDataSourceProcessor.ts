@@ -7,7 +7,6 @@
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
 import type { UnifiedMediaItemData, MediaStatus } from '@/core/mediaitem/types'
 import { MediaStatusManager } from '@/core/datasource/services/MediaStatusService'
-import { WebAVProcessor } from '@/core/utils/WebAVProcessor'
 import { BunnyProcessor } from '@/core/bunnyUtils/BunnyProcessor'
 import { DATA_SOURCE_CONCURRENCY } from '@/constants/ConcurrencyConstants'
 import pLimit from 'p-limit'
@@ -40,7 +39,6 @@ export abstract class DataSourceProcessor {
 
   // 服务实例
   protected mediaStatusManager: MediaStatusManager = new MediaStatusManager()
-  protected webavProcessor: WebAVProcessor = new WebAVProcessor()
   protected bunnyProcessor: BunnyProcessor = new BunnyProcessor()
 
   constructor() {

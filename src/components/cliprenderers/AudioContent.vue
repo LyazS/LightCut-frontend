@@ -272,6 +272,7 @@ async function renderWaveformDirectly(
   clipWidthPixels: number,
   height: number,
 ): Promise<void> {
+  // throw new Error('TODO')
   const unifiedStore = useUnifiedStore()
 
   if (canvas.height !== height) {
