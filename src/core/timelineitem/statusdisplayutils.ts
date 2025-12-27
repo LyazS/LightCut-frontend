@@ -24,33 +24,6 @@ export interface StatusDisplayInfo {
  */
 export class TimelineStatusDisplayUtils {
   /**
-   * 获取完整的状态显示信息
-   */
-  static getStatusDisplayInfo(mediaData: UnifiedMediaItemData | null): StatusDisplayInfo {
-    if (!mediaData) {
-      return {
-        text: '未知状态',
-        hasProgress: false,
-        percent: 0,
-        hasError: false,
-      }
-    }
-
-    const progressInfo = this.getProgressInfo(mediaData)
-    const errorInfo = this.getErrorInfo(mediaData)
-
-    return {
-      text: this.getStatusText(mediaData),
-      hasProgress: progressInfo.hasProgress,
-      percent: progressInfo.percent,
-      speed: progressInfo.speed,
-      hasError: errorInfo.hasError,
-      errorMessage: errorInfo.message,
-      recoverable: errorInfo.recoverable,
-    }
-  }
-
-  /**
    * 获取状态显示文本
    */
   static getStatusText(mediaData: UnifiedMediaItemData): string {
