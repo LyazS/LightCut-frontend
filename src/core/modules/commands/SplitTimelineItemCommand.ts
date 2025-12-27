@@ -24,7 +24,6 @@ import type {
   VideoMediaConfig,
   ImageMediaConfig,
   TextMediaConfig,
-  BaseMediaProps,
 } from '@/core/timelineitem/type'
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'

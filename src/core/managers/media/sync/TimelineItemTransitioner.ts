@@ -168,10 +168,6 @@ export class TimelineItemTransitioner {
         currentConfig.width = originalSize.width
         currentConfig.height = originalSize.height
 
-        // 更新原始宽度和高度
-        currentConfig.originalWidth = originalSize.width
-        currentConfig.originalHeight = originalSize.height
-
         console.log(`🖼️ [TimelineItemTransitioner] 已更新配置尺寸: ${timelineItem.id}`, {
           width: originalSize.width,
           height: originalSize.height,

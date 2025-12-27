@@ -26,7 +26,6 @@ import {
   hasAudioProperties,
 } from '@/core/timelineitem/queries'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
-import { convertToWebAVAnimation, isValidAnimationConfig } from '@/core/utils/animationConverter'
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
 import { generateThumbnailForUnifiedMediaItem } from '@/core/utils/thumbnailGenerator'
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'

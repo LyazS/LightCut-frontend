@@ -9,7 +9,6 @@ export type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   TransformData,
-  UnknownMediaConfig,
   VideoMediaConfig,
   AudioMediaConfig,
 } from './type'
@@ -20,11 +19,8 @@ export { DEFAULT_TEXT_STYLE } from './texttype'
 
 // 动画类型导出
 export type {
-  AnimationConfig,
-  Keyframe,
   KeyframeButtonState,
   KeyframeUIState,
-  WebAVAnimationConfig,
 } from './animationtypes'
 
 // 从mediaitem模块导入MediaType

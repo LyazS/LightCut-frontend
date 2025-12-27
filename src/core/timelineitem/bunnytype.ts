@@ -72,3 +72,9 @@ type GetAnimationMap = {
 
 export type GetConfigs<T extends MediaType> = GetConfigMap[T]
 export type GetAnimation<T extends MediaType> = GetAnimationMap[T]
+
+// 导出具体的配置类型供其他模块使用
+export type VideoMediaConfig = GetConfigs<'video'>
+export type ImageMediaConfig = GetConfigs<'image'>
+export type AudioMediaConfig = GetConfigs<'audio'>
+export type TextMediaConfig = GetConfigs<'text'>

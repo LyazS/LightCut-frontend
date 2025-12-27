@@ -152,18 +152,6 @@ export class UpdateTransformCommand implements SimpleCommand {
         }
       }
 
-      // 处理音频增益更新（仅对音频有效）
-      if (
-        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
-        this.newValues.gain !== undefined
-      ) {
-        // 类型安全的音频配置更新
-        const config = timelineItem.config as AudioMediaConfig
-        if (config.gain !== undefined) {
-          config.gain = this.newValues.gain
-        }
-      }
-
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
       console.log(`🎯 已更新变换属性: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
@@ -235,18 +223,6 @@ export class UpdateTransformCommand implements SimpleCommand {
           if (config.isMuted !== undefined) {
             config.isMuted = this.oldValues.isMuted
           }
-        }
-      }
-
-      // 处理音频增益恢复（仅对音频有效）
-      if (
-        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
-        this.oldValues.gain !== undefined
-      ) {
-        // 类型安全的音频配置恢复
-        const config = timelineItem.config as AudioMediaConfig
-        if (config.gain !== undefined) {
-          config.gain = this.oldValues.gain
         }
       }
 

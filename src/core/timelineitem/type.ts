@@ -10,112 +10,23 @@
  */
 
 import type { Raw } from 'vue'
-import type { MediaType, MediaTypeOrUnknown } from '@/core/mediaitem'
+import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import type { AnimationConfig } from './animationtypes'
 import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
-import type { TextStyleConfig } from './texttype'
-import type { GetConfigs } from './bunnytype'
-import { DEFAULT_TEXT_STYLE } from './texttype'
+import type { GetConfigs, GetAnimation } from './bunnytype'
 
-/**
- * 基础媒体属性（所有媒体类型共享）
- */
-export interface BaseMediaProps {
-  /** 层级控制 */
-  zIndex: number
-  /** 动画配置（可选） */
-  // animation?: AnimationConfig<T>
-}
-
-/**
- * 视觉媒体属性（video 和 image 共享）
- */
-interface VisualMediaProps extends BaseMediaProps {
-  /** 水平位置 */
-  x: number
-  /** 垂直位置 */
-  y: number
-  /** 宽度 */
-  width: number
-  /** 高度 */
-  height: number
-  /** 旋转角度（弧度） */
-  rotation: number
-  /** 透明度（0-1） */
-  opacity: number
-  /** 原始宽度（用于计算缩放系数） */
-  originalWidth: number
-  /** 原始高度（用于计算缩放系数） */
-  originalHeight: number
-  /** 等比缩放状态（每个clip独立） */
-  proportionalScale: boolean
-}
-
-/**
- * 音频媒体属性（video 和 audio 共享）
- */
-interface AudioMediaProps {
-  /** 音量（0-1） */
-  volume: number
-  /** 静音状态 */
-  isMuted: boolean
-}
-
-/**
- * 视频媒体配置：同时具有视觉和音频属性
- */
-export interface VideoMediaConfig extends VisualMediaProps, AudioMediaProps {
-  // 视频特有属性（预留）
-  // playbackRate?: number // 倍速可能在 timeRange 中更合适
-}
-
-/**
- * 图片媒体配置：只有视觉属性
- */
-export interface ImageMediaConfig extends VisualMediaProps {
-  // 图片特有属性（预留）
-  // filters?: ImageFilterConfig[]
-}
-
-/**
- * 音频媒体配置：只有音频属性
- */
-export interface AudioMediaConfig extends BaseMediaProps, AudioMediaProps {
-  /** 增益（dB） */
-  gain: number
-  // 音频特有属性（预留）
-  // waveformColor?: string
-  // showWaveform?: boolean
-}
-
-/**
- * 文本媒体配置：继承视觉媒体属性，添加文本特有属性
- */
-export interface TextMediaConfig extends VisualMediaProps {
-  /** 文本内容 */
-  text: string
-  /** 文本样式配置 */
-  style: TextStyleConfig
-}
-
-/**
- * 媒体配置映射
- */
-type MediaConfigMap = {
-  video: VideoMediaConfig
-  image: ImageMediaConfig
-  audio: AudioMediaConfig
-  text: TextMediaConfig
-}
-
-/**
- * 根据媒体类型获取对应配置的工具类型
- */
-export type GetMediaConfig<T extends MediaType> = MediaConfigMap[T]
-
-// 导入我们的自定义 Sprite 类
-import type { UnifiedSprite } from '@/core/visiblesprite'
+// 重新导出 bunnytype 中的类型供其他模块使用
+export type {
+  GetConfigs,
+  GetAnimation,
+  VisualProps,
+  AudioProps,
+  TextProps,
+  VideoMediaConfig,
+  ImageMediaConfig,
+  AudioMediaConfig,
+  TextMediaConfig,
+} from './bunnytype'
 
 // ==================== 基础类型定义 ====================
 
@@ -166,32 +77,7 @@ export interface TransformData {
   playbackRate?: number
   volume?: number
   isMuted?: boolean
-  gain?: number // 音频增益（dB）
 }
-
-/**
- * 未知媒体类型的基础配置
- */
-export interface UnknownMediaConfig {
-  name: string
-}
-
-/**
- * 时间轴项目配置映射（包含unknown类型）
- * 区别于媒体项目配置，这是时间轴项目级别的配置
- */
-type TimelineItemConfigMap = {
-  video: VideoMediaConfig
-  image: ImageMediaConfig
-  audio: AudioMediaConfig
-  text: TextMediaConfig
-  unknown: UnknownMediaConfig
-}
-
-/**
- * 根据媒体类型获取对应时间轴项目配置的工具类型
- */
-export type GetTimelineItemConfig<T extends MediaTypeOrUnknown> = TimelineItemConfigMap[T]
 
 // ==================== 统一时间轴项目运行时数据接口 ====================
 /**
@@ -234,10 +120,10 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   timeRange: UnifiedTimeRange
 
   // ==================== 配置（类型安全） ====================
-  config: GetTimelineItemConfig<T>
+  config: GetConfigs<T>
 
   // ==================== 动画配置（类型安全） ====================
-  animation?: T extends MediaType ? AnimationConfig<T> : undefined
+  animation?: GetAnimation<T>
 
   // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime

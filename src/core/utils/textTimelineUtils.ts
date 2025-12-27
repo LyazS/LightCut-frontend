@@ -97,9 +97,6 @@ export async function createTextTimelineItem(
       height: Math.round(estimatedHeight),
       rotation: 0,
       opacity: 1,
-      // 原始尺寸（对于文本，原始尺寸就是渲染后的尺寸）
-      originalWidth: Math.round(estimatedWidth),
-      originalHeight: Math.round(estimatedHeight),
       // 等比缩放状态（默认开启）
       proportionalScale: true,
       // 基础属性（继承自 BaseMediaProps）

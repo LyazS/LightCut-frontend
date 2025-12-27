@@ -57,7 +57,6 @@ interface TransformProperties {
   playbackRate?: number // 倍速
   volume?: number // 音量（0-1之间）
   isMuted?: boolean // 静音状态
-  gain?: number // 音频增益（dB）
 }
 
 /**
@@ -154,12 +153,6 @@ export function useHistoryOperations(
     if (newTransform.isMuted !== undefined && oldTransform.isMuted !== undefined) {
       const muteChanged = oldTransform.isMuted !== newTransform.isMuted
       if (muteChanged) return true
-    }
-
-    // 检查增益变化
-    if (newTransform.gain !== undefined && oldTransform.gain !== undefined) {
-      const gainChanged = Math.abs(oldTransform.gain - newTransform.gain) >= 0.1 // 0.1dB误差容忍
-      if (gainChanged) return true
     }
 
     return false
@@ -320,12 +313,6 @@ export function useHistoryOperations(
       if (newTransform.isMuted !== undefined) {
         oldTransform.isMuted = config.isMuted ?? false
       }
-    }
-
-    if (timelineItem.mediaType === 'audio' && newTransform.gain !== undefined) {
-      // 获取当前增益（仅对音频有效）
-      const config = timelineItem.config as AudioMediaConfig
-      oldTransform.gain = config.gain ?? 0
     }
 
     // 检查是否有实际变化
@@ -774,17 +761,12 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 创建关键帧:', { timelineItemId, frame })
 
       // 创建关键帧命令
-      const command = new CreateKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          seekTo: (frame: number) => {
-            // 播放头控制应该由调用方提供，这里简化为不控制播放头
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
+      const command = new CreateKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          // 播放头控制应该由调用方提供，这里简化为不控制播放头
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -806,16 +788,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 删除关键帧:', { timelineItemId, frame })
 
       // 创建删除关键帧命令
-      const command = new DeleteKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
+      const command = new DeleteKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -881,15 +858,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 清除所有关键帧:', { timelineItemId })
 
       // 创建清除所有关键帧命令
-      const command = new ClearAllKeyframesCommand(
-        timelineItemId,
-        unifiedTimelineModule,
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
+      const command = new ClearAllKeyframesCommand(timelineItemId, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -911,16 +884,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 切换关键帧:', { timelineItemId, frame })
 
       // 创建切换关键帧命令
-      const command = new ToggleKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
+      const command = new ToggleKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)

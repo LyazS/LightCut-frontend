@@ -1,7 +1,7 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import type { VisibleSprite } from '@webav/av-cliper'
-import type { UnifiedTimelineItemData, UnknownMediaConfig } from '@/core/timelineitem/type'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
@@ -262,11 +262,9 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
         if (transform.opacity !== undefined) {
           config.opacity = transform.opacity
         }
-      }
-
-      // zIndex 不需要视觉属性守卫
-      if (transform.zIndex !== undefined) {
-        item.config.zIndex = transform.zIndex
+        if (transform.zIndex !== undefined) {
+          item.config.zIndex = transform.zIndex
+        }
       }
     } catch (error) {
       console.error('更新时间轴项目变换属性失败:', error)

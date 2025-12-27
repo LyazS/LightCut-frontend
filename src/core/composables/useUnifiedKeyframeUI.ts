@@ -8,7 +8,6 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import type {
   KeyframeUIState,
   KeyframeButtonState,
-  KeyframeProperties,
 } from '@/core/timelineitem/animationtypes'
 // WebAV功能现在通过unifiedStore提供
 import { useUnifiedStore } from '@/core/unifiedStore'

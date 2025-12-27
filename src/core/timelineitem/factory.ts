@@ -12,15 +12,14 @@ import type {
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-  GetMediaConfig,
+  GetConfigs,
 } from '@/core/timelineitem/type'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type {
   UnifiedTimelineItemData,
-  UnknownMediaConfig,
   TimelineItemStatus,
 } from '@/core/timelineitem/type'
-import type { AnimationConfig } from './animationtypes'
+import type { GetAnimation } from './bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
@@ -39,9 +38,9 @@ export function cloneTimelineItem<T extends MediaType>(
     mediaItemId?: string
     trackId?: string
     timeRange?: UnifiedTimeRange
-    config?: GetMediaConfig<T>
+    config?: GetConfigs<T>
     timelineStatus?: 'loading' | 'ready' | 'error'
-    animation?: AnimationConfig<T>
+    animation?: GetAnimation<T>
   },
 ): UnifiedTimelineItemData<T> {
   // 深拷贝原始对象，排除不需要克隆的 runtime 属性
@@ -96,15 +95,10 @@ export function duplicateTimelineItem<T extends MediaType>(
     timelineEndTime: original.timeRange.timelineEndTime + timeOffset,
   }
 
-  const newConfig: GetMediaConfig<T> = {
-    ...original.config,
-  }
-
   return cloneTimelineItem(original, {
     id: generateUUID4(),
     trackId: newTrackId,
     timeRange: newTimeRange,
-    config: newConfig,
   })
 }
 

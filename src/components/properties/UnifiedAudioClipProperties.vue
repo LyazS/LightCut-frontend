@@ -90,34 +90,6 @@
           </button>
         </div>
       </div>
-
-      <!-- 增益控制 -->
-      <div
-        v-if="selectedTimelineItem && isAudioTimelineItem(selectedTimelineItem)"
-        class="property-item"
-      >
-        <label>{{ t('properties.playback.gain') }}</label>
-        <div class="gain-controls">
-          <SliderInput
-            :model-value="gain"
-            @input="updateGain"
-            :min="-20"
-            :max="20"
-            :step="0.1"
-            slider-class="gain-slider"
-          />
-          <NumberInput
-            :model-value="gain"
-            @change="updateGain"
-            :min="-20"
-            :max="20"
-            :step="0.1"
-            :precision="1"
-            :show-controls="false"
-            :placeholder="t('properties.placeholders.gain')"
-          />
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -156,7 +128,6 @@ const timelineDurationFrames = computed(() => {
   // 确保返回整数帧数，避免浮点数精度问题
   return Math.round(timeRange.timelineEndTime - timeRange.timelineStartTime)
 })
-
 
 // 倍速分段配置
 const speedSegments = [
@@ -235,8 +206,7 @@ const isMuted = computed(() => {
 
 // 增益控制
 const gain = computed(() => {
-  if (!props.selectedTimelineItem || !isAudioTimelineItem(props.selectedTimelineItem)) return 0
-  return props.selectedTimelineItem.config.gain ?? 0
+  return 0
 })
 
 // 更新播放速度（仅对音频有效）- 使用带历史记录的方法
@@ -259,7 +229,7 @@ const handleTimecodeError = (errorMessage: string) => {
 
 // 更新目标时长（帧数版本）
 const updateTargetDurationFrames = async (newDurationFrames: number) => {
-  throw new Error("TODO")
+  throw new Error('TODO')
 }
 
 // 更新归一化速度
@@ -350,20 +320,6 @@ const toggleMute = () => {
   )
 }
 
-// 更新增益
-const updateGain = (newGain: number) => {
-  if (!props.selectedTimelineItem || !isAudioTimelineItem(props.selectedTimelineItem)) return
-
-  const clampedGain = Math.max(-20, Math.min(20, newGain))
-
-  // 使用历史记录系统更新增益
-  unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-    gain: clampedGain,
-  })
-
-  console.log('✅ 音频增益更新成功:', clampedGain, 'dB')
-}
-
 // 将归一化值(0-100)转换为实际播放速度
 const normalizedToSpeed = (normalized: number) => {
   // 找到对应的段
@@ -401,7 +357,6 @@ const speedToNormalized = (speed: number) => {
 }
 
 /* 使用全局样式 styles/components/panels.css 和 styles/components/inputs.css 中定义的样式 */
-
 
 /* 倍速控制样式 */
 .speed-controls {

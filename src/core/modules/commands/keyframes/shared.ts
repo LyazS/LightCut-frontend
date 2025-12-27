@@ -3,14 +3,10 @@
  * 适配新架构的统一类型系统
  */
 
-import type {
-  UnifiedTimelineItemData,
-  VideoMediaConfig,
-  AudioMediaConfig,
-  ImageMediaConfig,
-  TextMediaConfig,
-} from '@/core/timelineitem/type'
-import type { AnimationConfig } from '@/core/timelineitem/animationtypes'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import type { GetAnimation } from '@/core/timelineitem/bunnytype'
+import type { GetConfigs } from '@/core/timelineitem/bunnytype'
+import type { MediaType } from '@/core/mediaitem'
 import { generateCommandId as generateId } from '@/core/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'
@@ -23,9 +19,9 @@ import { cloneDeep } from 'lodash'
  */
 export interface KeyframeSnapshot {
   /** 动画配置的完整快照 */
-  animationConfig: AnimationConfig | undefined
+  animationConfig: GetAnimation<MediaType> | undefined
   /** 时间轴项目的属性快照 */
-  itemProperties: VideoMediaConfig | AudioMediaConfig | ImageMediaConfig | TextMediaConfig
+  itemProperties: GetConfigs<MediaType>
 }
 
 // ==================== 通用接口定义 ====================

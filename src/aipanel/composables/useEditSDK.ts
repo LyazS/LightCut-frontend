@@ -584,7 +584,6 @@ export function useEditSDK(
                   gain: 0,
                 }
               if ('isMuted' in config && baseInfo.audio) baseInfo.audio.isMuted = config.isMuted
-              if ('gain' in config && baseInfo.audio) baseInfo.audio.gain = config.gain
               break
           }
         }

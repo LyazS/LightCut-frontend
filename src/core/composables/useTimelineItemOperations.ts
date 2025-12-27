@@ -4,7 +4,6 @@ import { generateId } from '@/core/utils/idGenerator'
 import type { MediaType } from '@/core/mediaitem/types'
 import type {
   UnifiedTimelineItemData,
-  GetTimelineItemConfig,
   TimelineItemStatus,
 } from '@/core/timelineitem/type'
 import type {
@@ -152,7 +151,7 @@ export function useTimelineItemOperations() {
   function createEnhancedDefaultConfig(
     mediaType: MediaType,
     originalResolution: { width: number; height: number } | null,
-  ): GetTimelineItemConfig<MediaType> {
+  ): GetConfigs<MediaType> {
     // 根据媒体类型创建对应的默认配置
     switch (mediaType) {
       case 'video': {

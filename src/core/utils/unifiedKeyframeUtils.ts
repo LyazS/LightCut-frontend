@@ -5,11 +5,8 @@
  */
 
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-import type {
-  Keyframe,
-  KeyframeButtonState,
-  KeyframeUIState,
-} from '@/core/timelineitem/animationtypes'
+import type { KeyframeButtonState, KeyframeUIState } from '@/core/timelineitem/animationtypes'
+import type { AnimateKeyframe } from '@/core/timelineitem/bunnytype'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import {
   hasVisualProperties,
@@ -20,6 +17,7 @@ import {
   isAudioTimelineItem,
 } from '@/core/timelineitem/queries'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
+import type { MediaType } from '../mediaitem'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
@@ -75,7 +73,10 @@ export function initializeAnimation(item: UnifiedTimelineItemData): void {
  * @param absoluteFrame 绝对帧数（相对于整个项目时间轴）
  * @returns 新创建的关键帧
  */
-export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: number): Keyframe {
+export function createKeyframe(
+  item: UnifiedTimelineItemData,
+  absoluteFrame: number,
+): AnimateKeyframe<MediaType> {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
 
   if (hasVisualProperties(item)) {
@@ -94,7 +95,7 @@ export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: num
           zIndex: config.zIndex,
           volume: config.volume ?? 1,
         },
-      } as Keyframe
+      } as AnimateKeyframe<'video'>
     } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
       // hasVisualProperties 类型守卫已确保配置具有所需属性
       const config = item.config
@@ -109,7 +110,7 @@ export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: num
           opacity: config.opacity,
           zIndex: config.zIndex,
         },
-      } as Keyframe
+      } as AnimateKeyframe<'image' | 'text'>
     }
   } else if (isAudioTimelineItem(item)) {
     // 音频类型 - hasAudioProperties 类型守卫已确保配置具有所需属性
@@ -118,9 +119,8 @@ export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: num
       framePosition: relativeFrame,
       properties: {
         volume: config.volume ?? 1,
-        zIndex: config.zIndex,
       },
-    } as Keyframe
+    } as AnimateKeyframe<'audio'>
   }
 
   throw new Error(`Unsupported media type: ${item.mediaType}`)
@@ -186,7 +186,7 @@ export function getKeyframeUIState(
 function findKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
-): Keyframe | undefined {
+): AnimateKeyframe<MediaType> | undefined {
   if (!item.animation) return undefined
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
@@ -296,7 +296,8 @@ export function adjustKeyframesForDurationChange(
 export function sortKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
   ;(item.animation as any).keyframes.sort(
-    (a: Keyframe, b: Keyframe) => a.framePosition - b.framePosition,
+    (a: AnimateKeyframe<MediaType>, b: AnimateKeyframe<MediaType>) =>
+      a.framePosition - b.framePosition,
   )
 }
 
