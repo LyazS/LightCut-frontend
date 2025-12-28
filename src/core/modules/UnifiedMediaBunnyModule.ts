@@ -34,15 +34,14 @@ import type { AudioSample } from 'mediabunny'
 import { applyAnimationToConfig } from '@/core/utils/animationInterpolation'
 import type { GetConfigs, VisualProps } from '@/core/timelineitem/bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import {
+  renderToCanvas,
+  type FrameData,
+  type RenderContext,
+} from '@/core/bunnyUtils/canvasRenderer'
 
-/**
- * 帧数据接口
- * 包含帧数和对应的 VideoSample
- */
-export interface FrameData {
-  frameNumber: number
-  videoSample: VideoSample
-}
+// 重新导出 FrameData 类型以保持向后兼容
+export type { FrameData }
 
 export function createUnifiedMediaBunnyModule(
   registry: ModuleRegistry,
@@ -211,7 +210,7 @@ export function createUnifiedMediaBunnyModule(
       }
 
       // 渲染到 Canvas（使用 bunnyCurFrameMap 和 runtime 中的数据）
-      renderToCanvas(timelineModule.timelineItems.value, currentTime)
+      renderToCanvasWrapper(timelineModule.timelineItems.value, currentTime)
 
       renderRunCnt++
     }, mExpectFrameTime)
@@ -341,211 +340,30 @@ export function createUnifiedMediaBunnyModule(
   }
 
   /**
-   * 检查元素是否在画布边界内
-   * 用于性能优化，跳过完全在画布外的元素
-   * 注意：config.x, config.y 是相对于画布中心的坐标
-   * @param config 视觉属性配置
-   * @returns 是否在边界内
-   */
-  function isInBounds(config: VisualProps): boolean {
-    const halfW = config.width / 2
-    const halfH = config.height / 2
-    const canvasHalfWidth = mCanvas!.width / 2
-    const canvasHalfHeight = mCanvas!.height / 2
-
-    return (
-      config.x + halfW >= -canvasHalfWidth &&
-      config.x - halfW <= canvasHalfWidth &&
-      config.y + halfH >= -canvasHalfHeight &&
-      config.y - halfH <= canvasHalfHeight
-    )
-  }
-
-  /**
-   * 渲染到 Canvas（专业视频编辑器模式）
-   * 使用 item.config 中的所有变换属性进行精确渲染
-   *
-   * 坐标系统说明：
-   * - 画布原点在画布中心 (canvasWidth/2, canvasHeight/2)
-   * - config.x, config.y 是相对于画布中心的坐标
-   * - 元素原点在元素中心
+   * 渲染到 Canvas 的包装函数
+   * 调用独立的 renderToCanvas 工具函数
    *
    * @param timelineItems 时间轴项目列表
    * @param currentTimeN 当前播放时间（帧数）
    */
-  function renderToCanvas(
+  function renderToCanvasWrapper(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
     currentTimeN: number,
   ): void {
     if (!mCanvas || !mCtx) return
 
-    // 1. 清空画布
-    mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height)
-
-    // 2. 将画布原点移动到画布中心
-    // 这样所有的绘制都基于中心坐标系
-    mCtx.save()
-    mCtx.translate(mCanvas.width / 2, mCanvas.height / 2)
-
-    // 3. 收集可渲染项目
-    const renderableItems = timelineItems.filter((item) => {
-      // 检查是否在当前播放时间范围内
-      if (
-        currentTimeN < item.timeRange.timelineStartTime ||
-        currentTimeN > item.timeRange.timelineEndTime
-      ) {
-        return false
-      }
-
-      // 检查轨道是否可见
-      const track = item.trackId ? trackModule.getTrack(item.trackId) : null
-      if (track && !track.isVisible) return false
-
-      // 检查是否有可渲染内容
-      if (TimelineItemQueries.isVideoTimelineItem(item)) {
-        return mBunnyCurFrameMap.has(item.id)
-      } else if (TimelineItemQueries.isTextTimelineItem(item)) {
-        return item.runtime.textBitmap !== undefined
-      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
-        const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-        return mediaItem?.runtime.bunny?.imageClip !== undefined
-      }
-      return false
-    })
-
-    // 4. 按轨道顺序排序（使用计算属性优化性能）
-    // 索引小的先渲染（在下层），索引大的后渲染（在上层）
-    const sortedItems = renderableItems.sort((a, b) => {
-      // 获取轨道索引，如果没有 trackId 或找不到则返回 -Infinity（排在最前面）
-      const getTrackIndex = (trackId: string | undefined): number => {
-        if (!trackId) return -Infinity
-        return trackModule.trackIndexMap.value.get(trackId) ?? -Infinity
-      }
-
-      return getTrackIndex(a.trackId) - getTrackIndex(b.trackId)
-    })
-
-    // 5. 渲染每个项目
-    for (const item of sortedItems) {
-      // 性能优化：跳过完全在画布外的元素
-      if (TimelineItemQueries.hasVisualProperties(item)) {
-        if (!isInBounds(item.config)) {
-          continue
-        }
-      }
-      renderItem(item)
+    // 构建渲染上下文
+    const renderContext: RenderContext = {
+      canvas: mCanvas,
+      ctx: mCtx,
+      bunnyCurFrameMap: mBunnyCurFrameMap,
+      getTrack: (trackId: string) => trackModule.getTrack(trackId),
+      getMediaItem: (mediaItemId: string) => mediaModule.getMediaItem(mediaItemId),
+      trackIndexMap: trackModule.trackIndexMap.value,
     }
 
-    // 6. 恢复画布原点到左上角
-    mCtx.restore()
-  }
-
-  /**
-   * 渲染单个项目
-   * 应用所有 config 中的变换属性
-   *
-   * 坐标系统说明：
-   * - 画布原点已在 renderToCanvas 中移动到画布中心
-   * - config.x, config.y 是相对于画布中心的坐标
-   * - 元素原点在元素中心
-   *
-   * @param item 时间轴项目
-   */
-  function renderItem(item: UnifiedTimelineItemData<MediaType>): void {
-    if (!mCtx) return
-
-    // 检查是否有视觉属性（纯音频项目无需渲染）
-    if (!TimelineItemQueries.hasVisualProperties(item)) {
-      return
-    }
-
-    const visualConfig = item.config
-
-    // 性能优化：如果没有旋转和不透明度变化，直接绘制
-    const needsTransform = visualConfig.rotation !== 0 || visualConfig.opacity !== 1
-
-    if (!needsTransform) {
-      // 直接绘制，不需要 save/restore
-      const width = visualConfig.width
-      const height = visualConfig.height
-      // config.x, config.y 已经是相对于画布中心的坐标
-      // 绘制时需要偏移 -width/2, -height/2，使元素中心在 (config.x, config.y)
-      const x = visualConfig.x - width / 2
-      const y = visualConfig.y - height / 2
-
-      if (TimelineItemQueries.isVideoTimelineItem(item)) {
-        const frameData = mBunnyCurFrameMap.get(item.id)
-        if (frameData) {
-          const videoFrame = frameData.videoSample.toVideoFrame()
-          mCtx.drawImage(videoFrame, x, y, width, height)
-          videoFrame.close()
-        }
-      } else if (TimelineItemQueries.isTextTimelineItem(item) && item.runtime.textBitmap) {
-        mCtx.drawImage(item.runtime.textBitmap, x, y, width, height)
-      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
-        const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-        const imageClip = mediaItem?.runtime.bunny?.imageClip
-        if (imageClip) {
-          mCtx.drawImage(imageClip, x, y, width, height)
-        }
-      }
-
-      return
-    }
-
-    // 需要变换时使用 save/restore
-    mCtx.save()
-
-    try {
-      // === 应用变换（顺序很重要！）===
-
-      // 1. 移动到目标位置（相对于画布中心）
-      // 注意：画布原点已经在画布中心，所以 config.x, config.y 直接使用
-      mCtx.translate(visualConfig.x, visualConfig.y)
-
-      // 2. 应用旋转（围绕中心点旋转）
-      if (visualConfig.rotation !== 0) {
-        // 已经是弧度了
-        mCtx.rotate(visualConfig.rotation)
-      }
-
-      // 3. 应用不透明度
-      if (visualConfig.opacity !== undefined && visualConfig.opacity !== 1) {
-        mCtx.globalAlpha = visualConfig.opacity
-      }
-
-      // 4. 获取尺寸
-      const width = visualConfig.width
-      const height = visualConfig.height
-
-      // === 绘制内容 ===
-      // 注意：因为已经 translate 到中心点，所以绘制时要偏移 -width/2, -height/2
-
-      if (TimelineItemQueries.isVideoTimelineItem(item)) {
-        const frameData = mBunnyCurFrameMap.get(item.id)
-        if (frameData) {
-          const videoFrame = frameData.videoSample.toVideoFrame()
-          // 以中心点为原点绘制
-          mCtx.drawImage(videoFrame, -width / 2, -height / 2, width, height)
-          videoFrame.close()
-        }
-      } else if (TimelineItemQueries.isTextTimelineItem(item) && item.runtime.textBitmap) {
-        // 绘制文本位图
-        mCtx.drawImage(item.runtime.textBitmap, -width / 2, -height / 2, width, height)
-      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
-        const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-        const imageClip = mediaItem?.runtime.bunny?.imageClip
-        if (imageClip) {
-          // 绘制图片
-          mCtx.drawImage(imageClip, -width / 2, -height / 2, width, height)
-        }
-      }
-    } catch (error) {
-      console.error(`❌ 渲染项目失败: ${item.id}`, error)
-    } finally {
-      // 恢复画布状态（重要！避免影响后续渲染）
-      mCtx.restore()
-    }
+    // 调用独立的渲染函数
+    renderToCanvas(renderContext, timelineItems, currentTimeN)
   }
 
   // ==================== 音频系统 ====================
