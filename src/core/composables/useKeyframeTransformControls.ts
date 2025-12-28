@@ -119,6 +119,17 @@ export function useUnifiedKeyframeTransformControls(
     return selectedTimelineItem.value.config.opacity
   })
 
+  // 音量属性（支持视频和音频，支持关键帧动画）
+  const volume = computed(() => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasAudioProperties(selectedTimelineItem.value)
+    )
+      return 1
+    return selectedTimelineItem.value.config.volume ?? 1
+  })
+
+  // 注意：isMuted 不需要添加到这里，保持在组件中独立处理
 
   // 等比缩放相关（每个clip独立状态）
   const proportionalScale = computed({
@@ -219,6 +230,7 @@ export function useUnifiedKeyframeTransformControls(
     height?: number
     rotation?: number
     opacity?: number
+    volume?: number      // 新增：音量支持关键帧
   }) => {
     if (!selectedTimelineItem.value) return
 
@@ -234,6 +246,7 @@ export function useUnifiedKeyframeTransformControls(
         : 0,
       rotation: rotation.value,
       opacity: opacity.value,
+      volume: volume.value,      // 新增：音量
     }
 
     // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
@@ -268,7 +281,9 @@ export function useUnifiedKeyframeTransformControls(
     if (finalTransform.opacity !== undefined) {
       await updateUnifiedProperty('opacity', finalTransform.opacity)
     }
-
+    if (finalTransform.volume !== undefined) {
+      await updateUnifiedProperty('volume', finalTransform.volume)
+    }
 
     console.log('✅ 统一关键帧变换属性更新完成')
   }
@@ -408,6 +423,16 @@ export function useUnifiedKeyframeTransformControls(
     updateTransform({ opacity: newOpacity })
   }
 
+  /**
+   * 设置音量绝对值的方法（支持关键帧）
+   */
+  const setVolume = (value: number) => {
+    const newVolume = Math.max(0, Math.min(1, value))
+    updateTransform({ volume: newVolume })
+  }
+
+  // 注意：toggleMute 不需要添加到这里，保持在组件中独立处理
+
   // ==================== 对齐控制方法 ====================
 
   /**
@@ -502,6 +527,7 @@ export function useUnifiedKeyframeTransformControls(
     scaleY,
     rotation,
     opacity,
+    volume,      // 新增：音量属性
     proportionalScale,
     uniformScale,
     elementWidth,
@@ -528,9 +554,12 @@ export function useUnifiedKeyframeTransformControls(
     // 旋转和透明度控制方法
     setRotation,
     setOpacity,
+    setVolume,   // 新增：音量控制方法
 
     // 对齐控制方法
     alignHorizontal,
     alignVertical,
+    
+    // 注意：isMuted 和 toggleMute 不导出，保持在组件中独立处理
   }
 }

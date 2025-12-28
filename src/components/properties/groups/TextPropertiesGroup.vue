@@ -1,8 +1,9 @@
 <template>
-  <div class="text-clip-properties">
-    <!-- 基本信息 -->
+  <div class="text-properties-group">
     <div class="property-section">
-      <h4>{{ t('properties.basic.basicInfo') }}</h4>
+      <h4>{{ t('properties.text.textProperties') }}</h4>
+      
+      <!-- 文本内容 -->
       <div class="property-item">
         <label>{{ t('properties.basic.textContent') }}</label>
         <textarea
@@ -14,20 +15,6 @@
           rows="3"
         />
       </div>
-      <div class="property-item">
-        <label>{{ t('properties.basic.duration') }}</label>
-        <TimecodeInput
-          :model-value="timelineDurationFrames"
-          @update:model-value="updateTargetDurationFrames"
-          @error="handleTimecodeError"
-          :placeholder="t('properties.timecodes.timecodeFormat')"
-        />
-      </div>
-    </div>
-
-    <!-- 文本样式 -->
-    <div class="property-section">
-      <h4>{{ t('properties.effects.textStyle') }}</h4>
 
       <!-- 字体设置 -->
       <div class="property-item">
@@ -172,12 +159,6 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- 文本效果 -->
-    <div class="property-section">
-      <h4>{{ t('properties.effects.textEffects') }}</h4>
-
       <!-- 阴影效果 -->
       <div class="property-item">
         <label>{{ t('properties.effects.shadow') }}</label>
@@ -388,84 +369,41 @@
         </div>
       </div>
     </div>
-
-    <!-- 关键帧控制 -->
-    <UnifiedKeyframeControls
-      :keyframe-button-state="unifiedKeyframeButtonState"
-      :can-operate-keyframes="canOperateUnifiedKeyframes"
-      :has-previous-keyframe="hasUnifiedPreviousKeyframe"
-      :has-next-keyframe="hasUnifiedNextKeyframe"
-      :keyframe-tooltip="getUnifiedKeyframeTooltip()"
-      :show-debug-button="true"
-      @toggle-keyframe="toggleUnifiedKeyframe"
-      @go-to-previous="goToPreviousUnifiedKeyframe"
-      @go-to-next="goToNextUnifiedKeyframe"
-      @debug-keyframes="debugUnifiedKeyframes"
-    />
-
-    <!-- 变换控制 -->
-    <UnifiedTransformControls
-      :transform-x="transformX"
-      :transform-y="transformY"
-      :scale-x="scaleX"
-      :scale-y="scaleY"
-      :rotation="rotation"
-      :opacity="opacity"
-      :proportional-scale="proportionalScale"
-      :uniform-scale="uniformScale"
-      :element-width="elementWidth"
-      :element-height="elementHeight"
-      :can-operate-transforms="canOperateTransforms"
-      :position-limits="{
-        minX: -unifiedStore.videoResolution.width,
-        maxX: unifiedStore.videoResolution.width,
-        minY: -unifiedStore.videoResolution.height,
-        maxY: unifiedStore.videoResolution.height,
-      }"
-      @update-transform="updateTransform"
-      @toggle-proportional-scale="toggleProportionalScale"
-      @update-uniform-scale="updateUniformScale"
-      @set-scale-x="setScaleX"
-      @set-scale-y="setScaleY"
-      @set-rotation="setRotation"
-      @set-opacity="setOpacity"
-      @align-horizontal="alignHorizontal"
-      @align-vertical="alignVertical"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { isTextTimelineItem } from '@/core/timelineitem/queries'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
-import { useUnifiedKeyframeTransformControls } from '@/core/composables'
 import { IconComponents } from '@/constants/iconComponents'
 import NumberInput from '@/components/base/NumberInput.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
-import TimecodeInput from '@/components/base/TimecodeInput.vue'
-import UnifiedKeyframeControls from './UnifiedKeyframeControls.vue'
-import UnifiedTransformControls from './UnifiedTransformControls.vue'
 
 interface Props {
-  selectedTimelineItem: UnifiedTimelineItemData | null
-  currentFrame: number
+  selectedTimelineItem: UnifiedTimelineItemData<'text'> | null
 }
 
 const props = defineProps<Props>()
-
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
-// 计算属性：获取当前选中文本片段的样式（类似 localText）
+// 获取当前文本内容
+const localText = computed(() => {
+  if (props.selectedTimelineItem && isTextTimelineItem(props.selectedTimelineItem)) {
+    return props.selectedTimelineItem.config.text
+  }
+  return ''
+})
+
+// 获取当前文本样式
 const localStyle = computed<TextStyleConfig>(() => {
   if (props.selectedTimelineItem && isTextTimelineItem(props.selectedTimelineItem)) {
     return { ...props.selectedTimelineItem.config.style }
   }
-  // 返回默认样式
   return {
     fontSize: 48,
     fontFamily: 'Arial, sans-serif',
@@ -478,15 +416,11 @@ const localStyle = computed<TextStyleConfig>(() => {
   }
 })
 
-// 计算属性：背景颜色启用状态
-const backgroundColorEnabled = computed(() => {
-  return !!localStyle.value.backgroundColor
-})
+// 背景颜色启用状态
+const backgroundColorEnabled = computed(() => !!localStyle.value.backgroundColor)
 
-// 计算属性：阴影效果状态
-const shadowEnabled = computed(() => {
-  return !!localStyle.value.textShadow
-})
+// 阴影效果状态
+const shadowEnabled = computed(() => !!localStyle.value.textShadow)
 
 const shadowColor = computed(() => {
   if (localStyle.value.textShadow) {
@@ -516,181 +450,102 @@ const shadowOffsetY = computed(() => {
 
 const shadowBlur = computed(() => {
   if (localStyle.value.textShadow) {
-    // 匹配第三个px值（模糊值），格式：offsetX offsetY blur color
     const shadowMatch = localStyle.value.textShadow.match(/^(-?\d+)px\s+(-?\d+)px\s+(\d+)px/)
     return shadowMatch ? parseInt(shadowMatch[3]) : 4
   }
   return 4
 })
 
-// 计算属性：描边效果状态
-const strokeEnabled = computed(() => {
-  return !!localStyle.value.textStroke
-})
+// 描边效果状态
+const strokeEnabled = computed(() => !!localStyle.value.textStroke)
+const strokeColor = computed(() => localStyle.value.textStroke?.color || '#000000')
+const strokeWidth = computed(() => localStyle.value.textStroke?.width || 1)
 
-const strokeColor = computed(() => {
-  return localStyle.value.textStroke?.color || '#000000'
-})
-
-const strokeWidth = computed(() => {
-  return localStyle.value.textStroke?.width || 1
-})
-
-// 计算属性：发光效果状态
-const glowEnabled = computed(() => {
-  return !!localStyle.value.textGlow
-})
-
-const glowColor = computed(() => {
-  return localStyle.value.textGlow?.color || '#ffffff'
-})
-
-const glowBlur = computed(() => {
-  return localStyle.value.textGlow?.blur || 10
-})
-
-const glowSpread = computed(() => {
-  return localStyle.value.textGlow?.spread || 0
-})
+// 发光效果状态
+const glowEnabled = computed(() => !!localStyle.value.textGlow)
+const glowColor = computed(() => localStyle.value.textGlow?.color || '#ffffff')
+const glowBlur = computed(() => localStyle.value.textGlow?.blur || 10)
+const glowSpread = computed(() => localStyle.value.textGlow?.spread || 0)
 
 // 文本对齐选项
 const textAlignOptions = [
-  {
-    value: 'left' as const,
-    label: '左对齐',
-  },
-  {
-    value: 'center' as const,
-    label: '居中对齐',
-  },
-  {
-    value: 'right' as const,
-    label: '右对齐',
-  },
+  { value: 'left' as const, label: '左对齐' },
+  { value: 'center' as const, label: '居中对齐' },
+  { value: 'right' as const, label: '右对齐' },
 ]
 
-// 关键帧动画和变换控制器
-const {
-  // 关键帧状态
-  unifiedKeyframeButtonState,
-  canOperateUnifiedKeyframes,
-  hasUnifiedPreviousKeyframe,
-  hasUnifiedNextKeyframe,
-
-  // 变换操作状态
-  canOperateTransforms,
-
-  // 变换属性
-  transformX,
-  transformY,
-  scaleX,
-  scaleY,
-  rotation,
-  opacity,
-  proportionalScale,
-  uniformScale,
-  elementWidth,
-  elementHeight,
-
-  // 关键帧控制方法
-  toggleUnifiedKeyframe,
-  goToPreviousUnifiedKeyframe,
-  goToNextUnifiedKeyframe,
-  getUnifiedKeyframeTooltip,
-  debugUnifiedKeyframes,
-
-  // 变换更新方法
-  updateTransform,
-
-  // 缩放控制方法
-  toggleProportionalScale,
-  updateUniformScale,
-  setScaleX,
-  setScaleY,
-
-  // 旋转和透明度控制方法
-  setRotation,
-  setOpacity,
-
-  // 对齐控制方法
-  alignHorizontal,
-  alignVertical,
-} = useUnifiedKeyframeTransformControls({
-  selectedTimelineItem: computed(() => props.selectedTimelineItem),
-  currentFrame: computed(() => props.currentFrame),
-})
-
-// 时间轴时长（帧数）
-const timelineDurationFrames = computed(() => {
-  if (!props.selectedTimelineItem) return 0
-  const timeRange = props.selectedTimelineItem.timeRange
-  return Math.round(timeRange.timelineEndTime - timeRange.timelineStartTime)
-})
-
-// 计算属性：获取当前选中文本片段的文本内容
-const localText = computed(() => {
-  if (props.selectedTimelineItem && isTextTimelineItem(props.selectedTimelineItem)) {
-    return props.selectedTimelineItem.config.text
-  }
-  return ''
-})
-
-// 更新文本内容（类似于updateTargetDurationFromTimecode）
+// 更新文本内容
 const updateTextContent = async (event: Event) => {
   const target = event.target as HTMLTextAreaElement
   const textValue = target.value.trim()
 
-  if (
-    !props.selectedTimelineItem ||
-    !isTextTimelineItem(props.selectedTimelineItem) ||
-    !textValue
-  ) {
+  if (!props.selectedTimelineItem || !isTextTimelineItem(props.selectedTimelineItem) || !textValue) {
     return
   }
 
   try {
-    console.log('🔄 [UnifiedTextClipProperties] 更新文本内容:', textValue.substring(0, 20) + '...')
-
-    // 使用历史记录操作更新文本内容
-    await unifiedStore.updateTextContentWithHistory(
-      props.selectedTimelineItem.id,
-      textValue,
-      {}, // 样式更新为空对象，只更新文本内容
-    )
-
-    console.log('✅ [UnifiedTextClipProperties] 文本内容更新成功')
+    await unifiedStore.updateTextContentWithHistory(props.selectedTimelineItem.id, textValue, {})
   } catch (error) {
-    console.error('❌ [UnifiedTextClipProperties] 更新文本内容失败:', error)
+    console.error('更新文本内容失败:', error)
     unifiedStore.messageError(t('properties.errors.textContentUpdateFailed'))
   }
 }
 
-// 更新文本样式（接受样式字典参数）
+// 更新文本样式
 const updateTextStyle = async (styleUpdates: Partial<TextStyleConfig> = {}) => {
   if (!props.selectedTimelineItem || !isTextTimelineItem(props.selectedTimelineItem)) {
     return
   }
 
   try {
-    // 直接使用传入的样式更新
-    const styleToUpdate = { ...styleUpdates }
-
-    console.log('🎨 [UnifiedTextClipProperties] 更新文本样式:', styleToUpdate)
-
-    // 使用历史记录操作更新文本样式
-    await unifiedStore.updateTextStyleWithHistory(props.selectedTimelineItem.id, styleToUpdate)
-
-    console.log('✅ [UnifiedTextClipProperties] 文本样式更新成功')
+    await unifiedStore.updateTextStyleWithHistory(props.selectedTimelineItem.id, styleUpdates)
   } catch (error) {
-    console.error('❌ [UnifiedTextClipProperties] 更新文本样式失败:', error)
+    console.error('更新文本样式失败:', error)
     unifiedStore.messageError(t('properties.errors.textStyleUpdateFailed'))
   }
 }
-// 更新字体大小
+
+// 字体相关处理
 const updateFontSize = (size: number) => {
   updateTextStyle({ fontSize: Math.max(12, Math.min(200, size)) })
 }
-// 更新文本对齐
+
+const handleFontFamilyChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  updateTextStyle({ fontFamily: target.value })
+}
+
+const handleFontWeightChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  updateTextStyle({ fontWeight: target.value })
+}
+
+const handleFontStyleChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  updateTextStyle({ fontStyle: target.value as 'normal' | 'italic' })
+}
+
+// 颜色相关处理
+const handleColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  updateTextStyle({ color: target.value })
+}
+
+const handleBackgroundColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  updateTextStyle({ backgroundColor: target.value })
+}
+
+const toggleBackgroundColor = () => {
+  const newEnabled = !backgroundColorEnabled.value
+  if (newEnabled) {
+    updateTextStyle({ backgroundColor: localStyle.value.backgroundColor || '#000000' })
+  } else {
+    updateTextStyle({ backgroundColor: undefined })
+  }
+}
+
+// 文本对齐
 const updateTextAlign = (event: Event) => {
   const align = (event.target as HTMLButtonElement).dataset.align as 'left' | 'center' | 'right'
   if (align) {
@@ -698,236 +553,113 @@ const updateTextAlign = (event: Event) => {
   }
 }
 
-// 切换背景颜色启用状态（接受 event）
-const toggleBackgroundColor = (event?: Event) => {
-  const newEnabled = !backgroundColorEnabled.value
-  if (newEnabled) {
-    // 如果启用，设置背景颜色
-    updateTextStyle({ backgroundColor: localStyle.value.backgroundColor || '#000000' })
-  } else {
-    // 如果禁用，移除背景颜色
-    updateTextStyle({ backgroundColor: undefined })
-  }
-}
-
-// 字体系列变化处理（接受 event）
-const handleFontFamilyChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const newFontFamily = target.value
-  updateTextStyle({ fontFamily: newFontFamily })
-}
-
-// 字体粗重变化处理（接受 event）
-const handleFontWeightChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const newFontWeight = target.value
-  updateTextStyle({ fontWeight: newFontWeight })
-}
-
-// 字体样式变化处理（接受 event）
-const handleFontStyleChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  const newFontStyle = target.value as 'normal' | 'italic'
-  updateTextStyle({ fontStyle: newFontStyle })
-}
-
-// 文字颜色变化处理（接受 event）
-const handleColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const newColor = target.value
-  updateTextStyle({ color: newColor })
-}
-
-// 背景颜色变化处理（接受 event）
-const handleBackgroundColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const newBackgroundColor = target.value
-  updateTextStyle({ backgroundColor: newBackgroundColor })
-}
-
-// 阴影颜色变化处理（接受 event）
-const handleShadowColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  updateShadowColor(target.value)
-}
-
-// 描边颜色变化处理（接受 event）
-const handleStrokeColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  updateStrokeColor(target.value)
-}
-
-// 发光颜色变化处理（接受 event）
-const handleGlowColorChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  updateGlowColor(target.value)
-}
-
-// ==================== 文本效果方法 ====================
-
-// 阴影效果方法
-const toggleShadow = (event?: Event) => {
-  const currentEnabled = shadowEnabled.value
-  if (currentEnabled) {
-    // 如果当前启用，则禁用
+// 阴影效果
+const toggleShadow = () => {
+  if (shadowEnabled.value) {
     updateTextStyle({ textShadow: undefined })
   } else {
-    // 如果当前禁用，则启用（使用默认参数）
     updateTextStyle({ textShadow: '2px 2px 4px #000000' })
   }
 }
 
 const updateShadowBlur = (blur: number) => {
   const clampedBlur = Math.max(0, Math.min(20, blur))
-
   if (shadowEnabled.value) {
-    // 从当前 localStyle 获取其他参数
-    const currentOffsetX = shadowOffsetX.value
-    const currentOffsetY = shadowOffsetY.value
-    const currentColor = shadowColor.value
-
     updateTextStyle({
-      textShadow: `${currentOffsetX}px ${currentOffsetY}px ${clampedBlur}px ${currentColor}`,
+      textShadow: `${shadowOffsetX.value}px ${shadowOffsetY.value}px ${clampedBlur}px ${shadowColor.value}`,
     })
   }
 }
 
 const updateShadowOffsetX = (offsetX: number) => {
   const clampedOffsetX = Math.max(-20, Math.min(20, offsetX))
-
   if (shadowEnabled.value) {
-    const currentOffsetY = shadowOffsetY.value
-    const currentBlur = shadowBlur.value
-    const currentColor = shadowColor.value
-
     updateTextStyle({
-      textShadow: `${clampedOffsetX}px ${currentOffsetY}px ${currentBlur}px ${currentColor}`,
+      textShadow: `${clampedOffsetX}px ${shadowOffsetY.value}px ${shadowBlur.value}px ${shadowColor.value}`,
     })
   }
 }
 
 const updateShadowOffsetY = (offsetY: number) => {
   const clampedOffsetY = Math.max(-20, Math.min(20, offsetY))
-
   if (shadowEnabled.value) {
-    const currentOffsetX = shadowOffsetX.value
-    const currentBlur = shadowBlur.value
-    const currentColor = shadowColor.value
-
     updateTextStyle({
-      textShadow: `${currentOffsetX}px ${clampedOffsetY}px ${currentBlur}px ${currentColor}`,
+      textShadow: `${shadowOffsetX.value}px ${clampedOffsetY}px ${shadowBlur.value}px ${shadowColor.value}`,
     })
   }
 }
 
-const updateShadowColor = (color: string) => {
+const handleShadowColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
   if (shadowEnabled.value) {
-    const currentOffsetX = shadowOffsetX.value
-    const currentOffsetY = shadowOffsetY.value
-    const currentBlur = shadowBlur.value
-
     updateTextStyle({
-      textShadow: `${currentOffsetX}px ${currentOffsetY}px ${currentBlur}px ${color}`,
+      textShadow: `${shadowOffsetX.value}px ${shadowOffsetY.value}px ${shadowBlur.value}px ${target.value}`,
     })
   }
 }
 
-// 描边效果方法
-const toggleStroke = (event?: Event) => {
-  const currentEnabled = strokeEnabled.value
-  if (currentEnabled) {
-    // 如果当前启用，则禁用
+// 描边效果
+const toggleStroke = () => {
+  if (strokeEnabled.value) {
     updateTextStyle({ textStroke: undefined })
   } else {
-    // 如果当前禁用，则启用（使用默认参数）
     updateTextStyle({ textStroke: { width: 1, color: '#000000' } })
   }
 }
 
 const updateStrokeWidth = (width: number) => {
   const clampedWidth = Math.max(0, Math.min(10, width))
-
   if (strokeEnabled.value) {
-    const currentColor = strokeColor.value
-
-    updateTextStyle({
-      textStroke: { width: clampedWidth, color: currentColor },
-    })
+    updateTextStyle({ textStroke: { width: clampedWidth, color: strokeColor.value } })
   }
 }
 
-const updateStrokeColor = (color: string) => {
+const handleStrokeColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
   if (strokeEnabled.value) {
-    const currentWidth = strokeWidth.value
-
-    updateTextStyle({
-      textStroke: { width: currentWidth, color: color },
-    })
+    updateTextStyle({ textStroke: { width: strokeWidth.value, color: target.value } })
   }
 }
 
-// 发光效果方法
-const toggleGlow = (event?: Event) => {
-  const currentEnabled = glowEnabled.value
-  if (currentEnabled) {
-    // 如果当前启用，则禁用
+// 发光效果
+const toggleGlow = () => {
+  if (glowEnabled.value) {
     updateTextStyle({ textGlow: undefined })
   } else {
-    // 如果当前禁用，则启用（使用默认参数）
     updateTextStyle({ textGlow: { color: '#ffffff', blur: 10, spread: 0 } })
   }
 }
 
 const updateGlowBlur = (blur: number) => {
   const clampedBlur = Math.max(1, Math.min(30, blur))
-
   if (glowEnabled.value) {
-    const currentColor = glowColor.value
-    const currentSpread = glowSpread.value
-
     updateTextStyle({
-      textGlow: { color: currentColor, blur: clampedBlur, spread: currentSpread },
+      textGlow: { color: glowColor.value, blur: clampedBlur, spread: glowSpread.value },
     })
   }
 }
 
 const updateGlowSpread = (spread: number) => {
   const clampedSpread = Math.max(0, Math.min(20, spread))
-
   if (glowEnabled.value) {
-    const currentColor = glowColor.value
-    const currentBlur = glowBlur.value
-
     updateTextStyle({
-      textGlow: { color: currentColor, blur: currentBlur, spread: clampedSpread },
+      textGlow: { color: glowColor.value, blur: glowBlur.value, spread: clampedSpread },
     })
   }
 }
 
-const updateGlowColor = (color: string) => {
+const handleGlowColorChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
   if (glowEnabled.value) {
-    const currentBlur = glowBlur.value
-    const currentSpread = glowSpread.value
-
     updateTextStyle({
-      textGlow: { color: color, blur: currentBlur, spread: currentSpread },
+      textGlow: { color: target.value, blur: glowBlur.value, spread: glowSpread.value },
     })
   }
-}
-
-// 处理时间码错误
-const handleTimecodeError = (errorMessage: string) => {
-  unifiedStore.messageError(errorMessage)
-}
-
-// 更新目标时长（帧数版本）
-const updateTargetDurationFrames = async (newDurationFrames: number) => {
-  throw new Error('TODO')
 }
 </script>
 
 <style scoped>
-.text-clip-properties {
+.text-properties-group {
   width: 100%;
 }
 
@@ -965,7 +697,9 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   flex: 1;
 }
 
-.font-family-select {
+.font-family-select,
+.font-weight-select,
+.font-style-select {
   width: 100%;
   padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--color-border-secondary);
@@ -977,12 +711,13 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   transition: border-color 0.2s ease;
 }
 
-.font-family-select:focus {
+.font-family-select:focus,
+.font-weight-select:focus,
+.font-style-select:focus {
   outline: none;
   border-color: var(--color-border-focus);
 }
 
-/* 字体大小控制 */
 .font-size-controls {
   display: flex;
   align-items: center;
@@ -990,7 +725,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   flex: 1;
 }
 
-/* 字体样式控制 */
 .font-style-controls {
   display: flex;
   align-items: center;
@@ -1001,20 +735,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
 .font-weight-select,
 .font-style-select {
   flex: 1;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  font-size: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.font-weight-select:focus,
-.font-style-select:focus {
-  outline: none;
-  border-color: var(--color-border-focus);
 }
 
 /* 颜色控制样式 */
@@ -1040,7 +760,16 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   border-color: var(--color-border-focus);
 }
 
-/* 背景颜色控制样式 */
+.color-picker:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.color-picker.small {
+  width: 32px;
+  height: 24px;
+}
+
 .background-color-controls {
   display: flex;
   align-items: center;
@@ -1055,15 +784,11 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   cursor: pointer;
 }
 
-.background-color-checkbox {
+.background-color-checkbox,
+.effect-checkbox {
   width: 16px;
   height: 16px;
   cursor: pointer;
-}
-
-.color-picker:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* 文本对齐控制 */
@@ -1138,17 +863,6 @@ const updateTargetDurationFrames = async (newDurationFrames: number) => {
   font-size: 12px;
   color: var(--color-text-secondary);
   text-align: right;
-}
-
-.effect-checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.color-picker.small {
-  width: 32px;
-  height: 24px;
 }
 
 .effect-slider {

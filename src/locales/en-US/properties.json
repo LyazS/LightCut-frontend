@@ -25,6 +25,15 @@
       "playbackRate": "Playback Rate",
       "normalizedSpeed": "Normalized Speed"
     },
+    "audio": {
+      "audioProperties": "Audio Properties"
+    },
+    "visual": {
+      "visualProperties": "Visual Properties"
+    },
+    "text": {
+      "textProperties": "Text Properties"
+    },
     "effects": {
       "textStyle": "Text Style",
       "textEffects": "Text Effects",
