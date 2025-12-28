@@ -41,7 +41,7 @@
           </div>
         </template>
 
-        <!-- WebAV解析中状态 -->
+        <!-- 解析中状态 -->
         <template v-else-if="item?.mediaStatus === 'decoding'">
           <div class="thumbnail-placeholder">
             <div class="loading-spinner"></div>
@@ -80,7 +80,7 @@
 
         <!-- 就绪状态：显示缩略图 -->
         <template v-else-if="item">
-          <!-- WebAV生成的缩略图 -->
+          <!-- 优先使用缩略图 -->
           <img
             v-if="item.runtime.bunny?.thumbnailUrl"
             :src="item.runtime.bunny.thumbnailUrl"
@@ -204,7 +204,7 @@ const statusText = computed(() => {
     case 'asyncprocessing':
       return `${t('media.tooltip.processing')}: ${item.value.source.progress.toFixed(2)}%`
     case 'decoding':
-      return t('media.tooltip.webavDecoding')
+      return t('media.tooltip.decoding')
     case 'error':
       return t('media.tooltip.error')
     case 'cancelled':

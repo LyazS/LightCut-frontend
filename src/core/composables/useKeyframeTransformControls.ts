@@ -281,7 +281,7 @@ export function useUnifiedKeyframeTransformControls(
     if (!selectedTimelineItem.value) return
 
     try {
-      // 使用统一关键帧处理逻辑（已经包含了正确的WebAV更新流程）
+      // 使用统一关键帧处理逻辑
       await handleUnifiedPropertyChange(property, value)
 
       console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {

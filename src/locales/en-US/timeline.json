@@ -12,7 +12,7 @@
     "status": {
       "pending": "Pending",
       "asyncProcessing": "Async processing",
-      "webavDecoding": "Decoding",
+      "decoding": "Decoding",
       "error": "Media loading error",
       "cancelled": "Processing cancelled",
       "missing": "Media file missing"

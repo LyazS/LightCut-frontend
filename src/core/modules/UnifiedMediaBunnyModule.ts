@@ -505,8 +505,8 @@ export function createUnifiedMediaBunnyModule(
 
       // 2. 应用旋转（围绕中心点旋转）
       if (visualConfig.rotation !== 0) {
-        // 将角度转换为弧度
-        mCtx.rotate((visualConfig.rotation * Math.PI) / 180)
+        // 已经是弧度了
+        mCtx.rotate(visualConfig.rotation)
       }
 
       // 3. 应用不透明度

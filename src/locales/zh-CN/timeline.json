@@ -12,7 +12,7 @@
     "status": {
       "pending": "等待处理中",
       "asyncProcessing": "异步处理中",
-      "webavDecoding": "解码中",
+      "decoding": "解码中",
       "error": "媒体加载错误",
       "cancelled": "处理已取消",
       "missing": "媒体文件缺失"

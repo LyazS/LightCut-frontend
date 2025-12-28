@@ -545,7 +545,7 @@ export class AIGenerationProcessor extends DataSourceProcessor {
         mediaItem.mediaType = mediaType
       }
 
-      // 6. WebAV 处理
+      // 6. 解析处理
       this.transitionMediaStatus(mediaItem, 'decoding')
       const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
 
@@ -579,7 +579,6 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       this.transitionMediaStatus(mediaItem, 'ready')
       console.log(`✅ [AIGenerationProcessor] 媒体项目处理完成: ${mediaItem.name}`)
     } catch (error) {
-      // 处理 WebAV 或其他步骤的错误
       console.error(`❌ [AIGenerationProcessor] 媒体项目处理失败: ${mediaItem.name}`, error)
       this.transitionMediaStatus(mediaItem, 'error')
       source.errorMessage = error instanceof Error ? error.message : '处理失败'

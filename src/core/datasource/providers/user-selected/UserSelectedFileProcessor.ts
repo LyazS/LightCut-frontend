@@ -113,10 +113,10 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
         mediaItem.mediaType = mediaType
       }
 
-      // 3. 设置为WebAV解析状态
+      // 3. 设置为解析状态
       this.transitionMediaStatus(mediaItem, 'decoding')
 
-      // 4. WebAV处理器负责具体处理
+      // 4. 处理器负责具体处理
       const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
       
       // 5. 直接设置元数据
@@ -135,7 +135,7 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
           }
         } catch (saveError) {
           console.error(`❌ 媒体文件保存失败: ${mediaItem.name}`, saveError)
-          console.warn(`媒体文件保存失败，但WebAV解析继续: ${mediaItem.name}`, saveError)
+          console.warn(`媒体文件保存失败，但解析继续: ${mediaItem.name}`, saveError)
         }
       } else {
         console.log(`⏭️ [PROJECT_LOAD] 跳过文件保存: ${mediaItem.name}`)

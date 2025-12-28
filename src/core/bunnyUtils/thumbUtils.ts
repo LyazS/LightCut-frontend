@@ -1,11 +1,6 @@
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'
 
 /**
- * 统一架构下的缩略图生成器
- * 使用WebAV的tick API生成视频和图片的缩略图
- */
-
-/**
  * 计算缩略图尺寸
  * @param originalWidth 原始宽度
  * @param originalHeight 原始高度

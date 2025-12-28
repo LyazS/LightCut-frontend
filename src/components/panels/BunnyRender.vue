@@ -37,14 +37,6 @@ interface ExtendedHTMLElement extends HTMLElement {
   _resizeObserver?: ResizeObserver
 }
 
-/**
- * 暴露方法接口（与 WebAVRenderer 保持一致）
- */
-interface BunnyRenderExpose {
-  getCanvas: () => HTMLCanvasElement | null
-  initializeMediaBunnyCanvas: () => Promise<void>
-}
-
 // 暴露方法
 defineExpose({
   getCanvas: () => canvasRef.value,
@@ -154,11 +146,11 @@ async function initializeMediaBunnyCanvas(): Promise<void> {
     console.error('❌ Canvas 元素未找到')
     return
   }
-  
+
   try {
     // 设置 Canvas 元素
     await unifiedStore.setMediaBunnyCanvas(canvasRef.value)
-    
+
     console.log('✅ MediaBunny Canvas 初始化成功')
   } catch (error) {
     console.error('❌ MediaBunny Canvas 初始化失败:', error)

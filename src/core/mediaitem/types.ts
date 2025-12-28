@@ -16,7 +16,7 @@ import { BunnyMedia } from '../mediabunny/bunny-media'
 export type MediaStatus =
   | 'pending' // 等待开始处理
   | 'asyncprocessing' // 异步获取中（抽象状态，对应各种数据源的获取阶段）
-  | 'decoding' // WebAV解析中
+  | 'decoding' // 解析中
   | 'ready' // 就绪
   | 'error' // 错误
   | 'cancelled' // 取消
@@ -77,7 +77,7 @@ export interface UnifiedMediaItemData {
   }
 
   // ==================== 元数据（状态相关） ====================
-  duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
+  duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、解析等
 }
 
 // ==================== 专门的状态类型定义 ====================

@@ -59,7 +59,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 // 生命周期
-// 预加载项目设置（在所有子组件挂载前完成，确保WebAV初始化时使用正确的分辨率）
+// 预加载项目设置（在所有子组件挂载前完成，确保初始化时使用正确的分辨率）
 onBeforeMount(async () => {
   console.log(' [LIFECYCLE] VideoEditor.onBeforeMount 开始')
 

@@ -124,7 +124,7 @@ export class BunnyProcessor {
         ThumbnailMode.FIT,
       )
 
-      // 7. 将 thumbnailUrl 添加到 webavObjects
+      // 7. 将 thumbnailUrl 添加到 bunnyObjects
       bunnyObjects.thumbnailUrl = thumbnailUrl
     } else if (mediaItem.mediaType === 'audio') {
       const maxEdge = THUMBNAIL_CONSTANTS.MEDIA_ITEM_MAX_EDGE

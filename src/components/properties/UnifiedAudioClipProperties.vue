@@ -256,10 +256,6 @@ const updateVolume = async (newVolume: number) => {
   // 确保属性存在，如果不存在则初始化（类型安全版本）
   if (!hasAudioProperties(props.selectedTimelineItem)) return
 
-  // 📝 数据流向说明：
-  // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
-  // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
-  // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
   const config = props.selectedTimelineItem.config
 
   // 类型安全的属性初始化和访问
@@ -270,19 +266,11 @@ const updateVolume = async (newVolume: number) => {
     config.isMuted = false
   }
 
-  // 使用历史记录系统更新音量
-  if (clampedVolume === 0) {
-    // 设为静音，但保留原音量值
-    await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-      isMuted: true,
-    })
-  } else {
-    // 更新音量值并取消静音
-    await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
-      volume: clampedVolume,
-      isMuted: false,
-    })
-  }
+  // 更新音量值并取消静音
+  await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
+    volume: clampedVolume,
+    isMuted: false,
+  })
 
   console.log('✅ 音频音量更新成功:', clampedVolume)
 }
@@ -291,10 +279,6 @@ const updateVolume = async (newVolume: number) => {
 const toggleMute = async () => {
   if (!props.selectedTimelineItem || !hasAudioProperties(props.selectedTimelineItem)) return
 
-  // 📝 数据流向说明：
-  // volume 和 isMuted 属性属于【非动画属性】，WebAV不支持这些属性的propsChange事件
-  // 因此无法遵循标准的 UI → WebAV → TimelineItem → UI 数据流向
-  // 这里直接修改config是技术限制导致的必要妥协，不是架构设计缺陷
   const config = props.selectedTimelineItem.config
 
   // 类型安全的属性访问和初始化

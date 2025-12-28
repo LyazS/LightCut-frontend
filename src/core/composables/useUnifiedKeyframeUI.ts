@@ -9,7 +9,6 @@ import type {
   KeyframeUIState,
   KeyframeButtonState,
 } from '@/core/timelineitem/animationtypes'
-// WebAV功能现在通过unifiedStore提供
 import { useUnifiedStore } from '@/core/unifiedStore'
 import {
   hasAnimation,
@@ -19,13 +18,11 @@ import {
   getPreviousKeyframeFrame,
   getNextKeyframeFrame,
 } from '@/core/utils/unifiedKeyframeUtils'
-// 关键帧命令已经迁移到 unifiedStore
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { UpdatePropertyCommand } from '@/core/modules/commands/keyframes'
 import { BatchUpdatePropertiesCommand } from '@/core/modules/commands/batchCommands'
 
 /**
- * 统一关键帧UI管理 Composable（新架构版本）
  * @param timelineItem 当前选中的时间轴项目
  * @param currentFrame 当前播放帧数
  */
@@ -33,7 +30,6 @@ export function useUnifiedKeyframeUI(
   timelineItem: Ref<UnifiedTimelineItemData | null>,
   currentFrame: Ref<number>,
 ) {
-  // 统一存储，用于显示通知和WebAV控制
   const unifiedStore = useUnifiedStore()
 
   // ==================== 计算属性 ====================

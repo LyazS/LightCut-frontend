@@ -18,14 +18,6 @@ export const DATA_SOURCE_CONCURRENCY = {
 } as const
 
 /**
- * WebAV处理器并发配置
- */
-export const WEBAV_CONCURRENCY = {
-  /** WebAV Clip处理默认并发数 */
-  MAX_CONCURRENT_CLIPS: 3,
-} as const
-
-/**
  * MediaBunny处理器并发配置
  */
 export const BUNNY_CONCURRENCY = {
