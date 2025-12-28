@@ -13,6 +13,7 @@ import type {
   AudioMediaConfig,
   UnifiedTimelineItemData,
   TransformData,
+  TransformDataEx,
 } from '@/core/timelineitem'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem'
@@ -32,34 +33,8 @@ export class UpdateTransformCommand implements SimpleCommand {
 
   constructor(
     private timelineItemId: string,
-    private oldValues: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-      duration?: number // 时长（帧数）
-      playbackRate?: number // 倍速
-      volume?: number // 音量（0-1之间）
-      isMuted?: boolean // 静音状态
-      gain?: number // 音频增益（dB）
-    },
-    private newValues: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-      duration?: number // 时长（帧数）
-      playbackRate?: number // 倍速
-      volume?: number // 音量（0-1之间）
-      isMuted?: boolean // 静音状态
-      gain?: number // 音频增益（dB）
-    },
+    private oldValues: TransformDataEx,
+    private newValues: TransformDataEx,
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
@@ -96,8 +71,8 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 应用新的变换属性（位置、大小、旋转、透明度、层级）
-      const transformValues = {
+      // 应用新的变换属性（位置、大小、旋转、透明度、层级、音量、静音）
+      const transformValues: TransformData = {
         x: this.newValues.x,
         y: this.newValues.y,
         width: this.newValues.width,
@@ -105,12 +80,14 @@ export class UpdateTransformCommand implements SimpleCommand {
         rotation: this.newValues.rotation,
         opacity: this.newValues.opacity,
         zIndex: this.newValues.zIndex,
+        volume: this.newValues.volume,
+        isMuted: this.newValues.isMuted,
       }
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
         Object.entries(transformValues).filter(([_, value]) => value !== undefined),
-      )
+      ) as TransformData
 
       if (Object.keys(filteredTransform).length > 0) {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
@@ -128,32 +105,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (this.newValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.newValues.duration)
       }
-
-      // 处理音量更新（对视频和音频有效）
-      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-        if (this.newValues.volume !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.volume !== undefined) {
-            config.volume = this.newValues.volume
-          }
-        }
-
-        if (this.newValues.isMuted !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.isMuted !== undefined) {
-            config.isMuted = this.newValues.isMuted
-          }
-        }
-      }
-
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`🎯 已更新变换属性: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 更新变换属性失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 更新变换属性失败: `, error)
       throw error
     }
   }
@@ -170,8 +123,8 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 恢复到旧的变换属性（位置、大小、旋转、透明度、层级）
-      const transformValues = {
+      // 恢复到旧的变换属性（位置、大小、旋转、透明度、层级、音量、静音）
+      const transformValues: TransformData = {
         x: this.oldValues.x,
         y: this.oldValues.y,
         width: this.oldValues.width,
@@ -179,12 +132,14 @@ export class UpdateTransformCommand implements SimpleCommand {
         rotation: this.oldValues.rotation,
         opacity: this.oldValues.opacity,
         zIndex: this.oldValues.zIndex,
+        volume: this.oldValues.volume,
+        isMuted: this.oldValues.isMuted,
       }
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
         Object.entries(transformValues).filter(([_, value]) => value !== undefined),
-      )
+      ) as TransformData
 
       if (Object.keys(filteredTransform).length > 0) {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
@@ -202,32 +157,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (this.oldValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.oldValues.duration)
       }
-
-      // 处理音量恢复（对视频和音频有效）
-      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-        if (this.oldValues.volume !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.volume !== undefined) {
-            config.volume = this.oldValues.volume
-          }
-        }
-
-        if (this.oldValues.isMuted !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.isMuted !== undefined) {
-            config.isMuted = this.oldValues.isMuted
-          }
-        }
-      }
-
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`↩️ 已撤销变换属性更新: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 撤销变换属性更新失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 撤销变换属性更新失败: `, error)
       throw error
     }
   }
@@ -305,12 +236,6 @@ export class UpdateTransformCommand implements SimpleCommand {
       const oldMuteText = this.oldValues.isMuted ? '静音' : '有声'
       const newMuteText = this.newValues.isMuted ? '静音' : '有声'
       changes.push(`静音状态: ${oldMuteText} → ${newMuteText}`)
-    }
-
-    if (this.newValues.gain !== undefined && this.oldValues.gain !== undefined) {
-      changes.push(
-        `增益: ${this.oldValues.gain.toFixed(1)}dB → ${this.newValues.gain.toFixed(1)}dB`,
-      )
     }
 
     const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : ''

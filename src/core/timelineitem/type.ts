@@ -27,6 +27,15 @@ export type {
   AudioMediaConfig,
   TextMediaConfig,
 } from './bunnytype'
+import type {
+  VisualProps,
+  AudioProps,
+  TextProps,
+  VideoMediaConfig,
+  ImageMediaConfig,
+  AudioMediaConfig,
+  TextMediaConfig,
+} from './bunnytype'
 
 // ==================== 基础类型定义 ====================
 
@@ -38,24 +47,15 @@ export type TimelineItemStatus =
   | 'loading' // 正在处理中，包含下载、解析、等待
   | 'error' // 不可用状态，包含错误、缺失、取消
 
-
 // ==================== 配置类型映射 ====================
 
 /**
  * 变换数据接口（保持兼容性）
  */
-export interface TransformData {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  rotation?: number
-  opacity?: number
-  zIndex?: number
+export type TransformData = Partial<VisualProps> & Partial<AudioProps>
+export type TransformDataEx = TransformData & {
   duration?: number // 时长（帧数）- 用于时间轴项目时长调整
   playbackRate?: number
-  volume?: number
-  isMuted?: boolean
 }
 
 // ==================== 统一时间轴项目运行时数据接口 ====================

@@ -9,6 +9,7 @@ export type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   TransformData,
+  TransformDataEx,
   VideoMediaConfig,
   AudioMediaConfig,
 } from './type'

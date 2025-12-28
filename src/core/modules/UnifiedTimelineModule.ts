@@ -1,9 +1,14 @@
 import { ref, type Raw, type Ref } from 'vue'
 import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import type { UnifiedTimelineItemData, TransformData } from '@/core/timelineitem/type'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { MediaType } from '@/core/mediaitem/types'
-import type { VideoMediaConfig, ImageMediaConfig, TextMediaConfig } from '@/core/timelineitem/type'
+import type {
+  VideoMediaConfig,
+  ImageMediaConfig,
+  TextMediaConfig,
+  AudioMediaConfig,
+} from '@/core/timelineitem/type'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedWebavModule } from './UnifiedWebavModule'
@@ -125,24 +130,13 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
    * 更新UnifiedTimelineItem的变换属性
    * 直接设置到 item.config 中，不设置到 sprite
    */
-  function updateTimelineItemTransform(
-    timelineItemId: string,
-    transform: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-    },
-  ) {
+  function updateTimelineItemTransform(timelineItemId: string, transform: TransformData) {
     const item = getReadyTimelineItem(timelineItemId)
     if (!item) return
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     if (TimelineItemQueries.hasVisualProperties(item)) {
-      const config = item.config as VideoMediaConfig | ImageMediaConfig | TextMediaConfig
+      const config = item.config
 
       // 直接更新 config 中的属性
       if (transform.x !== undefined) {
@@ -165,6 +159,18 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       }
       if (transform.zIndex !== undefined) {
         item.config.zIndex = transform.zIndex
+      }
+    }
+
+    // 处理音频属性（对视频和音频有效）
+    if (TimelineItemQueries.hasAudioProperties(item)) {
+      const config = item.config
+
+      if (transform.volume !== undefined) {
+        config.volume = transform.volume
+      }
+      if (transform.isMuted !== undefined) {
+        config.isMuted = transform.isMuted
       }
     }
   }
