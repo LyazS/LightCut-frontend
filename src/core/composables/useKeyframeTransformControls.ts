@@ -119,15 +119,6 @@ export function useUnifiedKeyframeTransformControls(
     return selectedTimelineItem.value.config.opacity
   })
 
-  const zIndex = computed(() => {
-    if (!selectedTimelineItem.value) return 0
-    // zIndex 只存在于 VisualProps 中，需要类型检查
-    const config = selectedTimelineItem.value.config
-    if ('zIndex' in config) {
-      return config.zIndex
-    }
-    return 0
-  })
 
   // 等比缩放相关（每个clip独立状态）
   const proportionalScale = computed({
@@ -228,7 +219,6 @@ export function useUnifiedKeyframeTransformControls(
     height?: number
     rotation?: number
     opacity?: number
-    zIndex?: number
   }) => {
     if (!selectedTimelineItem.value) return
 
@@ -244,7 +234,6 @@ export function useUnifiedKeyframeTransformControls(
         : 0,
       rotation: rotation.value,
       opacity: opacity.value,
-      zIndex: zIndex.value,
     }
 
     // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
@@ -280,20 +269,6 @@ export function useUnifiedKeyframeTransformControls(
       await updateUnifiedProperty('opacity', finalTransform.opacity)
     }
 
-    // 对于其他属性（如zIndex），仍然使用原来的更新方式
-    const otherTransform: any = {}
-    if (finalTransform.zIndex !== undefined) {
-      otherTransform.zIndex = finalTransform.zIndex
-    }
-
-    if (Object.keys(otherTransform).length > 0) {
-      // 使用带历史记录的变换属性更新方法（仅用于非关键帧属性）
-      await unifiedStore.updateTimelineItemTransformWithHistory(
-        selectedTimelineItem.value.id,
-        otherTransform,
-      )
-      console.log('✅ 其他变换属性更新成功')
-    }
 
     console.log('✅ 统一关键帧变换属性更新完成')
   }
@@ -527,7 +502,6 @@ export function useUnifiedKeyframeTransformControls(
     scaleY,
     rotation,
     opacity,
-    zIndex,
     proportionalScale,
     uniformScale,
     elementWidth,

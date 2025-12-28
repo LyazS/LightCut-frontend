@@ -83,8 +83,6 @@ export async function createTextTimelineItem(
     opacity: 1,
     // 等比缩放状态（默认开启）
     proportionalScale: true,
-    // 基础属性（继承自 BaseMediaProps）
-    zIndex: 1,
   }
 
   // 6. 创建统一时间轴项目（使用新架构，不包含sprite）

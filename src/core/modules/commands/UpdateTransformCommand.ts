@@ -1,6 +1,6 @@
 /**
  * 更新变换属性命令
- * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
+ * 支持变换属性（位置、大小、旋转、透明度、时长、倍速）修改的撤销/重做操作
  */
 
 import { generateCommandId } from '@/core/utils/idGenerator'
@@ -24,7 +24,7 @@ import { TimelineItemFactory } from '@/core/timelineitem'
 
 /**
  * 更新变换属性命令
- * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
+ * 支持变换属性（位置、大小、旋转、透明度、时长、倍速）修改的撤销/重做操作
  */
 export class UpdateTransformCommand implements SimpleCommand {
   public readonly id: string
@@ -71,7 +71,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 应用新的变换属性（位置、大小、旋转、透明度、层级、音量、静音）
+      // 应用新的变换属性（位置、大小、旋转、透明度、音量、静音）
       const transformValues: TransformData = {
         x: this.newValues.x,
         y: this.newValues.y,
@@ -79,7 +79,6 @@ export class UpdateTransformCommand implements SimpleCommand {
         height: this.newValues.height,
         rotation: this.newValues.rotation,
         opacity: this.newValues.opacity,
-        zIndex: this.newValues.zIndex,
         volume: this.newValues.volume,
         isMuted: this.newValues.isMuted,
       }
@@ -123,7 +122,7 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 恢复到旧的变换属性（位置、大小、旋转、透明度、层级、音量、静音）
+      // 恢复到旧的变换属性（位置、大小、旋转、透明度、音量、静音）
       const transformValues: TransformData = {
         x: this.oldValues.x,
         y: this.oldValues.y,
@@ -131,7 +130,6 @@ export class UpdateTransformCommand implements SimpleCommand {
         height: this.oldValues.height,
         rotation: this.oldValues.rotation,
         opacity: this.oldValues.opacity,
-        zIndex: this.oldValues.zIndex,
         volume: this.oldValues.volume,
         isMuted: this.oldValues.isMuted,
       }
@@ -210,9 +208,6 @@ export class UpdateTransformCommand implements SimpleCommand {
       changes.push(`透明度: ${oldOpacity}% → ${newOpacity}%`)
     }
 
-    if (this.newValues.zIndex !== undefined && this.oldValues.zIndex !== undefined) {
-      changes.push(`层级: ${this.oldValues.zIndex} → ${this.newValues.zIndex}`)
-    }
 
     if (this.newValues.duration !== undefined && this.oldValues.duration !== undefined) {
       changes.push(

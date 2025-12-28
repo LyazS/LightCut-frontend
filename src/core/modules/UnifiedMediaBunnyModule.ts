@@ -27,9 +27,13 @@ import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'
+import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { AudioSample } from 'mediabunny'
+import { applyAnimationToConfig } from '@/core/utils/animationInterpolation'
+import type { GetConfigs, VisualProps } from '@/core/timelineitem/bunnytype'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**
  * 帧数据接口
@@ -47,6 +51,7 @@ export function createUnifiedMediaBunnyModule(
   const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
   const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
   const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
+  const trackModule = registry.get<UnifiedTrackModule>(MODULE_NAMES.TRACK)
 
   // ==================== 状态定义 ====================
 
@@ -200,11 +205,7 @@ export function createUnifiedMediaBunnyModule(
       }
 
       // 不断更新clip帧数据,如果是播放则需要解码音频
-      void updateClips(
-        timelineModule.timelineItems.value,
-        currentTime,
-        playbackModule.isPlaying.value,
-      )
+      updateClips(timelineModule.timelineItems.value, currentTime, playbackModule.isPlaying.value)
       if (playbackModule.isPlaying.value) {
         playbackModule.setCurrentFrame(currentTime)
       }
@@ -242,73 +243,135 @@ export function createUnifiedMediaBunnyModule(
   }
 
   /**
+   * 更新单个 clip 的帧数据
+   * 异步调用 bunnyClip.tickN() 更新 bunnyCurFrameMap 和处理音频
+   * @param item 时间轴项目
+   * @param currentTime 当前时间（帧数）
+   * @param shouldPlayAudio 是否应该播放音频（考虑轨道和项目静音状态）
+   */
+  async function updateClipFrame(
+    item: UnifiedTimelineItemData<MediaType>,
+    currentTime: number,
+    shouldPlayAudio: boolean,
+    volume: number,
+  ): Promise<void> {
+    const bunnyClip = item.runtime.bunnyClip
+    if (!bunnyClip) return
+
+    // 检查当前帧数是否需要更新
+    const frameData = mBunnyCurFrameMap.get(item.id)
+    if (frameData?.frameNumber === currentTime) {
+      // 帧数相同，跳过更新
+      return
+    }
+
+    // 异步更新帧数据
+    // tickN 内部限制必须解码完才能解码下一个
+    // 未解码完就再次执行 tickN 会返回 ‘skip’
+    // 这是第二层频率限制
+    const { audio, video, state } = await bunnyClip.tickN(
+      BigInt(currentTime),
+      shouldPlayAudio, //根据轨道和项目静音状态决定是否请求音频
+      true, //总是请求视频帧
+    )
+    if (state === 'skip') {
+      // 什么都不做，调用 tickN 太频繁了
+    } else if (state === 'success') {
+      // 更新 bunnyCurFrameMap
+      if (video) {
+        const oldFrame = mBunnyCurFrameMap.get(item.id)
+        oldFrame?.videoSample.close()
+        mBunnyCurFrameMap.set(item.id, {
+          frameNumber: currentTime,
+          videoSample: video,
+        })
+      }
+
+      // 调度音频（只在需要播放音频时）
+      if (shouldPlayAudio && audio) {
+        scheduleAudioBuffers(audio, bunnyClip.getPlaybackRate(), volume)
+      }
+    } else {
+      // 清理无效帧
+      const oldFrame = mBunnyCurFrameMap.get(item.id)
+      oldFrame?.videoSample.close()
+      mBunnyCurFrameMap.delete(item.id)
+    }
+  }
+
+  /**
    * 更新所有 clips
    * 调用 bunnyClip.tickN() 更新 bunnyCurFrameMap 和处理音频
    */
-  async function updateClips(
+  function updateClips(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
     currentTime: number,
     playAudio: boolean,
-  ): Promise<void> {
+  ): void {
+    // mUpdatingClip 可以防止过度更新
+    // 这是第一层防御，第二层在clip内部来限制过度更新
     if (mUpdatingClip) return
     mUpdatingClip = true
 
-    await Promise.all(
-      timelineItems.map(async (item) => {
-        // 这里处理各自的动画
-        // 处理视频/音频
-        if (item.mediaType === 'video' || item.mediaType === 'audio') {
-          const bunnyClip = item.runtime.bunnyClip
-          if (bunnyClip) {
-            // 检查当前帧数是否需要更新
-            const frameData = mBunnyCurFrameMap.get(item.id)
-            if (frameData?.frameNumber === currentTime) {
-              // 帧数相同，无需更新
-              return
-            }
+    for (const item of timelineItems) {
+      // 应用动画插值到 config
+      applyAnimationToConfig(item, currentTime)
 
-            const { audio, video, state } = await bunnyClip.tickN(
-              BigInt(currentTime),
-              playAudio, //按需请求音频
-              true, //总是请求视频帧
-            )
+      // 处理视频/音频
+      if (
+        TimelineItemQueries.isVideoTimelineItem(item) ||
+        TimelineItemQueries.isAudioTimelineItem(item)
+      ) {
+        const track = trackModule.getTrack(item.trackId || '')
+        const isTrackMuted = track?.isMuted ?? false
+        const isItemMuted = item.config.isMuted ?? false
+        const itemVolume = item.config.volume ?? 1.0
+        const shouldPlayAudio = playAudio && !isTrackMuted && !isItemMuted
 
-            if (state === 'success') {
-              // 更新 bunnyCurFrameMap
-              if (video) {
-                const oldFrame = mBunnyCurFrameMap.get(item.id)
-                oldFrame?.videoSample.close()
-                mBunnyCurFrameMap.set(item.id, {
-                  frameNumber: currentTime,
-                  videoSample: video,
-                })
-              }
-
-              // 调度音频
-              if (playAudio) scheduleAudioBuffers(audio, bunnyClip.getPlaybackRate())
-            } else {
-              // 清理无效帧
-              const oldFrame = mBunnyCurFrameMap.get(item.id)
-              oldFrame?.videoSample.close()
-              mBunnyCurFrameMap.delete(item.id)
-            }
-          }
-        }
-      }),
-    )
+        // 更新 clip 帧数据（不等待完成，使用 void）
+        // 这里不等待，因此会后台执行，飞快地跳过这里，导致整个 updateClips 都会快速执行一遍
+        // 按照 workerTimer 频率来执行，可能会在解码慢跟不上的时候多次重复执行
+        // 因此内部也需要一些策略来限制频率
+        void updateClipFrame(item, currentTime, shouldPlayAudio, itemVolume)
+      }
+    }
 
     mCurrentBunnyFrame.value = currentTime
     mUpdatingClip = false
   }
 
   /**
-   * 渲染到 Canvas（网格布局）
-   * 使用 bunnyCurFrameMap 和 timelineItem.runtime 中的数据：
-   * - bunnyCurFrameMap.get(item.id) (视频)
-   * - runtime.textBitmap (文本)
-   * - mediaItem.runtime.bunny.imageClip (图片)
+   * 检查元素是否在画布边界内
+   * 用于性能优化，跳过完全在画布外的元素
+   * 注意：config.x, config.y 是相对于画布中心的坐标
+   * @param config 视觉属性配置
+   * @returns 是否在边界内
+   */
+  function isInBounds(config: VisualProps): boolean {
+    const halfW = config.width / 2
+    const halfH = config.height / 2
+    const canvasHalfWidth = mCanvas!.width / 2
+    const canvasHalfHeight = mCanvas!.height / 2
+
+    return (
+      config.x + halfW >= -canvasHalfWidth &&
+      config.x - halfW <= canvasHalfWidth &&
+      config.y + halfH >= -canvasHalfHeight &&
+      config.y - halfH <= canvasHalfHeight
+    )
+  }
+
+  /**
+   * 渲染到 Canvas（专业视频编辑器模式）
+   * 使用 item.config 中的所有变换属性进行精确渲染
+   *
+   * 坐标系统说明：
+   * - 画布原点在画布中心 (canvasWidth/2, canvasHeight/2)
+   * - config.x, config.y 是相对于画布中心的坐标
+   * - 元素原点在元素中心
+   *
    * @param timelineItems 时间轴项目列表
-   * @param currentTimeN 当前播放时间（帧数，bigint类型）
+   * @param currentTimeN 当前播放时间（帧数）
    */
   function renderToCanvas(
     timelineItems: UnifiedTimelineItemData<MediaType>[],
@@ -316,71 +379,173 @@ export function createUnifiedMediaBunnyModule(
   ): void {
     if (!mCanvas || !mCtx) return
 
-    // 清空画布
+    // 1. 清空画布
     mCtx.clearRect(0, 0, mCanvas.width, mCanvas.height)
 
-    // 收集所有可渲染的项目（需要同时满足：可渲染 + 在当前时间范围内）
+    // 2. 将画布原点移动到画布中心
+    // 这样所有的绘制都基于中心坐标系
+    mCtx.save()
+    mCtx.translate(mCanvas.width / 2, mCanvas.height / 2)
+
+    // 3. 收集可渲染项目
     const renderableItems = timelineItems.filter((item) => {
       // 检查是否在当前播放时间范围内
-      const isInTimeRange =
-        currentTimeN >= item.timeRange.timelineStartTime &&
-        currentTimeN <= item.timeRange.timelineEndTime
-
-      if (!isInTimeRange) {
+      if (
+        currentTimeN < item.timeRange.timelineStartTime ||
+        currentTimeN > item.timeRange.timelineEndTime
+      ) {
         return false
       }
 
-      // 检查是否可渲染
-      if (item.mediaType === 'video') {
+      // 检查轨道是否可见
+      const track = item.trackId ? trackModule.getTrack(item.trackId) : null
+      if (track && !track.isVisible) return false
+
+      // 检查是否有可渲染内容
+      if (TimelineItemQueries.isVideoTimelineItem(item)) {
         return mBunnyCurFrameMap.has(item.id)
-      } else if (item.mediaType === 'text') {
+      } else if (TimelineItemQueries.isTextTimelineItem(item)) {
         return item.runtime.textBitmap !== undefined
-      } else if (item.mediaType === 'image') {
+      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
         const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
         return mediaItem?.runtime.bunny?.imageClip !== undefined
       }
       return false
     })
 
-    const itemCount = renderableItems.length
-    if (itemCount === 0) return
-
-    // 计算网格行列数（尽量接近正方形）
-    const cols = Math.ceil(Math.sqrt(itemCount))
-    const rows = Math.ceil(itemCount / cols)
-
-    // 计算每个单元格的宽高
-    const cellWidth = mCanvas.width / cols
-    const cellHeight = mCanvas.height / rows
-
-    // 绘制所有项目
-    renderableItems.forEach((item, index) => {
-      const col = index % cols
-      const row = Math.floor(index / cols)
-      const x = col * cellWidth
-      const y = row * cellHeight
-
-      try {
-        if (item.mediaType === 'video') {
-          const frameData = mBunnyCurFrameMap.get(item.id)
-          if (frameData) {
-            const videoFrame = frameData.videoSample.toVideoFrame()
-            mCtx!.drawImage(videoFrame, x, y, cellWidth, cellHeight)
-            videoFrame.close()
-          }
-        } else if (item.mediaType === 'text' && item.runtime.textBitmap) {
-          mCtx!.drawImage(item.runtime.textBitmap, x, y, cellWidth, cellHeight)
-        } else if (item.mediaType === 'image') {
-          const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
-          const imageClip = mediaItem?.runtime.bunny?.imageClip
-          if (imageClip) {
-            mCtx!.drawImage(imageClip, x, y, cellWidth, cellHeight)
-          }
-        }
-      } catch (error) {
-        console.error(`❌ 渲染项目失败: ${item.id}`, error)
+    // 4. 按轨道顺序排序（使用计算属性优化性能）
+    // 索引小的先渲染（在下层），索引大的后渲染（在上层）
+    const sortedItems = renderableItems.sort((a, b) => {
+      // 获取轨道索引，如果没有 trackId 或找不到则返回 -Infinity（排在最前面）
+      const getTrackIndex = (trackId: string | undefined): number => {
+        if (!trackId) return -Infinity
+        return trackModule.trackIndexMap.value.get(trackId) ?? -Infinity
       }
+
+      return getTrackIndex(a.trackId) - getTrackIndex(b.trackId)
     })
+
+    // 5. 渲染每个项目
+    for (const item of sortedItems) {
+      // 性能优化：跳过完全在画布外的元素
+      if (TimelineItemQueries.hasVisualProperties(item)) {
+        if (!isInBounds(item.config)) {
+          continue
+        }
+      }
+      renderItem(item)
+    }
+
+    // 6. 恢复画布原点到左上角
+    mCtx.restore()
+  }
+
+  /**
+   * 渲染单个项目
+   * 应用所有 config 中的变换属性
+   *
+   * 坐标系统说明：
+   * - 画布原点已在 renderToCanvas 中移动到画布中心
+   * - config.x, config.y 是相对于画布中心的坐标
+   * - 元素原点在元素中心
+   *
+   * @param item 时间轴项目
+   */
+  function renderItem(item: UnifiedTimelineItemData<MediaType>): void {
+    if (!mCtx) return
+
+    // 检查是否有视觉属性（纯音频项目无需渲染）
+    if (!TimelineItemQueries.hasVisualProperties(item)) {
+      return
+    }
+
+    const visualConfig = item.config
+
+    // 性能优化：如果没有旋转和不透明度变化，直接绘制
+    const needsTransform = visualConfig.rotation !== 0 || visualConfig.opacity !== 1
+
+    if (!needsTransform) {
+      // 直接绘制，不需要 save/restore
+      const width = visualConfig.width
+      const height = visualConfig.height
+      // config.x, config.y 已经是相对于画布中心的坐标
+      // 绘制时需要偏移 -width/2, -height/2，使元素中心在 (config.x, config.y)
+      const x = visualConfig.x - width / 2
+      const y = visualConfig.y - height / 2
+
+      if (TimelineItemQueries.isVideoTimelineItem(item)) {
+        const frameData = mBunnyCurFrameMap.get(item.id)
+        if (frameData) {
+          const videoFrame = frameData.videoSample.toVideoFrame()
+          mCtx.drawImage(videoFrame, x, y, width, height)
+          videoFrame.close()
+        }
+      } else if (TimelineItemQueries.isTextTimelineItem(item) && item.runtime.textBitmap) {
+        mCtx.drawImage(item.runtime.textBitmap, x, y, width, height)
+      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
+        const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+        const imageClip = mediaItem?.runtime.bunny?.imageClip
+        if (imageClip) {
+          mCtx.drawImage(imageClip, x, y, width, height)
+        }
+      }
+
+      return
+    }
+
+    // 需要变换时使用 save/restore
+    mCtx.save()
+
+    try {
+      // === 应用变换（顺序很重要！）===
+
+      // 1. 移动到目标位置（相对于画布中心）
+      // 注意：画布原点已经在画布中心，所以 config.x, config.y 直接使用
+      mCtx.translate(visualConfig.x, visualConfig.y)
+
+      // 2. 应用旋转（围绕中心点旋转）
+      if (visualConfig.rotation !== 0) {
+        // 将角度转换为弧度
+        mCtx.rotate((visualConfig.rotation * Math.PI) / 180)
+      }
+
+      // 3. 应用不透明度
+      if (visualConfig.opacity !== undefined && visualConfig.opacity !== 1) {
+        mCtx.globalAlpha = visualConfig.opacity
+      }
+
+      // 4. 获取尺寸
+      const width = visualConfig.width
+      const height = visualConfig.height
+
+      // === 绘制内容 ===
+      // 注意：因为已经 translate 到中心点，所以绘制时要偏移 -width/2, -height/2
+
+      if (TimelineItemQueries.isVideoTimelineItem(item)) {
+        const frameData = mBunnyCurFrameMap.get(item.id)
+        if (frameData) {
+          const videoFrame = frameData.videoSample.toVideoFrame()
+          // 以中心点为原点绘制
+          mCtx.drawImage(videoFrame, -width / 2, -height / 2, width, height)
+          videoFrame.close()
+        }
+      } else if (TimelineItemQueries.isTextTimelineItem(item) && item.runtime.textBitmap) {
+        // 绘制文本位图
+        mCtx.drawImage(item.runtime.textBitmap, -width / 2, -height / 2, width, height)
+      } else if (TimelineItemQueries.isImageTimelineItem(item)) {
+        const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
+        const imageClip = mediaItem?.runtime.bunny?.imageClip
+        if (imageClip) {
+          // 绘制图片
+          mCtx.drawImage(imageClip, -width / 2, -height / 2, width, height)
+        }
+      }
+    } catch (error) {
+      console.error(`❌ 渲染项目失败: ${item.id}`, error)
+    } finally {
+      // 恢复画布状态（重要！避免影响后续渲染）
+      mCtx.restore()
+    }
   }
 
   // ==================== 音频系统 ====================
@@ -400,14 +565,19 @@ export function createUnifiedMediaBunnyModule(
   /**
    * 调度音频缓冲
    */
-  function scheduleAudioBuffers(audioSamples: AudioSample[], rate: number): void {
+  function scheduleAudioBuffers(audioSamples: AudioSample[], rate: number, volume: number): void {
     if (!mAudioContext || !mGainNode) return
 
     for (const sample of audioSamples) {
       const node = mAudioContext.createBufferSource()
       node.buffer = sample.toAudioBuffer()
       node.playbackRate.value = rate
-      node.connect(mGainNode)
+
+      // 为每个音频节点创建独立的增益节点以控制音量
+      const gainNode = mAudioContext.createGain()
+      gainNode.gain.value = volume
+      node.connect(gainNode)
+      gainNode.connect(mGainNode)
 
       const startTimestamp = mAudioContextStartTime! + sample.timestamp - mPlaybackTimeAtStart
       const curTime = mAudioContext.currentTime
@@ -472,8 +642,6 @@ export function createUnifiedMediaBunnyModule(
 
     // 更新播放时间锚点
     mPlaybackTimeAtStart = playbackModule.currentFrame.value / RENDERER_FPS
-
-    console.log('⏸️ MediaBunny 停止播放')
   }
 
   /**
@@ -487,8 +655,6 @@ export function createUnifiedMediaBunnyModule(
     // 渲染循环会不断以 mPlaybackTimeAtStart 为基准点来渲染
     const clampedFrames = Math.max(0, Math.min(mTimelineDuration, frames))
     mPlaybackTimeAtStart = clampedFrames / RENDERER_FPS
-
-    console.log(`⏩ MediaBunny Seek 到: ${clampedFrames}帧`)
   }
 
   /**
@@ -505,7 +671,6 @@ export function createUnifiedMediaBunnyModule(
 
   // 创建节流函数，100ms内只执行一次
   const throttledSeekToFrame = throttle(async (frame: number) => {
-    console.log(`🎯 [MediaBunny] 帧数变化，已触发帧同步: ${mCurrentBunnyFrame} -> ${frame}`)
     seekToFrame(frame)
   }, 100)
   /**

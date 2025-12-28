@@ -10,7 +10,6 @@ export interface VisualProps {
   opacity: number
   /** 等比缩放状态（每个clip独立） */
   proportionalScale: boolean
-  zIndex: number
 }
 
 export interface AudioProps {
@@ -30,12 +29,10 @@ export interface VisualAnimatableProps {
   height: number
   rotation: number
   opacity: number
-  zIndex: number
 }
 
 export interface AudioAnimatableProps {
   volume: number
-  zIndex: number
 }
 
 export type KeyframePropertiesMap = {

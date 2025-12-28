@@ -157,9 +157,6 @@ export function createUnifiedTimelineModule(registry: ModuleRegistry) {
       if (transform.opacity !== undefined) {
         config.opacity = transform.opacity
       }
-      if (transform.zIndex !== undefined) {
-        item.config.zIndex = transform.zIndex
-      }
     }
 
     // 处理音频属性（对视频和音频有效）

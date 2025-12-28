@@ -55,7 +55,11 @@ export interface IClip {
    */
   tickN(
     timeN: bigint,
-  ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }>
+  ): Promise<{
+    audio: AudioSample[]
+    video: VideoSample | null
+    state: 'success' | 'outofrange' | 'skip'
+  }>
 
   /**
    * 克隆当前 Clip 实例

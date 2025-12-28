@@ -51,7 +51,6 @@ interface TransformProperties {
   height?: number
   rotation?: number
   opacity?: number
-  zIndex?: number
   duration?: number // 时长（帧数）
   playbackRate?: number // 倍速
   volume?: number // 音量（0-1之间）
@@ -123,11 +122,6 @@ export function useHistoryOperations(
       if (opacityChanged) return true
     }
 
-    // 检查层级变化
-    if (newTransform.zIndex !== undefined && oldTransform.zIndex !== undefined) {
-      const zIndexChanged = oldTransform.zIndex !== newTransform.zIndex
-      if (zIndexChanged) return true
-    }
 
     // 检查时长变化
     if (newTransform.duration !== undefined && oldTransform.duration !== undefined) {
@@ -274,10 +268,6 @@ export function useHistoryOperations(
       }
     }
 
-    if (newTransform.zIndex !== undefined) {
-      const config = timelineItem.config as VideoMediaConfig
-      oldTransform.zIndex = config.zIndex
-    }
 
     if (newTransform.duration !== undefined) {
       // 计算当前时长（帧数）

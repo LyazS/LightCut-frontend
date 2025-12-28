@@ -25,6 +25,7 @@ export class BunnyClip implements IClip {
   private bunnyMedia: BunnyMedia
   private needResetVideo: boolean = false
   private needResetAudio: boolean = false
+  private isTicking: boolean = false
 
   // 视频相关属性
   private videoSampleAtTSFunc:
@@ -91,7 +92,6 @@ export class BunnyClip implements IClip {
       this.videoIteratorN = this.videoSampleAtTSFunc(this.generateTimestamps(startN))
       this.nextFrameN = (await this.videoIteratorN.next()).value ?? null
       this.videoInTimeN = startN
-      console.log(`📌 [视频] 创建迭代器，起始时间: ${startN}帧`)
     }
   }
 
@@ -111,7 +111,6 @@ export class BunnyClip implements IClip {
       timeN < this.videoInTimeN || // 如果是往回seek
       timeN - this.videoInTimeN > VIDEO_SEEK_THRESHOLD_N // 如果往前seek太远
     ) {
-      console.log(`⏰ [视频] 时间检查 - 当前: ${timeN}帧, 上次: ${this.videoInTimeN}帧`)
       await this.resetVideoN(timeN)
     }
 
@@ -121,7 +120,8 @@ export class BunnyClip implements IClip {
       // 1. 检查 nextFrameN 是否存在
       if (!this.nextFrameN) {
         // 从迭代器获取新帧
-        this.nextFrameN = (await this.videoIteratorN.next()).value ?? null
+        const sample_res = await this.videoIteratorN?.next?.()
+        this.nextFrameN = sample_res?.value ?? null
         this.videoInTimeN = this.videoInTimeN + 1n
       }
 
@@ -148,8 +148,6 @@ export class BunnyClip implements IClip {
   }
 
   private async resetVideoN(startN: bigint): Promise<void> {
-    console.log(`⏩ 视频 Seek 到 ${startN}帧`)
-
     // 清理缓存的下一帧
     this.nextFrameN?.close()
     this.nextFrameN = null
@@ -174,7 +172,6 @@ export class BunnyClip implements IClip {
   private async ensureAudioIterator(startTime: number = 0): Promise<void> {
     if (!this.audioIterator && this.audioSampleFunc) {
       this.audioIterator = this.audioSampleFunc(startTime)
-      console.log(`📌 [音频] 创建迭代器，起始时间: ${startTime.toFixed(2)}s`)
     }
   }
 
@@ -203,9 +200,6 @@ export class BunnyClip implements IClip {
       currentTime < this.audioInTime ||
       currentTime - this.audioInTime > anomaly_th
     ) {
-      console.log(
-        `⏰ [音频] 时间检查 - 当前: ${currentTime.toFixed(2)}s, 上次: ${this.audioInTime.toFixed(2)}s`,
-      )
       await this.resetAudio(currentTime)
     }
 
@@ -242,8 +236,6 @@ export class BunnyClip implements IClip {
    * @param timestamp 目标时间戳
    */
   private async resetAudio(timestamp: number): Promise<void> {
-    console.log(`⏩ 音频 Seek 到: ${timestamp.toFixed(2)}s`)
-
     // 清理旧迭代器并创建新的
     await this.cleanupAudioIterator()
     await this.ensureAudioIterator(timestamp)
@@ -320,19 +312,35 @@ export class BunnyClip implements IClip {
     timeN: bigint,
     needAudio: boolean = true,
     needVideo: boolean = true,
-  ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
-    if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
+  ): Promise<{
+    audio: AudioSample[]
+    video: VideoSample | null
+    state: 'success' | 'outofrange' | 'skip'
+  }> {
+    if (this.isTicking) {
       return this.tickInterceptor(timeN, {
         audio: [],
         video: null,
-        state: 'outofrange',
+        state: 'skip',
       })
     }
-    const [audio, video] = await Promise.all([
-      this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN) : [],
-      this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
-    ])
-    return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+    try {
+      this.isTicking = true
+      if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
+        return this.tickInterceptor(timeN, {
+          audio: [],
+          video: null,
+          state: 'outofrange',
+        })
+      }
+      const [audio, video] = await Promise.all([
+        this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN) : [],
+        this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
+      ])
+      return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+    } finally {
+      this.isTicking = false
+    }
   }
 
   /**

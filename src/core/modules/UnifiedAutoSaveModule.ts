@@ -320,17 +320,17 @@ export function createUnifiedAutoSaveModule(
     clearWatchers()
 
     // 监听时间轴项目变化 - 内容变化
-    const unwatchTimelineItems = watch(
-      () => dataWatchers.timelineItems.value,
-      () => {
-        if (autoSaveState.value.isEnabled) {
-          // console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-          triggerAutoSave({ configChanged: true, contentChanged: true })
-        }
-      },
-      { deep: true },
-    )
-    unwatchFunctions.push(unwatchTimelineItems)
+    // const unwatchTimelineItems = watch(
+    //   () => dataWatchers.timelineItems.value,
+    //   () => {
+    //     if (autoSaveState.value.isEnabled) {
+    //       // console.log('🔄 [AutoSave] 检测到时间轴项目变化')
+    //       triggerAutoSave({ configChanged: true, contentChanged: true })
+    //     }
+    //   },
+    //   { deep: true },
+    // )
+    // unwatchFunctions.push(unwatchTimelineItems)
 
     // 监听轨道变化 - 内容变化
     const unwatchTracks = watch(

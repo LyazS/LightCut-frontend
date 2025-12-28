@@ -138,8 +138,6 @@ export function useTimelineItemOperations() {
           // 音频属性
           volume: 1,
           isMuted: false,
-          // 基础属性
-          zIndex: 0,
         } as VideoMediaConfig
       }
 
@@ -157,8 +155,6 @@ export function useTimelineItemOperations() {
           opacity: 1,
           // 等比缩放状态（默认开启）
           proportionalScale: true,
-          // 基础属性
-          zIndex: 0,
         } as ImageMediaConfig
       }
 
@@ -168,8 +164,6 @@ export function useTimelineItemOperations() {
           volume: 1,
           isMuted: false,
           gain: 0, // 默认增益为0dB
-          // 基础属性
-          zIndex: 0,
         } as AudioMediaConfig
 
       default:

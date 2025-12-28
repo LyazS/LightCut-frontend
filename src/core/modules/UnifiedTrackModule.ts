@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { isReady } from '@/core/timelineitem/queries'
@@ -17,6 +17,17 @@ export function createUnifiedTrackModule() {
 
   // 轨道列表 - 使用统一轨道类型
   const tracks = ref<UnifiedTrackData[]>([])
+
+  // 🔑 计算属性：轨道ID到索引的映射
+  // 用于快速查找轨道在数组中的位置，优化渲染排序性能
+  // 时间复杂度从 O(n) 优化到 O(1)
+  const trackIndexMap = computed(() => {
+    const map = new Map<string, number>()
+    tracks.value.forEach((track, index) => {
+      map.set(track.id, index)
+    })
+    return map
+  })
 
   // ==================== 轨道管理方法 ====================
 
@@ -260,6 +271,7 @@ export function createUnifiedTrackModule() {
   return {
     // 状态
     tracks,
+    trackIndexMap,  // 导出计算属性供其他模块使用
 
     // 基础方法
     addTrack,

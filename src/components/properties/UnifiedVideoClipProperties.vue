@@ -124,7 +124,6 @@
       :scale-y="scaleY"
       :rotation="rotation"
       :opacity="opacity"
-      :z-index="zIndex"
       :proportional-scale="proportionalScale"
       :uniform-scale="uniformScale"
       :element-width="elementWidth"
@@ -196,7 +195,6 @@ const {
   scaleY,
   rotation,
   opacity,
-  zIndex,
   proportionalScale,
   uniformScale,
   elementWidth,

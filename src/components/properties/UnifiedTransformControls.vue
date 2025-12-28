@@ -256,20 +256,6 @@
         </div>
       </div>
 
-      <div class="property-item">
-        <label>{{ t('properties.transform.zIndex') }}</label>
-        <NumberInput
-          :model-value="zIndex"
-          @change="(value) => $emit('update-transform', { zIndex: value })"
-          :disabled="!canOperateTransforms"
-          :min="0"
-          :step="1"
-          :precision="0"
-          :show-controls="false"
-          input-class="scale-input"
-          :placeholder="t('properties.transform.layer')"
-        />
-      </div>
     </div>
   </div>
 </template>
@@ -292,8 +278,7 @@ interface Props {
   scaleY: number
   rotation: number
   opacity: number
-  zIndex: number
-
+ 
   // 缩放相关
   proportionalScale: boolean
   uniformScale: number
@@ -315,7 +300,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'update-transform', transform: { x?: number; y?: number; zIndex?: number }): void
+  (e: 'update-transform', transform: { x?: number; y?: number }): void
   (e: 'toggle-proportional-scale'): void
   (e: 'update-uniform-scale', value: number): void
   (e: 'set-scale-x', value: number): void

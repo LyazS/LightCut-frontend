@@ -62,8 +62,6 @@ export interface VisualMediaProperties {
   rotation: number
   /** 透明度（0-1） */
   opacity: number
-  /** 层级 */
-  zIndex: number
 }
 
 /**
@@ -533,7 +531,6 @@ export function useEditSDK(
                   height: config.height || 0,
                   rotation: config.rotation || 0,
                   opacity: config.opacity || 1,
-                  zIndex: config.zIndex || 0,
                 }
               if ('y' in config && baseInfo.visual) baseInfo.visual.y = config.y
               if ('width' in config && baseInfo.visual) baseInfo.visual.width = config.width
@@ -541,7 +538,6 @@ export function useEditSDK(
               if ('rotation' in config && baseInfo.visual)
                 baseInfo.visual.rotation = config.rotation
               if ('opacity' in config && baseInfo.visual) baseInfo.visual.opacity = config.opacity
-              if ('zIndex' in config && baseInfo.visual) baseInfo.visual.zIndex = config.zIndex
 
               // 视频特有属性
               if (timelineItem.mediaType === 'video') {

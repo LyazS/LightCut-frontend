@@ -92,7 +92,6 @@ export function createKeyframe(
           height: config.height,
           rotation: config.rotation,
           opacity: config.opacity,
-          zIndex: config.zIndex,
           volume: config.volume ?? 1,
         },
       } as AnimateKeyframe<'video'>
@@ -108,7 +107,6 @@ export function createKeyframe(
           height: config.height,
           rotation: config.rotation,
           opacity: config.opacity,
-          zIndex: config.zIndex,
         },
       } as AnimateKeyframe<'image' | 'text'>
     }
