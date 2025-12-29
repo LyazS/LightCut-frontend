@@ -1,4 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
+import { LayoutConstants } from '@/constants/LayoutConstants'
 import {
   getMaxZoomLevelFrames,
   getMinZoomLevelFrames,
@@ -40,6 +41,9 @@ export function createUnifiedViewportModule(registry: ModuleRegistry) {
   })
   // ==================== 状态定义 ====================
 
+  // 时间轴容器宽度（用于可见范围计算）
+  const TimelineContainerWidth = ref(800) // 默认容器宽度
+
   // 缩放和滚动状态
   const zoomLevel = ref(1) // 缩放级别，1为默认，大于1为放大，小于1为缩小
   const scrollOffset = ref(0) // 水平滚动偏移量（像素）
@@ -68,6 +72,12 @@ export function createUnifiedViewportModule(registry: ModuleRegistry) {
   const visibleDurationFrames = computed(() => {
     const calculatedDurationFrames = totalDurationFrames.value / zoomLevel.value
     return Math.min(calculatedDurationFrames, maxVisibleDurationFrames.value)
+  })
+
+  // 时间轴内容区域宽度（轨道内容区域的宽度，不包含轨道控制区域）
+  // 计算属性：containerWidth - TRACK_CONTROL_WIDTH
+  const TimelineContentWidth = computed(() => {
+    return TimelineContainerWidth.value - LayoutConstants.TRACK_CONTROL_WIDTH
   })
 
   // ==================== 缩放滚动方法 ====================
@@ -201,6 +211,14 @@ export function createUnifiedViewportModule(registry: ModuleRegistry) {
   }
 
   /**
+   * 设置容器宽度的方法
+   * @param width 容器宽度
+   */
+  function setContainerWidth(width: number) {
+    TimelineContainerWidth.value = width
+  }
+
+  /**
    * 重置视口为默认状态
    */
   function resetViewport() {
@@ -228,20 +246,24 @@ export function createUnifiedViewportModule(registry: ModuleRegistry) {
 
   return {
     // 状态
+    TimelineContainerWidth,
     zoomLevel,
     scrollOffset,
 
     // 计算属性（帧数版本）
+    totalDurationFrames,
     minZoomLevel,
     visibleDurationFrames,
     maxVisibleDurationFrames,
     contentEndTimeFrames,
+    TimelineContentWidth,
 
     // 方法
     getMaxZoomLevelForTimeline,
     getMaxScrollOffsetForTimeline,
     setZoomLevel,
     setScrollOffset,
+    setContainerWidth,
     zoomIn,
     zoomOut,
     scrollLeft,

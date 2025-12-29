@@ -21,7 +21,6 @@ import { createUnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyM
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
-import { calculateTotalDurationFrames } from '@/core/utils/durationUtils'
 import { useEditSDK } from '@/aipanel'
 import type { AgentMediaInfo, AgentTimelineItemInfo } from '@/aipanel/composables/useEditSDK'
 import type { MediaTypeOrUnknown } from '@/core'
@@ -84,28 +83,6 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedProjectModule = createUnifiedProjectModule(registry)
   registry.register(MODULE_NAMES.PROJECT, unifiedProjectModule)
 
-  // 计算总时长（需要在timeline模块之后）
-  const totalDurationFrames = computed(() => {
-    return calculateTotalDurationFrames(
-      unifiedTimelineModule.timelineItems.value,
-      unifiedConfigModule.timelineDurationFrames.value,
-    )
-  })
-
-  // 时间轴容器宽度（用于可见范围计算）
-  const TimelineContainerWidth = ref(800) // 默认容器宽度
-
-  // 设置容器宽度的方法
-  function setContainerWidth(width: number) {
-    TimelineContainerWidth.value = width
-  }
-
-  // 时间轴内容区域宽度（轨道内容区域的宽度，不包含轨道控制区域）
-  // 计算属性：containerWidth - TRACK_CONTROL_WIDTH
-  const TimelineContentWidth = computed(() => {
-    return TimelineContainerWidth.value - LayoutConstants.TRACK_CONTROL_WIDTH
-  })
-
   const unifiedViewportModule = createUnifiedViewportModule(registry)
   registry.register(MODULE_NAMES.VIEWPORT, unifiedViewportModule)
 
@@ -132,7 +109,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedUserModule = createUnifiedUserModule(registry)
   registry.register(MODULE_NAMES.USER, unifiedUserModule)
 
-  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, totalDurationFrames)
+  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, unifiedViewportModule.contentEndTimeFrames)
   registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
 
   // 创建历史记录操作模块
@@ -361,27 +338,27 @@ export const useUnifiedStore = defineStore('unified', () => {
     isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
     resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,
 
-    // ==================== 计算属性 ====================
-
-    totalDurationFrames,
-
     // ==================== 统一视口模块状态和方法 ====================
 
     // 视口状态
+    TimelineContainerWidth: unifiedViewportModule.TimelineContainerWidth,
     zoomLevel: unifiedViewportModule.zoomLevel,
     scrollOffset: unifiedViewportModule.scrollOffset,
 
     // 视口计算属性
+    totalDurationFrames: unifiedViewportModule.totalDurationFrames,
     minZoomLevel: unifiedViewportModule.minZoomLevel,
     visibleDurationFrames: unifiedViewportModule.visibleDurationFrames,
     maxVisibleDurationFrames: unifiedViewportModule.maxVisibleDurationFrames,
     contentEndTimeFrames: unifiedViewportModule.contentEndTimeFrames,
+    TimelineContentWidth: unifiedViewportModule.TimelineContentWidth,
 
     // 视口管理方法
     getMaxZoomLevelForTimeline: unifiedViewportModule.getMaxZoomLevelForTimeline,
     getMaxScrollOffsetForTimeline: unifiedViewportModule.getMaxScrollOffsetForTimeline,
     setZoomLevel: unifiedViewportModule.setZoomLevel,
     setScrollOffset: unifiedViewportModule.setScrollOffset,
+    setContainerWidth: unifiedViewportModule.setContainerWidth,
     zoomIn: unifiedViewportModule.zoomIn,
     zoomOut: unifiedViewportModule.zoomOut,
     scrollLeft: unifiedViewportModule.scrollLeft,
@@ -459,7 +436,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       frameToPixel(
         frames,
         timelineWidth,
-        totalDurationFrames.value,
+        unifiedViewportModule.totalDurationFrames.value,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,
       ),
@@ -467,7 +444,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       pixelToFrame(
         pixel,
         timelineWidth,
-        totalDurationFrames.value,
+        unifiedViewportModule.totalDurationFrames.value,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,
       ),
@@ -622,12 +599,5 @@ export const useUnifiedStore = defineStore('unified', () => {
     executeUserScript,
     list_medias,
     list_timelineitems,
-
-    // 时间轴容器宽度（用于可见范围计算）
-    TimelineContainerWidth,
-    setContainerWidth,
-
-    // 时间轴内容区域宽度（计算属性）
-    TimelineContentWidth,
   }
 })

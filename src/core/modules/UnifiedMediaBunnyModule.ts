@@ -45,7 +45,7 @@ export type { FrameData }
 
 export function createUnifiedMediaBunnyModule(
   registry: ModuleRegistry,
-  totalDurationFrames: Ref<number>,
+  contentEndTimeFrames: Ref<number>,
 ) {
   const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
   const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
@@ -505,7 +505,7 @@ export function createUnifiedMediaBunnyModule(
 
     // 监听时间轴时长变化，自动更新 MediaBunny 播放器时长
     watch(
-      totalDurationFrames,
+      contentEndTimeFrames,
       (newDurationFrames) => {
         updateTimelineDuration(newDurationFrames)
         console.log(`🎯 [MediaBunny] 时间轴时长变化，已更新播放器时长: ${newDurationFrames}帧`)
