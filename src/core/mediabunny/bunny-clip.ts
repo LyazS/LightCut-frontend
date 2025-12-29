@@ -175,7 +175,7 @@ export class BunnyClip implements IClip {
     }
   }
 
-  private async findAudioBuffersN(timeN: bigint): Promise<AudioSample[]> {
+  private async findAudioBuffersN(timeN: bigint, headFrame: bigint): Promise<AudioSample[]> {
     // 超出时间范围直接返回 null，这样可以确保在范围之内
     if (timeN < this.timeRange.timelineStart || timeN > this.timeRange.timelineEnd) {
       return []
@@ -185,8 +185,7 @@ export class BunnyClip implements IClip {
     const tlDuration = Number(this.timeRange.timelineEnd - this.timeRange.timelineStart)
     const clipStart = Number(this.timeRange.clipStart)
     const clipTimeN =
-      (Number(timeN + AUDIO_SCHEDULE_AHEAD_N - this.timeRange.timelineStart) / tlDuration) *
-        clipDuration +
+      (Number(timeN + headFrame - this.timeRange.timelineStart) / tlDuration) * clipDuration +
       clipStart
     const anomaly_th = (Number(AUDIO_ANOMALY_THRESHOLD_N) / tlDuration) * clipDuration
     // timeN是时间轴上的帧点
@@ -312,6 +311,7 @@ export class BunnyClip implements IClip {
     timeN: bigint,
     needAudio: boolean = true,
     needVideo: boolean = true,
+    audioHeadFrame: bigint = AUDIO_SCHEDULE_AHEAD_N,
   ): Promise<{
     audio: AudioSample[]
     video: VideoSample | null
@@ -334,7 +334,7 @@ export class BunnyClip implements IClip {
         })
       }
       const [audio, video] = await Promise.all([
-        this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN) : [],
+        this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
         this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
       ])
       return await this.tickInterceptor(timeN, { audio, video, state: 'success' })

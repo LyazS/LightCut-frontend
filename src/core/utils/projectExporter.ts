@@ -14,6 +14,16 @@ import {
   QUALITY_MEDIUM,
   type AudioSample,
 } from 'mediabunny'
+
+/**
+ * 带音量信息的音频样本
+ */
+export interface AudioSampleWithVolume {
+  /** 音频样本 */
+  samples: AudioSample[]
+  /** 对应的音量值 (0-1) */
+  volume: number
+}
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
@@ -171,8 +181,8 @@ class ExportManager {
    */
   private async renderFrameAndCollectAudio(
     currentTimeN: number,
-  ): Promise<Map<string, AudioSample[]>> {
-    const audioSamplesMap = new Map<string, AudioSample[]>()
+  ): Promise<Map<string, AudioSampleWithVolume>> {
+    const audioSamplesMap = new Map<string, AudioSampleWithVolume>()
 
     // 1. 更新所有 clips 的帧数据
     await Promise.all(
@@ -203,7 +213,12 @@ class ExportManager {
           const shouldRequestAudio = !isTrackMuted && !isItemMuted
 
           // 调用 tickN 获取音视频数据（转换为 bigint）
-          const { audio, video, state } = await bunnyClip.tickN(BigInt(currentTimeN))
+          const { audio, video, state } = await bunnyClip.tickN(
+            BigInt(currentTimeN),
+            true,
+            true,
+            1n,
+          )
 
           if (state === 'success') {
             // 更新视频帧
@@ -218,7 +233,12 @@ class ExportManager {
 
             // 收集音频样本（使用 item.id 作为键）
             if (shouldRequestAudio && audio && audio.length > 0) {
-              audioSamplesMap.set(item.id, audio)
+              // 获取当前帧的音量值（已经通过 applyAnimationToConfig 应用了动画插值）
+              const currentVolume = item.config.volume ?? 1.0
+              audioSamplesMap.set(item.id, {
+                samples: audio,
+                volume: currentVolume
+              })
             }
           } else {
             // 清理无效帧
@@ -359,12 +379,19 @@ class ExportManager {
         const timestamp = frameN / RENDERER_FPS
         await this.canvasSource.add(timestamp, frameDuration)
 
-        // 传递音频到 AudioSegmentRenderer（使用 item.id 作为键，转换为 bigint）
-        for (const [itemId, audioSamples] of audioSamplesMap.entries()) {
+        // 收集音频样本到缓冲区
+        for (const [itemId, audioSampleWithVolume] of audioSamplesMap.entries()) {
           await this.audioSegmentRenderer!.collectAudioSamples(
-            audioSamples,
+            audioSampleWithVolume.samples,
             itemId,
+            audioSampleWithVolume.volume
           )
+        }
+
+        // 每30帧（1秒）触发一次音频渲染
+        if ((frameN + 1) % 30 === 0) {
+          const segmentStartTime = Math.floor(frameN / 30) * 1.0 // 当前段的开始时间
+          await this.audioSegmentRenderer!.renderFixedSegment(segmentStartTime)
         }
 
         // 更新进度（10% - 95%）
@@ -372,9 +399,18 @@ class ExportManager {
         this.reportProgress('渲染', progress, `${frameN + 1}/${totalFrames} 帧`)
       }
 
+      // 处理最后不足30帧的部分
+      const lastCompleteSegment = Math.floor((totalFrames - 1) / 30)
+      const remainingFrames = totalFrames - lastCompleteSegment * 30
+      if (remainingFrames > 0) {
+        const finalSegmentStartTime = lastCompleteSegment * 1.0
+        const totalDuration = totalFrames / RENDERER_FPS // 总时长（秒）
+        await this.audioSegmentRenderer!.finalize(finalSegmentStartTime, totalDuration)
+      }
+
       // 阶段 7: 完成音频渲染
       this.reportProgress('完成', 95, '处理音频...')
-      await this.audioSegmentRenderer!.finalize()
+      // 音频渲染已经在主循环中处理完成
 
       // 阶段 8: 关闭并完成
       this.canvasSource.close()
