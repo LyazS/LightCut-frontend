@@ -17,11 +17,12 @@
  * - 通过监听 playbackModule 的状态变化来控制渲染循环
  */
 
-import { ref, markRaw, watch, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { workerTimer } from '@/core/mediabunny/worker-timer'
 import { RENDERER_FPS, AUDIO_DEFAULT_SAMPLE_RATE } from '@/core/mediabunny/constant'
 import { throttle } from 'lodash'
-import type { VideoSample } from 'mediabunny'
+import { canEncodeAudio } from 'mediabunny'
+import { registerMp3Encoder } from '@mediabunny/mp3-encoder'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
@@ -32,7 +33,6 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { AudioSample } from 'mediabunny'
 import { applyAnimationToConfig } from '@/core/utils/animationInterpolation'
-import type { GetConfigs, VisualProps } from '@/core/timelineitem/bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import {
   renderToCanvas,
@@ -40,8 +40,10 @@ import {
   type RenderContext,
 } from '@/core/bunnyUtils/canvasRenderer'
 
-// 重新导出 FrameData 类型以保持向后兼容
-export type { FrameData }
+if (!(await canEncodeAudio('mp3'))) {
+  registerMp3Encoder()
+  console.log('已注册mp3编码器')
+}
 
 export function createUnifiedMediaBunnyModule(
   registry: ModuleRegistry,

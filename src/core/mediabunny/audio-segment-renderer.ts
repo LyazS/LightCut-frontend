@@ -8,7 +8,7 @@ import { AUDIO_DEFAULT_SAMPLE_RATE } from './constant'
  * 音频分段渲染器配置
  */
 export interface AudioSegmentRendererConfig {
-  clips: IClip[]
+  clips: Map<string, IClip> // 从 IClip[] 改为 Map<string, IClip>
   segmentDuration?: number // 分段时长（秒），默认 1.0
   overlapDuration?: number // 重叠时长（秒），默认 0.1
   sampleRate?: number // 采样率，默认 48000
@@ -27,13 +27,13 @@ export class AudioSegmentRenderer {
   private numberOfChannels: number
 
   // 状态
-  private clipBuffers: Map<number, PerClipAudioBuffer>
+  private clipBuffers: Map<string, PerClipAudioBuffer> // 键从 number 改为 string
   private currentSegmentStartTime: number = 0
-  private clips: IClip[]
+  private clips: Map<string, IClip> // 从 IClip[] 改为 Map<string, IClip>
   private audioSource: AudioSampleSource | null = null
-  
+
   // 跟踪每个 clip 的最后一次缓冲更新时间戳
-  private lastBufferUpdateTimestamp: Map<number, number> = new Map()
+  private lastBufferUpdateTimestamp: Map<string, number> = new Map() // 键从 number 改为 string
 
   constructor(config: AudioSegmentRendererConfig) {
     this.clips = config.clips
@@ -42,10 +42,10 @@ export class AudioSegmentRenderer {
     this.sampleRate = config.sampleRate ?? AUDIO_DEFAULT_SAMPLE_RATE
     this.numberOfChannels = config.numberOfChannels ?? 2
 
-    // 为每个 clip 创建缓冲管理器
+    // 为每个 clip 创建缓冲管理器（使用 item.id 作为键）
     this.clipBuffers = new Map()
-    for (let i = 0; i < this.clips.length; i++) {
-      this.clipBuffers.set(i, new PerClipAudioBuffer(i))
+    for (const [itemId, clip] of this.clips.entries()) {
+      this.clipBuffers.set(itemId, new PerClipAudioBuffer(itemId))
     }
   }
 
@@ -53,16 +53,15 @@ export class AudioSegmentRenderer {
    * 收集音频样本
    * @param frameN 当前帧号
    * @param audioSamples 音频样本数组
-   * @param clipIndex clip 索引
+   * @param itemId TimelineItem 的 ID（从 clipIndex 改为 itemId）
    */
   async collectAudioSamples(
-    frameN: bigint,
     audioSamples: AudioSample[],
-    clipIndex: number,
+    itemId: string, // 从 clipIndex: number 改为 itemId: string
   ): Promise<void> {
-    const buffer = this.clipBuffers.get(clipIndex)
+    const buffer = this.clipBuffers.get(itemId)
     if (!buffer) {
-      console.warn(`未找到 clip ${clipIndex} 的缓冲管理器`)
+      console.warn(`未找到 item ${itemId} 的缓冲管理器`)
       return
     }
 
@@ -70,10 +69,10 @@ export class AudioSegmentRenderer {
     for (const sample of audioSamples) {
       buffer.addSample(sample)
     }
-    
-    // 更新该 clip 的最后缓冲更新时间戳
+
+    // 更新该 item 的最后缓冲更新时间戳
     if (!buffer.isEmpty()) {
-      this.lastBufferUpdateTimestamp.set(clipIndex, buffer.getLatestTimestamp())
+      this.lastBufferUpdateTimestamp.set(itemId, buffer.getLatestTimestamp())
     }
 
     // 检查是否应该触发渲染
@@ -98,9 +97,7 @@ export class AudioSegmentRenderer {
 
     // 检查是否有任何一个 clip 的缓冲时长 >= segmentDuration
     // 这样即使某些 clip 已经结束，只要还有 clip 有足够的缓冲就可以渲染
-    return activeBuffers.some(
-      (buffer) => buffer.getBufferedDuration() >= this.segmentDuration
-    )
+    return activeBuffers.some((buffer) => buffer.getBufferedDuration() >= this.segmentDuration)
   }
 
   /**
@@ -176,7 +173,7 @@ export class AudioSegmentRenderer {
       })
 
       // 3. 为每个 clip 创建音频源
-      for (const [clipIndex, buffer] of this.clipBuffers.entries()) {
+      for (const [itemId, buffer] of this.clipBuffers.entries()) {
         if (buffer.isEmpty()) {
           continue
         }
@@ -193,7 +190,7 @@ export class AudioSegmentRenderer {
           sourceNode.buffer = sample.toAudioBuffer()
 
           // 设置播放速率（考虑 clip 的倍速）
-          const clip = this.clips[clipIndex]
+          const clip = this.clips.get(itemId) // 从 this.clips[clipIndex] 改为 this.clips.get(itemId)
           if (clip) {
             const playbackRate = clip.getPlaybackRate()
             sourceNode.playbackRate.value = playbackRate
@@ -222,14 +219,14 @@ export class AudioSegmentRenderer {
       // 5. 提取主体部分的音频数据（不含 overlap）
       // 计算主体部分的样本数
       const mainPartSamples = Math.ceil(renderDuration * this.sampleRate)
-      
+
       // 创建只包含主体部分的 AudioBuffer
       const mainPartBuffer = new AudioBuffer({
         numberOfChannels: this.numberOfChannels,
         length: mainPartSamples,
         sampleRate: this.sampleRate,
       })
-      
+
       // 复制主体部分的数据
       for (let channel = 0; channel < this.numberOfChannels; channel++) {
         const sourceData = renderedBuffer.getChannelData(channel)
@@ -237,26 +234,26 @@ export class AudioSegmentRenderer {
         targetData.set(sourceData.subarray(0, mainPartSamples))
       }
 
-      // 6. 使用 MediaBunny API 将 AudioBuffer 转换为 AudioSample
+      // 7. 使用 MediaBunny API 将 AudioBuffer 转换为 AudioSample
       const audioSamples = AudioSample.fromAudioBuffer(
         mainPartBuffer,
         renderStartTime, // 起始时间戳
       )
 
-      // 7. 立即添加到 audioSource 并释放
+      // 8. 立即添加到 audioSource 并释放
       for (const sample of audioSamples) {
         await this.audioSource.add(sample)
         sample.close() // 立即释放，避免内存累积
       }
 
-      // 8. 清理已处理的样本并更新起始时间
+      // 9. 清理已处理的样本并更新起始时间
       // 无论是否强制渲染，都只清理主体部分，保留 overlap
       const clearTimestamp = renderEndTime - this.overlapDuration
-      
+
       for (const buffer of this.clipBuffers.values()) {
         buffer.clearSamplesBeforeTimestamp(clearTimestamp)
       }
-      
+
       // 更新下次渲染的起始时间为当前渲染的结束时间（不含 overlap）
       this.currentSegmentStartTime = renderEndTime
     } catch (error) {
@@ -297,7 +294,7 @@ export class AudioSegmentRenderer {
     if (!this.audioSource) {
       throw new Error('AudioSource 未设置，请先调用 setAudioSource()')
     }
-    
+
     // 强制渲染所有剩余样本
     while (!this.allBuffersEmpty()) {
       await this.renderCurrentSegment(true) // forceRender = true

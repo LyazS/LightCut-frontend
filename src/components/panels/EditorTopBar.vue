@@ -200,18 +200,19 @@ async function exportProject() {
     exportProgress.value = 0
     exportDetails.value = ''
 
-    // 执行导出，传入进度回调
+    // 执行导出，传入进度回调和 getMediaItem
     await exportProjectUtil({
       videoWidth: unifiedStore.videoResolution.width,
       videoHeight: unifiedStore.videoResolution.height,
       projectName: unifiedStore.projectName,
       timelineItems: unifiedStore.timelineItems,
       tracks: unifiedStore.tracks,
+      getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
       onProgress: (stage: string, progress: number, details?: string) => {
         // 更新本地导出进度
         exportProgress.value = Math.max(0, Math.min(100, progress))
         exportDetails.value = details || ''
-        console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
+        // console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
       },
     })
 

@@ -8,10 +8,10 @@ export class PerClipAudioBuffer {
   private samples: AudioSample[] = []
   private earliestTimestamp: number = Infinity
   private latestTimestamp: number = -Infinity
-  private clipIndex: number
+  private clipId: string // 从 clipIndex: number 改为 clipId: string
 
-  constructor(clipIndex: number) {
-    this.clipIndex = clipIndex
+  constructor(clipId: string) { // 从 clipIndex: number 改为 clipId: string
+    this.clipId = clipId
   }
 
   /**
@@ -124,11 +124,11 @@ export class PerClipAudioBuffer {
   }
 
   /**
-   * 获取 clip 索引
-   * @returns clip 索引
+   * 获取 clip ID
+   * @returns clip ID
    */
-  getClipIndex(): number {
-    return this.clipIndex
+  getClipId(): string {
+    return this.clipId
   }
 
   /**
