@@ -17,7 +17,7 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { useTimelineItemOperations } from '@/core/composables/useTimelineItemOperations'
 import { AddTimelineItemCommand } from '@/core/modules/commands/AddTimelineItemCommand'
 import { timecodeToFrames } from '@/core/utils/timeUtils'
-import { generateId } from '@/core/utils/idGenerator'
+import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
 
 // 导入共享类型定义
@@ -137,7 +137,7 @@ export function useBatchCommandBuilder(
 
     // 创建时间轴项目数据 - 与 createTimelineItemFromMediaItem 对齐
     const timelineItemData = {
-      id: generateId(),
+      id: generateTimelineItemId(),
       mediaItemId: params.mediaItemId,
       trackId: params.trackId,
       mediaType: knownMediaType,

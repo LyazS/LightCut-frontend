@@ -7,9 +7,9 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { GetAnimation } from '@/core/timelineitem/bunnytype'
 import type { GetConfigs } from '@/core/timelineitem/bunnytype'
 import type { MediaType } from '@/core/mediaitem'
-import { generateCommandId as generateId } from '@/core/utils/idGenerator'
 import { isPlayheadInTimelineItem as checkPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { cloneDeep } from 'lodash'
+import { useUnifiedStore } from '@/core/unifiedStore'
 
 // ==================== 关键帧数据快照接口 ====================
 
@@ -41,13 +41,6 @@ export interface PlaybackControls {
 }
 
 // ==================== 通用工具函数 ====================
-
-/**
- * 生成命令ID
- */
-export function generateCommandId(): string {
-  return generateId()
-}
 
 /**
  * 创建状态快照
@@ -97,17 +90,12 @@ export function isPlayheadInTimelineItem(item: UnifiedTimelineItemData, frame: n
 /**
  * 显示用户警告
  */
-export async function showUserWarning(title: string, message: string): Promise<void> {
-  try {
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-    // 假设新架构有类似的警告方法
-    if (typeof store.messageWarning === 'function') {
-      store.messageWarning(`${title}：${message}`)
-    } else {
-      console.warn(`${title}: ${message}`)
-    }
-  } catch (error) {
+export function showUserWarning(title: string, message: string): void {
+  const store = useUnifiedStore()
+  // 假设新架构有类似的警告方法
+  if (typeof store.messageWarning === 'function') {
+    store.messageWarning(`${title}：${message}`)
+  } else {
     console.warn(`${title}: ${message}`)
   }
 }

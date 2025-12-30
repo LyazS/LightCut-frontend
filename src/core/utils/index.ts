@@ -105,9 +105,6 @@ export {
 
 // ==================== 统一文本时间轴工具 ====================
 export {
-  // ID生成
-  generateTimelineItemId,
-
   // 文本时间轴项目创建
   createTextTimelineItem,
 } from './textTimelineUtils'

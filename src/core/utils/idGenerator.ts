@@ -112,3 +112,50 @@ export function parseMediaId(id: string): { nanoid: string; extension: string } 
     extension: extractExtensionFromId(id),
   }
 }
+
+/**
+ * 生成时间轴项目ID
+ * 使用UUID4格式确保全局唯一性和标准格式
+ * @returns UUID4格式的时间轴项目ID
+ */
+export function generateTimelineItemId(): string {
+  return generateUUID4()
+}
+
+/**
+ * 生成批量命令ID
+ * 用于批量操作的唯一标识
+ * 使用时间戳+随机数确保唯一性
+ * @returns 批量命令ID字符串
+ */
+export function generateBatchCommandId(): string {
+  return generateIdWithPrefix('batch')
+}
+
+/**
+ * 生成目录ID
+ * 使用nanoid确保短小且唯一
+ * @returns 带 'dir_' 前缀的目录ID
+ */
+export function generateDirectoryId(): string {
+  return `dir_${nanoid()}`
+}
+
+/**
+ * 生成标签页ID
+ * 使用nanoid确保短小且唯一
+ * @returns 带 'tab_' 前缀的标签页ID
+ */
+export function generateTabId(): string {
+  return `tab_${nanoid()}`
+}
+
+/**
+ * 生成聊天消息ID
+ * 使用时间戳确保按时间排序
+ * @param type 消息类型前缀
+ * @returns 聊天消息ID字符串
+ */
+export function generateChatMessageId(type: string): string {
+  return `${type}-${Date.now()}`
+}

@@ -4,6 +4,7 @@ import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedUseNaiveUIModule } from './UnifiedUseNaiveUIModule'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { generateBatchCommandId } from '@/core/utils/idGenerator'
 
 /**
  * 批量命令基类
@@ -88,7 +89,7 @@ export abstract class BaseBatchCommand implements SimpleCommand {
    * 生成命令ID
    */
   private generateCommandId(): string {
-    return `batch_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    return generateBatchCommandId()
   }
 }
 

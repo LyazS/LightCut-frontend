@@ -128,7 +128,6 @@ export {
   isVideoTrack,
   isAudioTrack,
   isTextTrack,
-  generateTrackId,
 } from './track'
 
 // ==================== 统一时间轴项目系统 ====================

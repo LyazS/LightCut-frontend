@@ -5,7 +5,7 @@
 
 import { reactive, markRaw } from 'vue'
 import { cloneDeep } from 'lodash'
-import { generateUUID4 } from '@/core/utils/idGenerator'
+import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem'
 import type {
   VideoMediaConfig,
@@ -96,7 +96,7 @@ export function duplicateTimelineItem<T extends MediaType>(
   }
 
   return cloneTimelineItem(original, {
-    id: generateUUID4(),
+    id: generateTimelineItemId(),
     trackId: newTrackId,
     timeRange: newTimeRange,
   })

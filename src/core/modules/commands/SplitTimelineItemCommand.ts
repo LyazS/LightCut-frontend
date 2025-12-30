@@ -4,7 +4,7 @@
  * 遵循"从源头重建"原则：保存完整的重建元数据，撤销时从原始素材重新创建
  */
 
-import { generateCommandId } from '@/core/utils/idGenerator'
+import { generateCommandId, generateTimelineItemId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import { reactive, markRaw } from 'vue'
 import type { VisibleSprite } from '@webav/av-cliper'
@@ -71,8 +71,8 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
 
     // 生成分割后项目的ID
-    this.firstItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-    this.secondItemId = `timeline_item_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    this.firstItemId = generateTimelineItemId()
+    this.secondItemId = generateTimelineItemId()
 
     console.log('💾 保存分割项目的重建数据:', {
       originalId: this.originalTimelineItemData.id,

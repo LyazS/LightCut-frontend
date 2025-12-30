@@ -294,34 +294,25 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
   function startMediaProcessing(mediaItem: UnifiedMediaItemData) {
     console.log(`🚀 [UnifiedMediaModule] 开始处理媒体项目: ${mediaItem.name}`)
 
-    // 导入并使用数据源处理器注册中心
-    import('@/core/datasource/registry')
-      .then(({ getDataSourceRegistry }) => {
-        // 获取数据源注册中心实例
-        const registry = getDataSourceRegistry()
-        // 获取对应的数据源处理器
-        const processor = registry.getProcessor(mediaItem.source.type)
+    // 直接使用数据源处理器注册中心（已在顶部静态导入）
+    const dsRegistry = getDataSourceRegistry()
+    const processor = dsRegistry.getProcessor(mediaItem.source.type)
 
-        if (processor) {
-          // ✅ 正确：通过任务队列处理，有并发控制和重试
-          processor.addTask(mediaItem)
+    if (processor) {
+      // ✅ 正确：通过任务队列处理，有并发控制和重试
+      processor.addTask(mediaItem)
 
-          console.log(`📋 [UnifiedMediaModule] 任务已加入队列`)
+      console.log(`📋 [UnifiedMediaModule] 任务已加入队列`)
 
-          // 注意：任务队列会自动处理，不需要手动 then/catch
-          // 状态更新会通过 mediaItem 的响应式属性自动反映
-          // 如果需要监听任务完成，可以通过 watch mediaItem.mediaStatus
-        } else {
-          console.error(
-            `❌ [UnifiedMediaModule] 找不到对应的数据源处理器: ${mediaItem.source.type}`,
-          )
-          UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-        }
-      })
-      .catch((error: any) => {
-        console.error(`❌ [UnifiedMediaModule] 导入数据源处理器失败: ${mediaItem.name}`, error)
-        UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-      })
+      // 注意：任务队列会自动处理，不需要手动 then/catch
+      // 状态更新会通过 mediaItem 的响应式属性自动反映
+      // 如果需要监听任务完成，可以通过 watch mediaItem.mediaStatus
+    } else {
+      console.error(
+        `❌ [UnifiedMediaModule] 找不到对应的数据源处理器: ${mediaItem.source.type}`,
+      )
+      UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
+    }
   }
 
   /**

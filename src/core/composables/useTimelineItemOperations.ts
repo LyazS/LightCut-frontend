@@ -1,6 +1,6 @@
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
-import { generateId } from '@/core/utils/idGenerator'
+import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/type'
 import type {
@@ -84,7 +84,7 @@ export function useTimelineItemOperations() {
 
       // 创建时间轴项目数据
       const timelineItemData: UnifiedTimelineItemData = {
-        id: generateId(),
+        id: generateTimelineItemId(),
         mediaItemId: storeMediaItem.id,
         trackId: trackId,
         mediaType: storeMediaItem.mediaType,

@@ -19,7 +19,6 @@ export type {
 } from './shared'
 
 export {
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,

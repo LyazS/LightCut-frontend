@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/core/utils/idGenerator'
+import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TextMediaConfig } from '@/core/timelineitem/type'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
@@ -11,15 +11,6 @@ import { DEFAULT_TEXT_STYLE } from '@/core/timelineitem/texttype'
  * 提供文本项目的创建、管理和操作功能
  * 适配新的统一时间轴项目架构
  */
-
-/**
- * 生成时间轴项目ID
- * 使用统一的UUID4生成器
- * @returns 唯一的时间轴项目ID
- */
-export function generateTimelineItemId(): string {
-  return generateUUID4()
-}
 
 /**
  * 创建文本时间轴项目（统一架构）- 专注于可持久化数据

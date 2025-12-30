@@ -9,12 +9,12 @@ import {
   type KeyframeSnapshot,
   type TimelineModule,
   type PlaybackControls,
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { generateCommandId } from '@/core/utils/idGenerator'
 import { createKeyframe, enableAnimation, initializeAnimation, sortKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 
 export class CreateKeyframeCommand implements SimpleCommand {

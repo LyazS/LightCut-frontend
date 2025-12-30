@@ -10,12 +10,12 @@ import {
   type KeyframeSnapshot,
   type TimelineModule,
   type PlaybackControls,
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { generateCommandId } from '@/core/utils/idGenerator'
 import { toggleKeyframe } from '@/core/utils/unifiedKeyframeUtils'
 
 export class ToggleKeyframeCommand implements SimpleCommand {

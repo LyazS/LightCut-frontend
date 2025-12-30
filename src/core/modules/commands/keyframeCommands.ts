@@ -14,7 +14,6 @@ export {
   type KeyframeSnapshot,
   type TimelineModule,
   type PlaybackControls,
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,

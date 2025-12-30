@@ -9,10 +9,10 @@ import {
   type KeyframeSnapshot,
   type TimelineModule,
   type PlaybackControls,
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
 } from './shared'
+import { generateCommandId } from '@/core/utils/idGenerator'
 import { clearAllKeyframes, relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
 
 export class ClearAllKeyframesCommand implements SimpleCommand {
