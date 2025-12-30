@@ -107,6 +107,14 @@
     :user="currentUser"
     @close="showUserInfoDialog = false"
   />
+
+  <!-- 导出设置对话框 -->
+  <ExportSettingsModal
+    :show="showExportDialog"
+    :default-title="unifiedStore.projectName"
+    @close="showExportDialog = false"
+    @export="handleExportWithSettings"
+  />
 </template>
 
 <script setup lang="ts">
@@ -120,7 +128,9 @@ import LoadingOverlay from '@/components/base/LoadingOverlay.vue'
 import EditProjectModal from '@/components/modals/EditProjectModal.vue'
 import LoginModal from '@/components/modals/LoginModal.vue'
 import UserInfoModal from '@/components/modals/UserInfoModal.vue'
+import ExportSettingsModal from '@/components/modals/ExportSettingsModal.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
+import type { Quality } from 'mediabunny'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -136,6 +146,7 @@ const isChatPanelVisible = ref(false)
 const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
+const showExportDialog = ref(false)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
 
@@ -193,8 +204,20 @@ async function saveProject() {
   }
 }
 
-async function exportProject() {
+function exportProject() {
+  // 显示导出设置对话框
+  showExportDialog.value = true
+}
+
+async function handleExportWithSettings(settings: {
+  title: string
+  videoQuality: Quality
+  audioQuality: Quality
+}) {
   try {
+    // 关闭对话框
+    showExportDialog.value = false
+
     // 开始导出
     isExporting.value = true
     exportProgress.value = 0
@@ -204,10 +227,12 @@ async function exportProject() {
     await exportProjectUtil({
       videoWidth: unifiedStore.videoResolution.width,
       videoHeight: unifiedStore.videoResolution.height,
-      projectName: unifiedStore.projectName,
+      projectName: settings.title,
       timelineItems: unifiedStore.timelineItems,
       tracks: unifiedStore.tracks,
       getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
+      videoQuality: settings.videoQuality,
+      audioQuality: settings.audioQuality,
       onProgress: (stage: string, progress: number, details?: string) => {
         // 更新本地导出进度
         exportProgress.value = Math.max(0, Math.min(100, progress))

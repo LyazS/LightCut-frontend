@@ -4,15 +4,19 @@
  * 以及单个素材导出功能
  */
 
-import { markRaw } from 'vue'
 import {
   Output,
   Mp4OutputFormat,
   BufferTarget,
   CanvasSource,
   AudioSampleSource,
+  QUALITY_VERY_LOW,
+  QUALITY_LOW,
   QUALITY_MEDIUM,
+  QUALITY_HIGH,
+  QUALITY_VERY_HIGH,
   type AudioSample,
+  type Quality,
 } from 'mediabunny'
 
 /**
@@ -58,6 +62,10 @@ export interface ExportProjectOptions {
   getMediaItem: (id: string) => UnifiedMediaItemData | undefined
   /** 进度更新回调函数（可选） */
   onProgress?: (stage: string, progress: number, details?: string) => void
+  /** 视频质量（可选，默认 QUALITY_MEDIUM） */
+  videoQuality?: Quality
+  /** 音频质量（可选，默认 QUALITY_MEDIUM） */
+  audioQuality?: Quality
 }
 
 /**
@@ -237,7 +245,7 @@ class ExportManager {
               const currentVolume = item.config.volume ?? 1.0
               audioSamplesMap.set(item.id, {
                 samples: audio,
-                volume: currentVolume
+                volume: currentVolume,
               })
             }
           } else {
@@ -342,12 +350,12 @@ class ExportManager {
 
       this.canvasSource = new CanvasSource(this.canvas!, {
         codec: 'avc',
-        bitrate: QUALITY_MEDIUM,
+        bitrate: this.config.videoQuality ?? QUALITY_MEDIUM,
       })
 
       this.audioSource = new AudioSampleSource({
         codec: 'mp3',
-        bitrate: QUALITY_MEDIUM,
+        bitrate: this.config.audioQuality ?? QUALITY_MEDIUM,
       })
 
       // 阶段 4: 初始化音频渲染器
@@ -385,7 +393,7 @@ class ExportManager {
           await this.audioSegmentRenderer!.collectAudioSamples(
             audioSampleWithVolume.samples,
             itemId,
-            audioSampleWithVolume.volume
+            audioSampleWithVolume.volume,
           )
         }
 
