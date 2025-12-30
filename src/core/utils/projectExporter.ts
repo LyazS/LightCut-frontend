@@ -217,7 +217,7 @@ class ExportManager {
             BigInt(currentTimeN),
             true,
             true,
-            1n,
+            0n,
           )
 
           if (state === 'success') {
@@ -364,6 +364,7 @@ class ExportManager {
       // 阶段 6: 渲染循环
       const totalFrames = this.calculateTotalFrames()
       const frameDuration = 1 / RENDERER_FPS
+      let lastTriggerFrame = -1 // 记录最后一次触发音频渲染的帧号
 
       for (let frameN = 0; frameN < totalFrames; frameN++) {
         // 检查取消
@@ -388,25 +389,40 @@ class ExportManager {
           )
         }
 
-        // 每30帧（1秒）触发一次音频渲染
-        if ((frameN + 1) % 30 === 0) {
-          const segmentStartTime = Math.floor(frameN / 30) * 1.0 // 当前段的开始时间
+        // 延迟到60帧之后才开始每30帧触发音频渲染，增加缓冲
+        if (frameN >= 59 && (frameN + 1) % 30 === 0) {
+          const segmentStartTime = Math.floor((frameN - 59) / 30) * 1.0 // 从第0段开始计算
           await this.audioSegmentRenderer!.renderFixedSegment(segmentStartTime)
+          lastTriggerFrame = frameN // 记录触发帧号
         }
+        /**
+         * 计算模拟音频渲染进度
+         * [0-170]帧
+         * 0-59  ： frameN=59, segmentStartTime=0
+         * 60-89 : frameN=89, segmentStartTime=1
+         * 90-119: frameN=119, segmentStartTime=2
+         * 120-149: frameN=149, segmentStartTime=3
+         * 150-170: 不触发
+         */
 
         // 更新进度（10% - 95%）
         const progress = 10 + ((frameN + 1) / totalFrames) * 85
         this.reportProgress('渲染', progress, `${frameN + 1}/${totalFrames} 帧`)
       }
 
-      // 处理最后不足30帧的部分
-      const lastCompleteSegment = Math.floor((totalFrames - 1) / 30)
-      const remainingFrames = totalFrames - lastCompleteSegment * 30
-      if (remainingFrames > 0) {
-        const finalSegmentStartTime = lastCompleteSegment * 1.0
-        const totalDuration = totalFrames / RENDERER_FPS // 总时长（秒）
+      // 处理最后部分
+      if (lastTriggerFrame >= 0 && totalFrames > lastTriggerFrame + 1) {
+        // 有触发过音频渲染，且还有剩余帧
+        const lastRenderedSegmentIndex = Math.floor((lastTriggerFrame - 59) / 30)
+        const finalSegmentStartTime = (lastRenderedSegmentIndex + 1) * 1.0
+        const totalDuration = totalFrames / RENDERER_FPS
         await this.audioSegmentRenderer!.finalize(finalSegmentStartTime, totalDuration)
+      } else if (lastTriggerFrame < 0) {
+        // 总帧数小于等于60帧，没有触发过任何段，需要从头处理
+        const totalDuration = totalFrames / RENDERER_FPS
+        await this.audioSegmentRenderer!.finalize(0, totalDuration)
       }
+      // 如果 lastTriggerFrame >= 0 且 totalFrames == lastTriggerFrame + 1，说明正好处理完，无需finalize
 
       // 阶段 7: 完成音频渲染
       this.reportProgress('完成', 95, '处理音频...')
