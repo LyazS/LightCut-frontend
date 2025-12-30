@@ -381,6 +381,10 @@ export const useUnifiedStore = defineStore('unified', () => {
     dialogWarning: unifiedUseNaiveUIModule.dialogWarning,
     dialogInfo: unifiedUseNaiveUIModule.dialogInfo,
 
+    // 便捷模态框方法
+    createModal: unifiedUseNaiveUIModule.createModal,
+    destroyAllModals: unifiedUseNaiveUIModule.destroyAllModals,
+
     initApi: unifiedUseNaiveUIModule.initApi,
 
     // ==================== 历史模块状态和方法 ====================

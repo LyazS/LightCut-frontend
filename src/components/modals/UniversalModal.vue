@@ -19,7 +19,6 @@
                     class="modal-close-btn"
                     :class="closeBtnClass"
                     @click="handleClose"
-                    :title="closeBtnTitle"
                   >
                     <component :is="IconComponents.CLOSE" size="16px" />
                   </button>
@@ -48,7 +47,7 @@
                     @click="handleCancel"
                     :disabled="loading"
                   >
-                    {{ cancelText }}
+                    {{ props.cancelText }}
                   </HoverButton>
                   <HoverButton
                     v-if="showConfirm"
@@ -57,7 +56,7 @@
                     :disabled="confirmDisabled || loading"
                     :loading="loading"
                   >
-                    {{ confirmText }}
+                    {{ props.confirmText }}
                   </HoverButton>
                 </slot>
               </div>
@@ -73,9 +72,6 @@
 import { computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
-import { useAppI18n } from '@/core/composables/useI18n'
-
-const { t } = useAppI18n()
 
 interface Props {
   show: boolean
@@ -161,11 +157,6 @@ const headerClass = computed(() => 'modal-header')
 const contentClass = computed(() => 'modal-content')
 const footerClass = computed(() => 'modal-footer')
 const closeBtnClass = computed(() => 'modal-close-btn')
-
-const closeBtnTitle = computed(() => t('common.close'))
-
-const confirmText = computed(() => props.confirmText || t('common.confirm'))
-const cancelText = computed(() => props.cancelText || t('common.cancel'))
 
 // 键盘事件处理
 const handleKeydown = (event: KeyboardEvent) => {

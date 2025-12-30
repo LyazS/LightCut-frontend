@@ -184,42 +184,19 @@
       </ContextMenu>
 
       <!-- 创建文件夹对话框 -->
-      <UniversalModal
-        v-model:show="showCreateDirModal"
-        :title="t('media.newFolder')"
-        @confirm="createDirectory"
-        @cancel="showCreateDirModal = false"
-      >
-        <div class="form-group">
-          <label>{{ t('media.folderNameLabel') }}</label>
-          <input
-            v-model="newDirName"
-            type="text"
-            :placeholder="t('media.folderNamePlaceholder')"
-            @keyup.enter="createDirectory"
-            ref="newDirInput"
-          />
-        </div>
-      </UniversalModal>
+      <CreateFolderModal
+        :show="showCreateDirModal"
+        @close="showCreateDirModal = false"
+        @confirm="handleCreateFolder"
+      />
 
       <!-- 重命名对话框 -->
-      <UniversalModal
-        v-model:show="showRenameModal"
-        :title="t('media.rename')"
-        @confirm="confirmRename"
-        @cancel="cancelRename"
-      >
-        <div class="form-group">
-          <label>{{ t('media.newNameLabel') }}</label>
-          <input
-            v-model="renameNewName"
-            type="text"
-            :placeholder="t('media.newNamePlaceholder')"
-            @keyup.enter="confirmRename"
-            ref="renameInput"
-          />
-        </div>
-      </UniversalModal>
+      <RenameModal
+        :show="showRenameModal"
+        :current-name="renameCurrentName"
+        @close="handleRenameClose"
+        @confirm="handleRenameConfirm"
+      />
 
       <!-- 隐藏的文件输入 -->
       <input
@@ -243,7 +220,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { NScrollbar } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
@@ -276,7 +253,8 @@ import {
   ContextMenuSeparator,
   ContextMenuGroup,
 } from '@imengyu/vue3-context-menu'
-import UniversalModal from '@/components/modals/UniversalModal.vue'
+import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
+import RenameModal from '@/components/modals/RenameModal.vue'
 import TextToImageModal from '@/components/modals/TextToImageModal.vue'
 import MediaItemThumbnail from '@/components/panels/MediaItemThumbnail.vue'
 import type { TaskSubmitResponse } from '@/types/taskApi'
@@ -309,15 +287,12 @@ const isDragOver = ref(false)
 const selectedItems = ref<DisplayItem[]>([])
 const lastSelectedItem = ref<DisplayItem | null>(null)
 const fileInput = ref<HTMLInputElement>()
-const newDirInput = ref<HTMLInputElement>()
 const showCreateDirModal = ref(false)
-const newDirName = ref('')
 
 // 重命名状态
 const showRenameModal = ref(false)
-const renameNewName = ref('')
+const renameCurrentName = ref('')
 const renameTarget = ref<DisplayItem | null>(null)
-const renameInput = ref<HTMLInputElement>()
 
 // 文生图对话框状态
 const showTextToImageModal = ref(false)
@@ -1081,29 +1056,28 @@ function startRename(item: DisplayItem): void {
 
   if (item.type === 'directory') {
     const dir = getDirectory(item.id)
-    renameNewName.value = dir?.name || ''
+    renameCurrentName.value = dir?.name || ''
   } else {
     const media = getMediaItem(item.id)
-    renameNewName.value = media?.name || ''
+    renameCurrentName.value = media?.name || ''
   }
 
   showRenameModal.value = true
-
-  // 等待对话框渲染后聚焦输入框
-  nextTick(() => {
-    renameInput.value?.focus()
-    renameInput.value?.select()
-  })
 }
 
-// 确认重命名
-async function confirmRename(): Promise<void> {
-  if (!renameTarget.value || !renameNewName.value.trim()) {
-    unifiedStore.messageError(t('media.nameCannotBeEmpty'))
+// 处理重命名关闭
+function handleRenameClose(): void {
+  showRenameModal.value = false
+  renameTarget.value = null
+  renameCurrentName.value = ''
+}
+
+// 处理重命名确认
+async function handleRenameConfirm(newName: string): Promise<void> {
+  if (!renameTarget.value) {
     return
   }
 
-  const newName = renameNewName.value.trim()
   const target = renameTarget.value
 
   try {
@@ -1121,38 +1095,23 @@ async function confirmRename(): Promise<void> {
       unifiedStore.messageSuccess(t('media.mediaRenameSuccess'))
     }
 
-    showRenameModal.value = false
-    renameTarget.value = null
-    renameNewName.value = ''
+    handleRenameClose()
   } catch (error) {
     console.error('重命名失败:', error)
     unifiedStore.messageError(t('media.renameFailed'))
   }
 }
 
-// 取消重命名
-function cancelRename(): void {
-  showRenameModal.value = false
-  renameTarget.value = null
-  renameNewName.value = ''
-}
-
-// 创建文件夹
-async function createDirectory(): Promise<void> {
-  if (!newDirName.value.trim()) {
-    unifiedStore.messageError(t('media.folderNameCannotBeEmpty'))
-    return
-  }
-
+// 处理创建文件夹
+async function handleCreateFolder(folderName: string): Promise<void> {
   if (!currentDir.value) {
     unifiedStore.messageError(t('media.selectDirectoryFirst'))
     return
   }
 
   try {
-    unifiedStore.createDirectory(newDirName.value.trim(), currentDir.value.id)
+    unifiedStore.createDirectory(folderName, currentDir.value.id)
     showCreateDirModal.value = false
-    newDirName.value = ''
     unifiedStore.messageSuccess(t('media.folderCreateSuccess'))
   } catch (error) {
     console.error('创建文件夹失败:', error)
@@ -1244,10 +1203,7 @@ function handleTextToImage(): void {
 }
 
 // 应用测试模式修改请求参数
-function applyTestMode(
-  params: MediaGenerationRequest,
-  testMode: string,
-): MediaGenerationRequest {
+function applyTestMode(params: MediaGenerationRequest, testMode: string): MediaGenerationRequest {
   console.log(`🧪 [LibraryMediaGrid] 应用测试模式: ${testMode}`)
 
   switch (testMode) {
@@ -1289,7 +1245,10 @@ async function submitAIGenerationTask(
   requestParams: MediaGenerationRequest,
 ): Promise<TaskSubmitResponse> {
   try {
-    const response = await fetchClient.post<TaskSubmitResponse>('/api/media/generate', requestParams)
+    const response = await fetchClient.post<TaskSubmitResponse>(
+      '/api/media/generate',
+      requestParams,
+    )
 
     if (response.status !== 200) {
       throw new Error(`提交任务失败: ${response.statusText}`)
@@ -1312,12 +1271,12 @@ async function submitAIGenerationTask(
 async function handleTextToImageSubmit(config: {
   processor: string
   text?: string
-  motionDescription?: string  // 视频动作描述
+  motionDescription?: string // 视频动作描述
   width?: number
   height?: number
   testMode?: string
-  debugError?: string  // 错误代码
-  mediaType?: string   // 新增：媒体类型
+  debugError?: string // 错误代码
+  mediaType?: string // 新增：媒体类型
 }): Promise<void> {
   if (!currentDir.value) {
     unifiedStore.messageError(t('media.selectDirectoryFirst'))
@@ -1338,8 +1297,8 @@ async function handleTextToImageSubmit(config: {
         ai_task_type: AITaskType.BIZYAIR_GENERATE_MEDIA,
         content_type: ContentType.IMAGE,
         task_config: {
-          web_app_id: 39492,  // qwen-image-4step 固定配置
-          prompt: config.text || '',  // 后端期望的字段名是 prompt
+          web_app_id: 39492, // qwen-image-4step 固定配置
+          prompt: config.text || '', // 后端期望的字段名是 prompt
           // width 和 height 使用后端默认值 (1024x960)
           // seed 使用后端自动生成
         },
@@ -1352,9 +1311,9 @@ async function handleTextToImageSubmit(config: {
         ai_task_type: AITaskType.BIZYAIR_GENERATE_MEDIA,
         content_type: ContentType.VIDEO,
         task_config: {
-          web_app_id: 39835,  // z-image wan2.2 i2v 固定配置
-          image_description: config.text || '',  // 图片描述（第一帧）
-          motion_description: config.motionDescription || '',  // 视频动作描述（可选）
+          web_app_id: 39835, // z-image wan2.2 i2v 固定配置
+          image_description: config.text || '', // 图片描述（第一帧）
+          motion_description: config.motionDescription || '', // 视频动作描述（可选）
           // width: 默认 1024
           // height: 默认 1024
           // frame_count: 默认 81
@@ -1379,7 +1338,7 @@ async function handleTextToImageSubmit(config: {
       } else {
         mediaItemName = t('media.remoteImageName', { timestamp: Date.now() })
       }
-      
+
       // 直接构造远程媒体请求
       requestParams = {
         ai_task_type: AITaskType.REMOTE_IMAGE,
@@ -1408,7 +1367,7 @@ async function handleTextToImageSubmit(config: {
       console.log(`🔥 [LibraryMediaGrid] 错误注入测试: ${config.debugError}`)
       requestParams.task_config._debug_error = config.debugError
     }
-    
+
     // 3. 🌟 根据测试模式修改请求参数（原有的测试模式）
     if (config.testMode && config.testMode !== 'normal' && !config.debugError) {
       console.log(`🧪 [LibraryMediaGrid] 测试模式: ${config.testMode}`)
@@ -1484,7 +1443,7 @@ async function handleTextToImageSubmit(config: {
     } else if (expectedMediaType === 'audio') {
       extension = 'mp3'
     }
-    
+
     const mediaId = generateMediaId(extension)
     const mediaItem = unifiedStore.createUnifiedMediaItemData(mediaId, mediaItemName, aiSource, {
       mediaType: expectedMediaType,
@@ -1521,10 +1480,10 @@ async function handleTextToImageSubmit(config: {
  */
 function canCancel(item: DisplayItem): boolean {
   if (item.type !== 'media') return false
-  
+
   const mediaItem = getMediaItem(item.id)
   if (!mediaItem) return false
-  
+
   // 🌟 只有 pending 状态才可以取消
   return mediaItem.mediaStatus === 'pending'
 }
@@ -1534,17 +1493,17 @@ function canCancel(item: DisplayItem): boolean {
  */
 async function handleCancelTask(): Promise<void> {
   if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'media') return
-  
+
   const mediaItem = getMediaItem(contextMenuTarget.value.id)
   if (!mediaItem) return
-  
+
   showContextMenu.value = false
-  
+
   try {
     console.log(`🛑 [LibraryMediaGrid] 尝试取消任务: ${mediaItem.name}`)
-    
+
     const success = await unifiedStore.cancelMediaProcessing(mediaItem.id)
-    
+
     if (success) {
       unifiedStore.messageSuccess(t('media.cancelSuccess', { name: mediaItem.name }))
     } else {
@@ -1554,8 +1513,8 @@ async function handleCancelTask(): Promise<void> {
     console.error('取消任务失败:', error)
     unifiedStore.messageError(
       t('media.cancelFailed', {
-        name: mediaItem.name
-      })
+        name: mediaItem.name,
+      }),
     )
   }
 }
@@ -1567,15 +1526,15 @@ async function handleCancelTask(): Promise<void> {
  */
 function canRetry(item: DisplayItem): boolean {
   if (item.type !== 'media') return false
-  
+
   const mediaItem = getMediaItem(item.id)
   if (!mediaItem) return false
-  
+
   // 只有错误或取消状态可以重试
   if (mediaItem.mediaStatus !== 'error' && mediaItem.mediaStatus !== 'cancelled') {
     return false
   }
-  
+
   // 🌟 只有 AI 生成类型支持重试
   return mediaItem.source.type === 'ai-generation'
 }
@@ -1585,12 +1544,12 @@ function canRetry(item: DisplayItem): boolean {
  */
 async function handleRetry(): Promise<void> {
   if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'media') return
-  
+
   const mediaItem = getMediaItem(contextMenuTarget.value.id)
   if (!mediaItem) return
-  
+
   showContextMenu.value = false
-  
+
   try {
     // 🌟 只支持 AI 生成类型的重试
     if (mediaItem.source.type === 'ai-generation') {
@@ -1604,8 +1563,8 @@ async function handleRetry(): Promise<void> {
     console.error('重试失败:', error)
     unifiedStore.messageError(
       t('media.retryFailed', {
-        error: error instanceof Error ? error.message : '未知错误'
-      })
+        error: error instanceof Error ? error.message : '未知错误',
+      }),
     )
   }
 }
@@ -1615,10 +1574,10 @@ async function handleRetry(): Promise<void> {
  */
 async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void> {
   const aiSource = mediaItem.source as AIGenerationSourceData
-  
+
   // 1. 重新提交任务到后端
   const submitResult = await submitAIGenerationTask(aiSource.requestParams)
-  
+
   if (!submitResult.success) {
     const errorMessage = buildTaskErrorMessage(
       submitResult.error_code,
@@ -1627,25 +1586,25 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
     )
     throw new Error(errorMessage)
   }
-  
+
   // 2. 更新任务ID和状态
   aiSource.aiTaskId = submitResult.task_id
   aiSource.taskStatus = TaskStatus.PENDING
   aiSource.actualCost = undefined
   aiSource.resultPath = undefined
-  
+
   // 3. 重置数据源状态
   aiSource.progress = 0
   aiSource.errorMessage = undefined
   aiSource.generationProgress = 0
   aiSource.streamConnected = false
-  
+
   // 4. 重置媒体状态
   mediaItem.mediaStatus = 'pending'
-  
+
   // 5. 重新启动处理流程
   unifiedStore.startMediaProcessing(mediaItem)
-  
+
   unifiedStore.messageSuccess(t('media.retryStarted', { name: mediaItem.name }))
 }
 
@@ -1656,13 +1615,15 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
  */
 function canExportMediaItem(item: DisplayItem): boolean {
   if (item.type !== 'media') return false
-  
+
   const mediaItem = getMediaItem(item.id)
   if (!mediaItem) return false
-  
+
   // 只有就绪状态的视频和图片可以导出
-  return mediaItem.mediaStatus === 'ready' &&
-         (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image')
+  return (
+    mediaItem.mediaStatus === 'ready' &&
+    (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image')
+  )
 }
 
 /**
@@ -1670,18 +1631,18 @@ function canExportMediaItem(item: DisplayItem): boolean {
  */
 async function handleExportMediaItem(item: DisplayItem): Promise<void> {
   if (item.type !== 'media') return
-  
+
   const mediaItem = getMediaItem(item.id)
   if (!mediaItem) return
-  
+
   showContextMenu.value = false
-  
+
   try {
     console.log('🚀 开始导出媒体项目:', mediaItem.name)
-    
+
     // 显示进度提示
     unifiedStore.messageInfo(t('media.media.exportStarted', { name: mediaItem.name }))
-    
+
     // 调用导出方法
     const blob = await exportMediaItem({
       mediaItem,
@@ -1689,7 +1650,7 @@ async function handleExportMediaItem(item: DisplayItem): Promise<void> {
         console.log(`📊 导出进度: ${progress.toFixed(2)}%`)
       },
     })
-    
+
     // 创建下载链接
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -1699,17 +1660,16 @@ async function handleExportMediaItem(item: DisplayItem): Promise<void> {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
+
     unifiedStore.messageSuccess(t('media.media.exportSuccess', { name: mediaItem.name }))
     console.log('✅ 媒体项目导出成功')
-    
   } catch (error) {
     console.error('❌ 导出媒体项目失败:', error)
     unifiedStore.messageError(
       t('media.media.exportFailed', {
         name: mediaItem.name,
-        error: error instanceof Error ? error.message : '未知错误'
-      })
+        error: error instanceof Error ? error.message : '未知错误',
+      }),
     )
   }
 }
@@ -1964,15 +1924,6 @@ async function handleBatchDelete(): Promise<void> {
     },
   })
 }
-
-// ==================== 生命周期 ====================
-
-// 监听对话框显示，自动聚焦输入框
-nextTick(() => {
-  if (showCreateDirModal.value) {
-    newDirInput.value?.focus()
-  }
-})
 </script>
 
 <style scoped>
@@ -2137,34 +2088,6 @@ nextTick(() => {
 
 .item-name:hover {
   background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* 对话框样式 */
-.form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: var(--spacing-xs);
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-.form-group input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-small);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 /* 剪切状态样式 */
