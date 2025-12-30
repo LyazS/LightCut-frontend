@@ -102,6 +102,17 @@ const form = ref<{
   audioQuality: 'medium',
 })
 
+// 监听模态框打开，更新表单数据
+watch(
+  () => props.show,
+  (newShow) => {
+    if (newShow) {
+      // 模态框打开时，重置表单为默认值
+      form.value.title = props.defaultTitle || ''
+    }
+  }
+)
+
 // 将字符串质量级别转换为 Quality 对象
 function qualityLevelToQuality(level: QualityLevel): Quality {
   switch (level) {
