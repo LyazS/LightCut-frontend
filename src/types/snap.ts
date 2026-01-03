@@ -71,7 +71,7 @@ export interface SnapConfig {
   timelineStart: boolean // 时间轴起始位置吸附
 
   // 吸附参数
-  threshold: number // 吸附阈值（像素）
+  threshold: number // 吸附阈值（像素，不受zoom level影响）
   visualFeedback: boolean // 可视化反馈开关
 }
 

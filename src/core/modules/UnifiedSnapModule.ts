@@ -56,6 +56,15 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
 
   // 获取媒体项目的getMediaItem方法
   const getMediaItem = (id: string) => mediaModule.getMediaItem(id)
+  
+  // 延迟获取 viewport 模块（避免循环依赖）
+  let viewportModule: any = null
+  const getViewportModule = () => {
+    if (!viewportModule) {
+      viewportModule = registry.get(MODULE_NAMES.VIEWPORT)
+    }
+    return viewportModule
+  }
   // ==================== 状态定义 ====================
 
   // 吸附配置
@@ -233,8 +242,8 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
       return null
     }
 
-    // 使用自定义阈值或配置中的阈值
-    const threshold = customThreshold ?? snapConfig.value.threshold
+    // 使用自定义阈值或配置中的阈值（像素单位）
+    const pixelThreshold = customThreshold ?? snapConfig.value.threshold
 
     // 检查缓存是否有效
     if (!snapCache.value.isValid) {
@@ -242,20 +251,35 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
       return null
     }
 
+    // 获取 viewport 模块以计算像素到帧数的转换
+    const viewport = getViewportModule()
+    if (!viewport) {
+      console.warn('⚠️ [UnifiedSnapModule] viewport 模块未初始化，无法计算吸附阈值')
+      return null
+    }
+
+    // 计算像素每帧的比例
+    const pixelsPerFrame =
+      (viewport.TimelineContentWidth.value * viewport.zoomLevel.value) /
+      viewport.totalDurationFrames.value
+
+    // 将像素阈值转换为帧数阈值
+    const frameThreshold = pixelThreshold / pixelsPerFrame
+
     // 查找最近的吸附点
     let bestSnapPoint: SnapPoint | null = null
     let bestDistance = Infinity
 
     snapCache.value.targets.forEach((target) => {
       const distance = Math.abs(frame - (target as any).frame)
-      if (distance < bestDistance && distance <= threshold) {
+      if (distance < bestDistance && distance <= frameThreshold) {
         bestDistance = distance
         bestSnapPoint = target
       }
     })
 
     // 如果没有找到合适的吸附点，返回null
-    if (!bestSnapPoint || bestDistance > threshold) {
+    if (!bestSnapPoint || bestDistance > frameThreshold) {
       return null
     }
 
