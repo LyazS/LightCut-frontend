@@ -18,15 +18,15 @@ export async function setupTimelineItemBunny(
   timelineItem: UnifiedTimelineItemData,
   mediaItem?: UnifiedMediaItemData,
 ): Promise<void> {
-  console.log(`🔄 [timelineItemSetup] 开始为 timelineItem 创建 bunny 对象:`, {
-    id: timelineItem.id,
-    mediaType: timelineItem.mediaType,
-  })
+  // console.log(`🔄 [timelineItemSetup] 开始为 timelineItem 创建 bunny 对象:`, {
+  //   id: timelineItem.id,
+  //   mediaType: timelineItem.mediaType,
+  // })
 
   try {
     // 检查并清理已存在的旧资源
     if (timelineItem.runtime.bunnyClip || timelineItem.runtime.textBitmap) {
-      console.log(`🧹 [timelineItemSetup] 检测到已存在的 bunny 对象，先清理旧资源`)
+      // console.log(`🧹 [timelineItemSetup] 检测到已存在的 bunny 对象，先清理旧资源`)
       await cleanupTimelineItemBunny(timelineItem)
     }
 
@@ -36,7 +36,7 @@ export async function setupTimelineItemBunny(
         const textConfig = timelineItem.config as TextMediaConfig
         const bmap = await textToImageBitmap2(textConfig.text, textConfig.style)
         timelineItem.runtime.textBitmap = bmap
-        console.log(`✅ [timelineItemSetup] 文本 bunny 对象创建完成`)
+        // console.log(`✅ [timelineItemSetup] 文本 bunny 对象创建完成`)
         break
       }
 
@@ -46,7 +46,7 @@ export async function setupTimelineItemBunny(
         if (!mediaItem || !mediaItem.runtime.bunny?.bunnyMedia) {
           throw new Error(`音视频类型需要 mediaItem 且 mediaItem.runtime.bunny.bunnyMedia 存在`)
         }
-
+        await mediaItem.runtime.bunny?.bunnyMedia.ready
         const bunnyclip = new BunnyClip(mediaItem.runtime.bunny.bunnyMedia)
         bunnyclip.setTimeRange({
           clipStart: BigInt(timelineItem.timeRange.clipStartTime),
@@ -55,7 +55,7 @@ export async function setupTimelineItemBunny(
           timelineEnd: BigInt(timelineItem.timeRange.timelineEndTime),
         })
         timelineItem.runtime.bunnyClip = markRaw(bunnyclip)
-        console.log(`✅ [timelineItemSetup] 音视频 bunny 对象创建完成`)
+        // console.log(`✅ [timelineItemSetup] 音视频 bunny 对象创建完成`)
         break
       }
 

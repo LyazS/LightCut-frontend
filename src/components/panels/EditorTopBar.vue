@@ -213,10 +213,13 @@ async function handleExportWithSettings(settings: {
   title: string
   videoQuality: Quality
   audioQuality: Quality
+  frameRate: number
 }) {
   try {
     // 关闭对话框
     showExportDialog.value = false
+
+    await unifiedStore.pause()
 
     // 开始导出
     isExporting.value = true
@@ -233,11 +236,11 @@ async function handleExportWithSettings(settings: {
       getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
       videoQuality: settings.videoQuality,
       audioQuality: settings.audioQuality,
+      frameRate: settings.frameRate,
       onProgress: (stage: string, progress: number, details?: string) => {
         // 更新本地导出进度
         exportProgress.value = Math.max(0, Math.min(100, progress))
         exportDetails.value = details || ''
-        // console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
       },
     })
 

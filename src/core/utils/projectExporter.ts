@@ -62,10 +62,12 @@ export interface ExportProjectOptions {
   getMediaItem: (id: string) => UnifiedMediaItemData | undefined
   /** 进度更新回调函数（可选） */
   onProgress?: (stage: string, progress: number, details?: string) => void
-  /** 视频质量（可选，默认 QUALITY_MEDIUM） */
-  videoQuality?: Quality
-  /** 音频质量（可选，默认 QUALITY_MEDIUM） */
-  audioQuality?: Quality
+  /** 视频质量 */
+  videoQuality: Quality
+  /** 音频质量 */
+  audioQuality: Quality
+  /** 导出帧率（可选，默认 30fps） */
+  frameRate?: number
 }
 
 /**
@@ -117,12 +119,17 @@ class ExportManager {
   // 导出配置
   private config: ExportProjectOptions
 
+  // 帧率配置
+  private frameRate: number
+
   // 控制标志
   private isExporting: boolean = false
   private shouldCancel: boolean = false
 
   constructor(config: ExportProjectOptions) {
     this.config = config
+    this.frameRate = config.frameRate ?? RENDERER_FPS
+    console.log(`✅ 导出帧率设置为: ${this.frameRate}fps`)
   }
 
   /**
@@ -192,11 +199,14 @@ class ExportManager {
   ): Promise<Map<string, AudioSampleWithVolume>> {
     const audioSamplesMap = new Map<string, AudioSampleWithVolume>()
 
+    // 🔴 关键转换：目标帧率 → 30fps
+    const frameIn30fps = Math.round(currentTimeN * (RENDERER_FPS / this.frameRate))
+
     // 1. 更新所有 clips 的帧数据
     await Promise.all(
       this.clonedTimelineItems.map(async (item) => {
-        // 应用动画插值
-        applyAnimationToConfig(item, currentTimeN)
+        // 应用动画插值（使用 30fps 的帧数）
+        applyAnimationToConfig(item, frameIn30fps)
 
         // 处理视频/音频项目
         if (
@@ -206,10 +216,10 @@ class ExportManager {
           const bunnyClip = item.runtime.bunnyClip
           if (!bunnyClip) return
 
-          // 检查是否在时间范围内
+          // 检查是否在时间范围内（使用 30fps 的帧数）
           if (
-            currentTimeN < item.timeRange.timelineStartTime ||
-            currentTimeN > item.timeRange.timelineEndTime
+            frameIn30fps < item.timeRange.timelineStartTime ||
+            frameIn30fps > item.timeRange.timelineEndTime
           ) {
             return
           }
@@ -220,9 +230,9 @@ class ExportManager {
           const isItemMuted = item.config.isMuted ?? false
           const shouldRequestAudio = !isTrackMuted && !isItemMuted
 
-          // 调用 tickN 获取音视频数据（转换为 bigint）
+          // 调用 tickN 获取音视频数据（使用 30fps 的帧数）
           const { audio, video, state } = await bunnyClip.tickN(
-            BigInt(currentTimeN),
+            BigInt(frameIn30fps),
             true,
             true,
             0n,
@@ -234,7 +244,7 @@ class ExportManager {
               const oldFrame = this.bunnyCurFrameMap.get(item.id)
               oldFrame?.videoSample.close()
               this.bunnyCurFrameMap.set(item.id, {
-                frameNumber: currentTimeN,
+                frameNumber: frameIn30fps,
                 videoSample: video,
               })
             }
@@ -275,7 +285,7 @@ class ExportManager {
       trackIndexMap: new Map(this.config.tracks.map((track, index) => [track.id, index])),
     }
 
-    renderToCanvas(renderContext, this.clonedTimelineItems, currentTimeN)
+    renderToCanvas(renderContext, this.clonedTimelineItems, frameIn30fps)
 
     return audioSamplesMap
   }
@@ -303,22 +313,27 @@ class ExportManager {
    * 计算总帧数
    */
   private calculateTotalFrames(): number {
-    let maxEndTime = 0
+    let maxEndTimeIn30fps = 0
     for (const item of this.clonedTimelineItems) {
-      if (item.timeRange.timelineEndTime > maxEndTime) {
-        maxEndTime = item.timeRange.timelineEndTime
+      if (item.timeRange.timelineEndTime > maxEndTimeIn30fps) {
+        maxEndTimeIn30fps = item.timeRange.timelineEndTime
       }
     }
-    return maxEndTime
+    
+    // 转换：30fps帧数 → 时长 → 目标帧率帧数
+    const durationInSeconds = maxEndTimeIn30fps / RENDERER_FPS
+    const totalFrames = Math.ceil(durationInSeconds * this.frameRate)
+    
+    console.log(`📊 帧数转换: ${maxEndTimeIn30fps}帧@30fps → ${durationInSeconds}秒 → ${totalFrames}帧@${this.frameRate}fps`)
+    
+    return totalFrames
   }
 
   /**
    * 报告进度
    */
   private reportProgress(stage: string, progress: number, details?: string): void {
-    if (this.config.onProgress) {
-      this.config.onProgress(stage, progress, details)
-    }
+    this.config.onProgress?.(stage, progress, details)
   }
 
   /**
@@ -350,12 +365,12 @@ class ExportManager {
 
       this.canvasSource = new CanvasSource(this.canvas!, {
         codec: 'avc',
-        bitrate: this.config.videoQuality ?? QUALITY_MEDIUM,
+        bitrate: this.config.videoQuality,
       })
 
       this.audioSource = new AudioSampleSource({
         codec: 'mp3',
-        bitrate: this.config.audioQuality ?? QUALITY_MEDIUM,
+        bitrate: this.config.audioQuality,
       })
 
       // 阶段 4: 初始化音频渲染器
@@ -363,7 +378,7 @@ class ExportManager {
 
       // 阶段 5: 添加轨道并启动
       this.output.addVideoTrack(this.canvasSource, {
-        frameRate: RENDERER_FPS,
+        frameRate: this.frameRate,
       })
       this.output.addAudioTrack(this.audioSource)
 
@@ -371,7 +386,7 @@ class ExportManager {
 
       // 阶段 6: 渲染循环
       const totalFrames = this.calculateTotalFrames()
-      const frameDuration = 1 / RENDERER_FPS
+      const frameDuration = 1 / this.frameRate
       let lastTriggerFrame = -1 // 记录最后一次触发音频渲染的帧号
 
       for (let frameN = 0; frameN < totalFrames; frameN++) {
@@ -385,7 +400,7 @@ class ExportManager {
         const audioSamplesMap = await this.renderFrameAndCollectAudio(frameN)
 
         // 添加视频帧
-        const timestamp = frameN / RENDERER_FPS
+        const timestamp = frameN / this.frameRate
         await this.canvasSource.add(timestamp, frameDuration)
 
         // 收集音频样本到缓冲区
@@ -397,11 +412,15 @@ class ExportManager {
           )
         }
 
-        // 延迟到60帧之后才开始每30帧触发音频渲染，增加缓冲
-        if (frameN >= 59 && (frameN + 1) % 30 === 0) {
-          const segmentStartTime = Math.floor((frameN - 59) / 30) * 1.0 // 从第0段开始计算
+        // 动态计算音频渲染触发点（基于目标帧率）
+        const framesPerSecond = this.frameRate
+        const bufferFrames = Math.round(framesPerSecond * 2) // 2秒缓冲
+        const triggerInterval = Math.round(framesPerSecond) // 每秒触发一次
+        
+        if (frameN >= bufferFrames - 1 && (frameN + 1 - bufferFrames) % triggerInterval === 0) {
+          const segmentStartTime = Math.floor((frameN - bufferFrames + 1) / triggerInterval) * 1.0
           await this.audioSegmentRenderer!.renderFixedSegment(segmentStartTime)
-          lastTriggerFrame = frameN // 记录触发帧号
+          lastTriggerFrame = frameN
         }
         /**
          * 计算模拟音频渲染进度
@@ -419,18 +438,20 @@ class ExportManager {
       }
 
       // 处理最后部分
+      const bufferFrames = Math.round(this.frameRate * 2)
+      const triggerInterval = Math.round(this.frameRate)
+      
       if (lastTriggerFrame >= 0 && totalFrames > lastTriggerFrame + 1) {
         // 有触发过音频渲染，且还有剩余帧
-        const lastRenderedSegmentIndex = Math.floor((lastTriggerFrame - 59) / 30)
+        const lastRenderedSegmentIndex = Math.floor((lastTriggerFrame - bufferFrames + 1) / triggerInterval)
         const finalSegmentStartTime = (lastRenderedSegmentIndex + 1) * 1.0
-        const totalDuration = totalFrames / RENDERER_FPS
+        const totalDuration = totalFrames / this.frameRate
         await this.audioSegmentRenderer!.finalize(finalSegmentStartTime, totalDuration)
       } else if (lastTriggerFrame < 0) {
-        // 总帧数小于等于60帧，没有触发过任何段，需要从头处理
-        const totalDuration = totalFrames / RENDERER_FPS
+        // 总帧数小于缓冲帧数，没有触发过任何段，需要从头处理
+        const totalDuration = totalFrames / this.frameRate
         await this.audioSegmentRenderer!.finalize(0, totalDuration)
       }
-      // 如果 lastTriggerFrame >= 0 且 totalFrames == lastTriggerFrame + 1，说明正好处理完，无需finalize
 
       // 阶段 7: 完成音频渲染
       this.reportProgress('完成', 95, '处理音频...')

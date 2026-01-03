@@ -23,6 +23,23 @@
         />
       </div>
 
+      <!-- 帧率选择 -->
+      <div class="form-group">
+        <label>{{ t('editor.frameRate') }}</label>
+        <select v-model="form.frameRate" class="form-select">
+          <option :value="8">{{ t('editor.frameRate8') }}</option>
+          <option :value="12">{{ t('editor.frameRate12') }}</option>
+          <option :value="16">{{ t('editor.frameRate16') }}</option>
+          <option :value="20">{{ t('editor.frameRate20') }}</option>
+          <option :value="24">{{ t('editor.frameRate24') }}</option>
+          <option :value="25">{{ t('editor.frameRate25') }}</option>
+          <option :value="30">{{ t('editor.frameRate30') }}</option>
+          <option :value="50">{{ t('editor.frameRate50') }}</option>
+          <option :value="60">{{ t('editor.frameRate60') }}</option>
+        </select>
+        <div class="quality-hint">{{ getFrameRateHint(form.frameRate) }}</div>
+      </div>
+
       <!-- 视频质量 -->
       <div class="form-group">
         <label>{{ t('editor.videoQuality') }}</label>
@@ -78,6 +95,7 @@ interface ExportSettings {
   title: string
   videoQuality: Quality
   audioQuality: Quality
+  frameRate: number
 }
 
 interface Emits {
@@ -96,10 +114,12 @@ const form = ref<{
   title: string
   videoQuality: QualityLevel
   audioQuality: QualityLevel
+  frameRate: number
 }>({
   title: props.defaultTitle || '',
   videoQuality: 'medium',
   audioQuality: 'medium',
+  frameRate: 30,
 })
 
 // 监听模态框打开，更新表单数据
@@ -144,7 +164,24 @@ function handleExport() {
     title: form.value.title.trim(),
     videoQuality: qualityLevelToQuality(form.value.videoQuality),
     audioQuality: qualityLevelToQuality(form.value.audioQuality),
+    frameRate: form.value.frameRate,
   })
+}
+
+// 获取帧率提示
+function getFrameRateHint(frameRate: number): string {
+  const hints: Record<number, string> = {
+    8: t('editor.frameRate8Hint'),
+    12: t('editor.frameRate12Hint'),
+    16: t('editor.frameRate16Hint'),
+    20: t('editor.frameRate20Hint'),
+    24: t('editor.frameRate24Hint'),
+    25: t('editor.frameRate25Hint'),
+    30: t('editor.frameRate30Hint'),
+    50: t('editor.frameRate50Hint'),
+    60: t('editor.frameRate60Hint'),
+  }
+  return hints[frameRate] || ''
 }
 
 // 获取视频质量提示

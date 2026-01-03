@@ -1,6 +1,4 @@
 import {
-  VideoSampleSink,
-  AudioSampleSink,
   VideoSample,
   AudioSample,
   type AnyIterable,
@@ -8,12 +6,8 @@ import {
 import {
   RENDERER_FPS,
   VIDEO_SEEK_THRESHOLD,
-  VIDEO_SEEK_THRESHOLD_N,
   AUDIO_SCHEDULE_AHEAD,
-  AUDIO_SCHEDULE_AHEAD_N,
   AUDIO_ANOMALY_THRESHOLD,
-  AUDIO_ANOMALY_THRESHOLD_N,
-  AUDIO_DEFAULT_SAMPLE_RATE,
 } from './constant'
 import type { TimeRange } from './types'
 import type { IClip } from './IClip'
@@ -109,7 +103,7 @@ export class BunnyClip implements IClip {
       this.needResetVideo ||
       !this.videoIteratorN ||
       timeN < this.videoInTimeN || // 如果是往回seek
-      timeN - this.videoInTimeN > VIDEO_SEEK_THRESHOLD_N // 如果往前seek太远
+      timeN - this.videoInTimeN > BigInt(Math.round(VIDEO_SEEK_THRESHOLD * RENDERER_FPS)) // 如果往前seek太远
     ) {
       await this.resetVideoN(timeN)
     }
@@ -187,7 +181,7 @@ export class BunnyClip implements IClip {
     const clipTimeN =
       (Number(timeN + headFrame - this.timeRange.timelineStart) / tlDuration) * clipDuration +
       clipStart
-    const anomaly_th = (Number(AUDIO_ANOMALY_THRESHOLD_N) / tlDuration) * clipDuration
+    const anomaly_th = ((AUDIO_ANOMALY_THRESHOLD * RENDERER_FPS) / tlDuration) * clipDuration
     // timeN是时间轴上的帧点
     // 这是映射到clip上的时间点
     const currentTime = clipTimeN / RENDERER_FPS
@@ -311,7 +305,7 @@ export class BunnyClip implements IClip {
     timeN: bigint,
     needAudio: boolean = true,
     needVideo: boolean = true,
-    audioHeadFrame: bigint = AUDIO_SCHEDULE_AHEAD_N,
+    audioHeadFrame?: bigint,
   ): Promise<{
     audio: AudioSample[]
     video: VideoSample | null
@@ -333,6 +327,8 @@ export class BunnyClip implements IClip {
           state: 'outofrange',
         })
       }
+      if (audioHeadFrame === null || audioHeadFrame === undefined)
+        audioHeadFrame = BigInt(Math.round(AUDIO_SCHEDULE_AHEAD * RENDERER_FPS))
       const [audio, video] = await Promise.all([
         this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
         this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
