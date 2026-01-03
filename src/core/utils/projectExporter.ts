@@ -78,6 +78,8 @@ export interface ExportMediaItemOptions {
   mediaItem: UnifiedMediaItemData
   /** 进度更新回调（可选） */
   onProgress?: (progress: number) => void
+  /** 导出帧率（可选，默认 30fps，仅视频有效） */
+  frameRate?: number
 }
 
 /**
@@ -86,15 +88,19 @@ export interface ExportMediaItemOptions {
 export interface ExportTimelineItemOptions {
   /** 时间轴项目数据 */
   timelineItem: UnifiedTimelineItemData
+  /** 获取媒体项目的函数 */
+  getMediaItem: (id: string) => UnifiedMediaItemData | undefined
   /** 进度更新回调（可选） */
   onProgress?: (progress: number) => void
+  /** 导出帧率（可选，默认 30fps，仅视频有效） */
+  frameRate?: number
 }
 
 /**
  * 导出管理器类
  * 封装所有导出逻辑
  */
-class ExportManager {
+export class ExportManager {
   // Canvas 相关
   private canvas: HTMLCanvasElement | null = null
   private ctx: CanvasRenderingContext2D | null = null
@@ -319,19 +325,21 @@ class ExportManager {
         maxEndTimeIn30fps = item.timeRange.timelineEndTime
       }
     }
-    
+
     // 如果目标帧率就是30fps，直接返回，无需转换
     if (this.frameRate === RENDERER_FPS) {
       console.log(`📊 帧数计算: ${maxEndTimeIn30fps}帧@${this.frameRate}fps (无需转换)`)
       return maxEndTimeIn30fps
     }
-    
+
     // 转换：30fps帧数 → 时长 → 目标帧率帧数
     const durationInSeconds = maxEndTimeIn30fps / RENDERER_FPS
     const totalFrames = Math.ceil(durationInSeconds * this.frameRate)
-    
-    console.log(`📊 帧数转换: ${maxEndTimeIn30fps}帧@30fps → ${durationInSeconds}秒 → ${totalFrames}帧@${this.frameRate}fps`)
-    
+
+    console.log(
+      `📊 帧数转换: ${maxEndTimeIn30fps}帧@30fps → ${durationInSeconds}秒 → ${totalFrames}帧@${this.frameRate}fps`,
+    )
+
     return totalFrames
   }
 
@@ -422,7 +430,7 @@ class ExportManager {
         const framesPerSecond = this.frameRate
         const bufferFrames = Math.round(framesPerSecond * 2) // 2秒缓冲
         const triggerInterval = Math.round(framesPerSecond) // 每秒触发一次
-        
+
         if (frameN >= bufferFrames - 1 && (frameN + 1 - bufferFrames) % triggerInterval === 0) {
           const segmentStartTime = Math.floor((frameN - bufferFrames + 1) / triggerInterval) * 1.0
           await this.audioSegmentRenderer!.renderFixedSegment(segmentStartTime)
@@ -446,10 +454,12 @@ class ExportManager {
       // 处理最后部分
       const bufferFrames = Math.round(this.frameRate * 2)
       const triggerInterval = Math.round(this.frameRate)
-      
+
       if (lastTriggerFrame >= 0 && totalFrames > lastTriggerFrame + 1) {
         // 有触发过音频渲染，且还有剩余帧
-        const lastRenderedSegmentIndex = Math.floor((lastTriggerFrame - bufferFrames + 1) / triggerInterval)
+        const lastRenderedSegmentIndex = Math.floor(
+          (lastTriggerFrame - bufferFrames + 1) / triggerInterval,
+        )
         const finalSegmentStartTime = (lastRenderedSegmentIndex + 1) * 1.0
         const totalDuration = totalFrames / this.frameRate
         await this.audioSegmentRenderer!.finalize(finalSegmentStartTime, totalDuration)
@@ -591,15 +601,245 @@ export async function exportProject(options: ExportProjectOptions): Promise<void
 }
 
 /**
+ * 导出图片媒体项目为 PNG Blob
+ */
+async function exportImageMediaItem(
+  mediaItem: UnifiedMediaItemData,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  // 1. 验证 imageClip 存在
+  const imageClip = mediaItem.runtime.bunny?.imageClip
+  if (!imageClip) {
+    throw new Error('媒体项目未就绪：imageClip 不存在')
+  }
+
+  onProgress?.(20)
+
+  // 2. 创建临时 Canvas（仅用于格式转换）
+  const canvas = document.createElement('canvas')
+  canvas.width = imageClip.width
+  canvas.height = imageClip.height
+  const ctx = canvas.getContext('2d')!
+
+  // 3. 绘制图片（无任何变换，保持原样）
+  ctx.drawImage(imageClip, 0, 0)
+
+  onProgress?.(60)
+
+  // 4. 转换为 PNG Blob
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob)
+      } else {
+        reject(new Error('图片转换失败'))
+      }
+    }, 'image/png')
+  })
+
+  onProgress?.(100)
+
+  return blob
+}
+
+/**
+ * 导出视频媒体项目为 MP4 Blob
+ */
+async function exportVideoMediaItem(
+  mediaItem: UnifiedMediaItemData,
+  onProgress?: (progress: number) => void,
+  frameRate?: number,
+): Promise<Blob> {
+  // 1. 验证媒体项目状态
+  if (mediaItem.mediaStatus !== 'ready') {
+    throw new Error('媒体项目未就绪')
+  }
+
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+  await bunnyMedia.ready
+
+  // 2. 创建临时时间轴项目（覆盖整个媒体时长）
+  const durationInFrames = Number(bunnyMedia.durationN)
+  const tempTimelineItem: UnifiedTimelineItemData<'video'> = {
+    id: 'temp-export-item',
+    mediaType: 'video',
+    mediaItemId: mediaItem.id,
+    trackId: 'temp-track',
+    timelineStatus: 'ready',
+    timeRange: {
+      timelineStartTime: 0,
+      timelineEndTime: durationInFrames,
+      clipStartTime: 0,
+      clipEndTime: durationInFrames,
+    },
+    config: {
+      // VideoMediaConfig = VisualProps & AudioProps
+      x: 0,
+      y: 0,
+      width: bunnyMedia.width,
+      height: bunnyMedia.height,
+      rotation: 0,
+      opacity: 1,
+      proportionalScale: true,
+      volume: 1,
+      isMuted: false,
+    },
+    runtime: {},
+  }
+
+  // 3. 构造 ExportProjectOptions
+  const exportOptions: ExportProjectOptions = {
+    videoWidth: bunnyMedia.width,
+    videoHeight: bunnyMedia.height,
+    projectName: 'temp-export',
+    timelineItems: [tempTimelineItem],
+    tracks: [{ id: 'temp-track', isVisible: true, isMuted: false }],
+    getMediaItem: (id: string) => (id === mediaItem.id ? mediaItem : undefined),
+    onProgress: onProgress ? (stage, progress) => onProgress(progress) : undefined,
+    videoQuality: QUALITY_MEDIUM,
+    audioQuality: QUALITY_MEDIUM,
+    frameRate: frameRate,
+  }
+
+  // 4. 使用 ExportManager 导出
+  const manager = new ExportManager(exportOptions)
+  const videoData = await manager.export()
+
+  // 5. 返回 Blob
+  return new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
+}
+
+/**
  * 导出单个媒体项目为 Blob（使用原始尺寸）
  */
 export async function exportMediaItem(options: ExportMediaItemOptions): Promise<Blob> {
-  throw new Error('TODO: 单个媒体项目导出功能待实现')
+  const { mediaItem, onProgress, frameRate } = options
+
+  // 1. 类型检查
+  if (mediaItem.mediaType === 'image') {
+    return await exportImageMediaItem(mediaItem, onProgress)
+  }
+
+  if (mediaItem.mediaType === 'video') {
+    return await exportVideoMediaItem(mediaItem, onProgress, frameRate)
+  }
+
+  throw new Error(`不支持导出 ${mediaItem.mediaType} 类型的媒体项目`)
+}
+
+/**
+ * 导出图片时间轴项目为 PNG Blob
+ */
+async function exportImageTimelineItem(
+  timelineItem: UnifiedTimelineItemData,
+  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  // 1. 获取媒体项目
+  const mediaItem = getMediaItem(timelineItem.mediaItemId)
+  if (!mediaItem) {
+    throw new Error(`找不到媒体项目: ${timelineItem.mediaItemId}`)
+  }
+
+  // 2. 直接调用 exportImageMediaItem
+  return await exportImageMediaItem(mediaItem, onProgress)
+}
+
+/**
+ * 导出视频时间轴项目为 MP4 Blob
+ */
+async function exportVideoTimelineItem(
+  timelineItem: UnifiedTimelineItemData,
+  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+  onProgress?: (progress: number) => void,
+  frameRate?: number,
+): Promise<Blob> {
+  // 1. 获取媒体项目
+  const mediaItem = getMediaItem(timelineItem.mediaItemId)
+  if (!mediaItem) {
+    throw new Error(`找不到媒体项目: ${timelineItem.mediaItemId}`)
+  }
+
+  // 2. 验证媒体项目状态
+  if (mediaItem.mediaStatus !== 'ready') {
+    throw new Error('媒体项目未就绪')
+  }
+
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+  await bunnyMedia.ready
+
+  // 3. 创建新的时间轴项目（只保留时间范围，重置其他配置）
+  const cleanTimelineItem: UnifiedTimelineItemData<'video'> = {
+    id: 'temp-export-item',
+    mediaType: 'video',
+    mediaItemId: mediaItem.id,
+    trackId: 'temp-track',
+    timelineStatus: 'ready',
+    timeRange: {
+      // 保留原始时间范围
+      timelineStartTime: 0,
+      timelineEndTime:
+        timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime,
+      clipStartTime: timelineItem.timeRange.clipStartTime,
+      clipEndTime: timelineItem.timeRange.clipEndTime,
+    },
+    config: {
+      // 重置为默认配置，不应用任何效果
+      x: 0,
+      y: 0,
+      width: bunnyMedia.width,
+      height: bunnyMedia.height,
+      rotation: 0,
+      opacity: 1,
+      proportionalScale: true,
+      volume: 1,
+      isMuted: false,
+    },
+    runtime: {},
+  }
+
+  // 4. 构造 ExportProjectOptions
+  const exportOptions: ExportProjectOptions = {
+    videoWidth: bunnyMedia.width,
+    videoHeight: bunnyMedia.height,
+    projectName: 'temp-export',
+    timelineItems: [cleanTimelineItem],
+    tracks: [{ id: 'temp-track', isVisible: true, isMuted: false }],
+    getMediaItem: (id: string) => (id === mediaItem.id ? mediaItem : undefined),
+    onProgress: onProgress ? (stage, progress) => onProgress(progress) : undefined,
+    videoQuality: QUALITY_MEDIUM,
+    audioQuality: QUALITY_MEDIUM,
+    frameRate: frameRate,
+  }
+
+  // 5. 使用 ExportManager 导出
+  const manager = new ExportManager(exportOptions)
+  const videoData = await manager.export()
+
+  // 6. 返回 Blob
+  return new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
 }
 
 /**
  * 导出单个时间轴项目为 Blob（使用原始尺寸）
  */
 export async function exportTimelineItem(options: ExportTimelineItemOptions): Promise<Blob> {
-  throw new Error('TODO: 单个时间轴项目导出功能待实现')
+  const { timelineItem, onProgress, getMediaItem, frameRate } = options
+
+  // 1. 类型检查
+  if (timelineItem.mediaType === 'image') {
+    return await exportImageTimelineItem(timelineItem, getMediaItem, onProgress)
+  }
+
+  if (timelineItem.mediaType === 'video') {
+    return await exportVideoTimelineItem(timelineItem, getMediaItem, onProgress, frameRate)
+  }
+
+  throw new Error(`不支持导出 ${timelineItem.mediaType} 类型的时间轴项目`)
 }

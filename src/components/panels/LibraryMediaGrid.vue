@@ -1682,7 +1682,7 @@ function getFileExtension(mediaType: string): string {
     case 'video':
       return 'mp4'
     case 'image':
-      return 'jpg'
+      return 'png'
     default:
       return 'bin'
   }
