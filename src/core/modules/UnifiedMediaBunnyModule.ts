@@ -31,7 +31,7 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem/types'
-import type { AudioSample } from 'mediabunny'
+import type { WrappedAudioBuffer } from 'mediabunny'
 import { applyAnimationToConfig } from '@/core/utils/animationInterpolation'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import {
@@ -385,12 +385,12 @@ export function createUnifiedMediaBunnyModule(
   /**
    * 调度音频缓冲
    */
-  function scheduleAudioBuffers(audioSamples: AudioSample[], rate: number, volume: number): void {
+  function scheduleAudioBuffers(wrappedBuffers: WrappedAudioBuffer[], rate: number, volume: number): void {
     if (!mAudioContext || !mGainNode) return
 
-    for (const sample of audioSamples) {
+    for (const wrapped of wrappedBuffers) {
       const node = mAudioContext.createBufferSource()
-      node.buffer = sample.toAudioBuffer()
+      node.buffer = wrapped.buffer  // 直接使用 AudioBuffer，无需转换
       node.playbackRate.value = rate
 
       // 为每个音频节点创建独立的增益节点以控制音量
@@ -399,7 +399,7 @@ export function createUnifiedMediaBunnyModule(
       node.connect(gainNode)
       gainNode.connect(mGainNode)
 
-      const startTimestamp = mAudioContextStartTime! + sample.timestamp - mPlaybackTimeAtStart
+      const startTimestamp = mAudioContextStartTime! + wrapped.timestamp - mPlaybackTimeAtStart
       const curTime = mAudioContext.currentTime
       if (startTimestamp >= curTime) {
         node.start(startTimestamp)
@@ -411,7 +411,7 @@ export function createUnifiedMediaBunnyModule(
         mQueuedAudioNodes.delete(node)
       }
 
-      sample.close()
+      // ✅ 不需要 close()，AudioBuffer 由浏览器自动管理
     }
   }
 

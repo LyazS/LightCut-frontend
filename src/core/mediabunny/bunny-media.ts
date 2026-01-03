@@ -2,14 +2,14 @@ import {
   Input,
   BlobSource,
   VideoSampleSink,
-  AudioSampleSink,
+  AudioBufferSink,
   ALL_FORMATS,
   InputVideoTrack,
   InputAudioTrack,
   type MetadataTags,
   VideoSample,
-  AudioSample,
   type AnyIterable,
+  type WrappedAudioBuffer,
 } from 'mediabunny'
 import { RENDERER_FPS } from './constant'
 /**
@@ -20,7 +20,7 @@ export class BunnyMedia {
   private videoTrack: InputVideoTrack | null = null
   private audioTrack: InputAudioTrack | null = null
   private videoSink: VideoSampleSink | null = null
-  private audioSink: AudioSampleSink | null = null
+  private audioSink: AudioBufferSink | null = null
   // 视频相关属性
 
   // 公开属性
@@ -80,7 +80,7 @@ export class BunnyMedia {
           channels: this.audioTrack.numberOfChannels,
           sampleRate: this.audioTrack.sampleRate,
         })
-        this.audioSink = new AudioSampleSink(this.audioTrack)
+        this.audioSink = new AudioBufferSink(this.audioTrack)
       }
       if (!this.videoSink && !this.audioSink) {
         throw new Error('该文件没有视频和音频轨道')
@@ -125,14 +125,14 @@ export class BunnyMedia {
     return this.videoSink.samples.bind(this.videoSink)
   }
 
-  audioSamplesFunc():
+  audioBuffersFunc():
     | ((
         startTimestamp?: number | undefined,
         endTimestamp?: number | undefined,
-      ) => AsyncGenerator<AudioSample, void, unknown>)
+      ) => AsyncGenerator<WrappedAudioBuffer, void, unknown>)
     | null {
     if (!this.audioSink) return null
-    return this.audioSink.samples.bind(this.audioSink)
+    return this.audioSink.buffers.bind(this.audioSink)
   }
 
   /**

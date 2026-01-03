@@ -1,19 +1,19 @@
-import type { AudioSample } from 'mediabunny'
+import type { WrappedAudioBuffer } from 'mediabunny'
 
 /**
- * 带音量信息的音频样本
+ * 带音量信息的音频缓冲
  */
-interface AudioSampleWithVolume {
-  sample: AudioSample
+interface WrappedAudioBufferWithVolume {
+  wrapped: WrappedAudioBuffer
   volume: number
 }
 
 /**
  * 单个 Clip 的音频缓冲管理器
- * 负责收集、管理和清理单个 clip 的音频样本
+ * 负责收集、管理和清理单个 clip 的音频缓冲
  */
 export class PerClipAudioBuffer {
-  private samples: AudioSampleWithVolume[] = []
+  private buffers: WrappedAudioBufferWithVolume[] = []
   private earliestTimestamp: number = Infinity
   private latestTimestamp: number = -Infinity
   private clipId: string
@@ -23,22 +23,22 @@ export class PerClipAudioBuffer {
   }
 
   /**
-   * 添加音频样本
-   * @param sample 音频样本
+   * 添加音频缓冲
+   * @param wrapped 包装的音频缓冲
    * @param volume 音量值 (0-1)，默认为 1.0
    */
-  addSample(sample: AudioSample, volume: number = 1.0): void {
-    this.samples.push({ sample, volume })
+  addBuffer(wrapped: WrappedAudioBuffer, volume: number = 1.0): void {
+    this.buffers.push({ wrapped, volume })
 
     // 更新时间戳范围
-    const sampleStart = sample.timestamp
-    const sampleEnd = sample.timestamp + sample.duration
+    const bufferStart = wrapped.timestamp
+    const bufferEnd = wrapped.timestamp + wrapped.duration
 
-    if (sampleStart < this.earliestTimestamp) {
-      this.earliestTimestamp = sampleStart
+    if (bufferStart < this.earliestTimestamp) {
+      this.earliestTimestamp = bufferStart
     }
-    if (sampleEnd > this.latestTimestamp) {
-      this.latestTimestamp = sampleEnd
+    if (bufferEnd > this.latestTimestamp) {
+      this.latestTimestamp = bufferEnd
     }
   }
 
@@ -47,7 +47,7 @@ export class PerClipAudioBuffer {
    * @returns 缓冲时长
    */
   getBufferedDuration(): number {
-    if (this.samples.length === 0) {
+    if (this.buffers.length === 0) {
       return 0
     }
     return this.latestTimestamp - this.earliestTimestamp
@@ -70,57 +70,55 @@ export class PerClipAudioBuffer {
   }
 
   /**
-   * 清理指定时间点之前的样本
+   * 清理指定时间点之前的缓冲
    * @param timestamp 时间戳
    */
-  clearSamplesBeforeTimestamp(timestamp: number): void {
-    // 过滤出需要保留的样本（结束时间 > timestamp）
-    const remainingSamples: AudioSampleWithVolume[] = []
+  clearBuffersBeforeTimestamp(timestamp: number): void {
+    // 过滤出需要保留的缓冲（结束时间 > timestamp）
+    const remainingBuffers: WrappedAudioBufferWithVolume[] = []
     
-    for (const sampleWithVolume of this.samples) {
-      const sampleEnd = sampleWithVolume.sample.timestamp + sampleWithVolume.sample.duration
-      if (sampleEnd > timestamp) {
-        remainingSamples.push(sampleWithVolume)
-      } else {
-        // 释放不再需要的样本
-        sampleWithVolume.sample.close()
+    for (const bufferWithVolume of this.buffers) {
+      const bufferEnd = bufferWithVolume.wrapped.timestamp + bufferWithVolume.wrapped.duration
+      if (bufferEnd > timestamp) {
+        remainingBuffers.push(bufferWithVolume)
       }
+      // ✅ 不需要 close()，AudioBuffer 由浏览器自动管理
     }
 
-    this.samples = remainingSamples
+    this.buffers = remainingBuffers
 
     // 重新计算时间戳范围
-    if (this.samples.length === 0) {
+    if (this.buffers.length === 0) {
       this.earliestTimestamp = Infinity
       this.latestTimestamp = -Infinity
     } else {
       this.earliestTimestamp = Infinity
       this.latestTimestamp = -Infinity
-      for (const sampleWithVolume of this.samples) {
-        const sampleStart = sampleWithVolume.sample.timestamp
-        const sampleEnd = sampleWithVolume.sample.timestamp + sampleWithVolume.sample.duration
-        if (sampleStart < this.earliestTimestamp) {
-          this.earliestTimestamp = sampleStart
+      for (const bufferWithVolume of this.buffers) {
+        const bufferStart = bufferWithVolume.wrapped.timestamp
+        const bufferEnd = bufferWithVolume.wrapped.timestamp + bufferWithVolume.wrapped.duration
+        if (bufferStart < this.earliestTimestamp) {
+          this.earliestTimestamp = bufferStart
         }
-        if (sampleEnd > this.latestTimestamp) {
-          this.latestTimestamp = sampleEnd
+        if (bufferEnd > this.latestTimestamp) {
+          this.latestTimestamp = bufferEnd
         }
       }
     }
   }
 
   /**
-   * 获取指定时间范围内的样本
+   * 获取指定时间范围内的缓冲
    * @param startTime 起始时间
    * @param endTime 结束时间
-   * @returns 带音量信息的样本数组
+   * @returns 带音量信息的缓冲数组
    */
-  getSamplesInRange(startTime: number, endTime: number): AudioSampleWithVolume[] {
-    return this.samples.filter((sampleWithVolume) => {
-      const sampleStart = sampleWithVolume.sample.timestamp
-      const sampleEnd = sampleWithVolume.sample.timestamp + sampleWithVolume.sample.duration
-      // 样本与时间范围有重叠
-      return sampleEnd > startTime && sampleStart < endTime
+  getBuffersInRange(startTime: number, endTime: number): WrappedAudioBufferWithVolume[] {
+    return this.buffers.filter((bufferWithVolume) => {
+      const bufferStart = bufferWithVolume.wrapped.timestamp
+      const bufferEnd = bufferWithVolume.wrapped.timestamp + bufferWithVolume.wrapped.duration
+      // 缓冲与时间范围有重叠
+      return bufferEnd > startTime && bufferStart < endTime
     })
   }
 
@@ -129,7 +127,7 @@ export class PerClipAudioBuffer {
    * @returns 是否为空
    */
   isEmpty(): boolean {
-    return this.samples.length === 0
+    return this.buffers.length === 0
   }
 
   /**
@@ -141,21 +139,19 @@ export class PerClipAudioBuffer {
   }
 
   /**
-   * 获取样本数量
-   * @returns 样本数量
+   * 获取缓冲数量
+   * @returns 缓冲数量
    */
-  getSampleCount(): number {
-    return this.samples.length
+  getBufferCount(): number {
+    return this.buffers.length
   }
 
   /**
-   * 清空所有样本并释放资源
+   * 清空所有缓冲
    */
   clear(): void {
-    for (const sampleWithVolume of this.samples) {
-      sampleWithVolume.sample.close()
-    }
-    this.samples = []
+    // ✅ 不需要 close()，AudioBuffer 由浏览器自动管理
+    this.buffers = []
     this.earliestTimestamp = Infinity
     this.latestTimestamp = -Infinity
   }

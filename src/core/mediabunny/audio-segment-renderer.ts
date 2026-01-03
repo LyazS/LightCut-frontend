@@ -1,5 +1,5 @@
+import type { WrappedAudioBuffer, AudioSampleSource } from 'mediabunny'
 import { AudioSample } from 'mediabunny'
-import type { AudioSampleSource } from 'mediabunny'
 import type { IClip } from './IClip'
 import { PerClipAudioBuffer } from './per-clip-audio-buffer'
 import { AUDIO_DEFAULT_SAMPLE_RATE } from './constant'
@@ -46,21 +46,21 @@ export class AudioSegmentRenderer {
   }
 
   /**
-   * 收集音频样本（仅收集，不触发渲染）
-   * @param audioSamples 音频样本数组
+   * 收集音频缓冲（仅收集，不触发渲染）
+   * @param wrappedBuffers 包装的音频缓冲数组
    * @param itemId TimelineItem 的 ID
    * @param volume 音量值 (0-1)，默认为 1.0
    */
-  async collectAudioSamples(audioSamples: AudioSample[], itemId: string, volume: number = 1.0): Promise<void> {
+  async collectAudioBuffers(wrappedBuffers: WrappedAudioBuffer[], itemId: string, volume: number = 1.0): Promise<void> {
     const buffer = this.clipBuffers.get(itemId)
     if (!buffer) {
       console.warn(`未找到 item ${itemId} 的缓冲管理器`)
       return
     }
 
-    // 只负责添加样本到缓冲，同时传递音量信息
-    for (const sample of audioSamples) {
-      buffer.addSample(sample, volume)
+    // 只负责添加缓冲，同时传递音量信息
+    for (const wrapped of wrappedBuffers) {
+      buffer.addBuffer(wrapped, volume)
     }
   }
 
@@ -89,16 +89,16 @@ export class AudioSegmentRenderer {
     for (const [itemId, buffer] of this.clipBuffers.entries()) {
       if (buffer.isEmpty()) continue
 
-      // 获取该时间段内的样本
-      const samples = buffer.getSamplesInRange(
+      // 获取该时间段内的缓冲
+      const buffers = buffer.getBuffersInRange(
         segmentStartTime,
         segmentEndTime + this.overlapDuration,
       )
 
-      // 添加样本到 OfflineAudioContext
-      for (const sampleWithVolume of samples) {
+      // 添加缓冲到 OfflineAudioContext
+      for (const bufferWithVolume of buffers) {
         const sourceNode = offlineContext.createBufferSource()
-        sourceNode.buffer = sampleWithVolume.sample.toAudioBuffer()
+        sourceNode.buffer = bufferWithVolume.wrapped.buffer  // 直接使用 AudioBuffer
 
         // 设置播放速率
         const clip = this.clips.get(itemId)
@@ -108,14 +108,14 @@ export class AudioSegmentRenderer {
 
         // 创建音量控制节点
         const gainNode = offlineContext.createGain()
-        gainNode.gain.value = sampleWithVolume.volume
+        gainNode.gain.value = bufferWithVolume.volume
 
         // 连接音频节点：sourceNode -> gainNode -> destination
         sourceNode.connect(gainNode)
         gainNode.connect(offlineContext.destination)
 
         // 计算在 context 中的起始时间
-        const contextStartTime = sampleWithVolume.sample.timestamp - segmentStartTime
+        const contextStartTime = bufferWithVolume.wrapped.timestamp - segmentStartTime
 
         if (contextStartTime >= 0) {
           sourceNode.start(contextStartTime)
@@ -150,10 +150,10 @@ export class AudioSegmentRenderer {
       sample.close()
     }
 
-    // 清理已处理的样本
+    // 清理已处理的缓冲
     const clearTimestamp = segmentEndTime - this.overlapDuration
     for (const buffer of this.clipBuffers.values()) {
-      buffer.clearSamplesBeforeTimestamp(clearTimestamp)
+      buffer.clearBuffersBeforeTimestamp(clearTimestamp)
     }
   }
 

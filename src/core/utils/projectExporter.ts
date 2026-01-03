@@ -15,16 +15,16 @@ import {
   QUALITY_MEDIUM,
   QUALITY_HIGH,
   QUALITY_VERY_HIGH,
-  type AudioSample,
   type Quality,
+  type WrappedAudioBuffer,
 } from 'mediabunny'
 
 /**
- * 带音量信息的音频样本
+ * 带音量信息的音频缓冲
  */
-export interface AudioSampleWithVolume {
-  /** 音频样本 */
-  samples: AudioSample[]
+export interface AudioBufferWithVolume {
+  /** 音频缓冲数组 */
+  buffers: WrappedAudioBuffer[]
   /** 对应的音量值 (0-1) */
   volume: number
 }
@@ -196,8 +196,8 @@ class ExportManager {
    */
   private async renderFrameAndCollectAudio(
     currentTimeN: number,
-  ): Promise<Map<string, AudioSampleWithVolume>> {
-    const audioSamplesMap = new Map<string, AudioSampleWithVolume>()
+  ): Promise<Map<string, AudioBufferWithVolume>> {
+    const audioBuffersMap = new Map<string, AudioBufferWithVolume>()
 
     // 🔴 关键转换：目标帧率 → 30fps
     const frameIn30fps = Math.round(currentTimeN * (RENDERER_FPS / this.frameRate))
@@ -249,12 +249,12 @@ class ExportManager {
               })
             }
 
-            // 收集音频样本（使用 item.id 作为键）
+            // 收集音频缓冲（使用 item.id 作为键）
             if (shouldRequestAudio && audio && audio.length > 0) {
               // 获取当前帧的音量值（已经通过 applyAnimationToConfig 应用了动画插值）
               const currentVolume = item.config.volume ?? 1.0
-              audioSamplesMap.set(item.id, {
-                samples: audio,
+              audioBuffersMap.set(item.id, {
+                buffers: audio,
                 volume: currentVolume,
               })
             }
@@ -287,7 +287,7 @@ class ExportManager {
 
     renderToCanvas(renderContext, this.clonedTimelineItems, frameIn30fps)
 
-    return audioSamplesMap
+    return audioBuffersMap
   }
 
   /**
@@ -318,6 +318,12 @@ class ExportManager {
       if (item.timeRange.timelineEndTime > maxEndTimeIn30fps) {
         maxEndTimeIn30fps = item.timeRange.timelineEndTime
       }
+    }
+    
+    // 如果目标帧率就是30fps，直接返回，无需转换
+    if (this.frameRate === RENDERER_FPS) {
+      console.log(`📊 帧数计算: ${maxEndTimeIn30fps}帧@${this.frameRate}fps (无需转换)`)
+      return maxEndTimeIn30fps
     }
     
     // 转换：30fps帧数 → 时长 → 目标帧率帧数
@@ -397,18 +403,18 @@ class ExportManager {
         }
 
         // 渲染当前帧并收集音频
-        const audioSamplesMap = await this.renderFrameAndCollectAudio(frameN)
+        const audioBuffersMap = await this.renderFrameAndCollectAudio(frameN)
 
         // 添加视频帧
         const timestamp = frameN / this.frameRate
         await this.canvasSource.add(timestamp, frameDuration)
 
-        // 收集音频样本到缓冲区
-        for (const [itemId, audioSampleWithVolume] of audioSamplesMap.entries()) {
-          await this.audioSegmentRenderer!.collectAudioSamples(
-            audioSampleWithVolume.samples,
+        // 收集音频缓冲到缓冲区
+        for (const [itemId, audioBufferWithVolume] of audioBuffersMap.entries()) {
+          await this.audioSegmentRenderer!.collectAudioBuffers(
+            audioBufferWithVolume.buffers,
             itemId,
-            audioSampleWithVolume.volume,
+            audioBufferWithVolume.volume,
           )
         }
 

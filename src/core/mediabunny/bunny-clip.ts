@@ -1,7 +1,7 @@
 import {
   VideoSample,
-  AudioSample,
   type AnyIterable,
+  type WrappedAudioBuffer,
 } from 'mediabunny'
 import {
   RENDERER_FPS,
@@ -31,13 +31,13 @@ export class BunnyClip implements IClip {
   private nextFrameN: VideoSample | null = null
 
   // 音频相关属性
-  private audioSampleFunc:
+  private audioBufferFunc:
     | ((
         startTimestamp?: number | undefined,
         endTimestamp?: number | undefined,
-      ) => AsyncGenerator<AudioSample, void, unknown>)
+      ) => AsyncGenerator<WrappedAudioBuffer, void, unknown>)
     | null = null
-  private audioIterator: AsyncGenerator<AudioSample, void, unknown> | null = null
+  private audioIterator: AsyncGenerator<WrappedAudioBuffer, void, unknown> | null = null
   private audioInTime: number = 0
 
   // 公开属性
@@ -57,7 +57,7 @@ export class BunnyClip implements IClip {
     this.durationN = bunnyMedia.durationN
     this.videoSampleAtTSFunc = bunnyMedia.videoSamplesAtTimestamps()
     this.videoGetSampleFunc = bunnyMedia.videoGetSample()
-    this.audioSampleFunc = bunnyMedia.audioSamplesFunc()
+    this.audioBufferFunc = bunnyMedia.audioBuffersFunc()
     this.setTimeRange({
       clipStart: 0n,
       clipEnd: this.durationN,
@@ -164,12 +164,12 @@ export class BunnyClip implements IClip {
    * @param startTime 迭代器起始时间，默认从0开始
    */
   private async ensureAudioIterator(startTime: number = 0): Promise<void> {
-    if (!this.audioIterator && this.audioSampleFunc) {
-      this.audioIterator = this.audioSampleFunc(startTime)
+    if (!this.audioIterator && this.audioBufferFunc) {
+      this.audioIterator = this.audioBufferFunc(startTime)
     }
   }
 
-  private async findAudioBuffersN(timeN: bigint, headFrame: bigint): Promise<AudioSample[]> {
+  private async findAudioBuffersN(timeN: bigint, headFrame: bigint): Promise<WrappedAudioBuffer[]> {
     // 超出时间范围直接返回 null，这样可以确保在范围之内
     if (timeN < this.timeRange.timelineStart || timeN > this.timeRange.timelineEnd) {
       return []
@@ -198,27 +198,32 @@ export class BunnyClip implements IClip {
 
     this.audioInTime = currentTime
     if (!this.audioIterator) return []
-    const result: AudioSample[] = []
+    const result: WrappedAudioBuffer[] = []
     while (1) {
       const result_buffer = await this.audioIterator.next()
       if (result_buffer.done || !result_buffer.value) {
         break
       }
-      const audioBuffer = result_buffer.value
-      result.push(audioBuffer)
-      if (audioBuffer.timestamp + audioBuffer.duration >= currentTime) {
+      const wrappedBuffer = result_buffer.value
+      result.push(wrappedBuffer)
+      if (wrappedBuffer.timestamp + wrappedBuffer.duration >= currentTime) {
         break
       }
     }
     const rate = this.getPlaybackRate()
-    const processedBuffers: AudioSample[] = []
+    const processedBuffers: WrappedAudioBuffer[] = []
 
-    for (const buf of result) {
-      buf.setTimestamp(
-        (buf.timestamp - clipStart / RENDERER_FPS) / rate +
-          Number(this.timeRange.timelineStart) / RENDERER_FPS,
-      )
-      processedBuffers.push(buf)
+    for (const wrapped of result) {
+      // 创建新的 WrappedAudioBuffer 对象，更新时间戳
+      const newTimestamp =
+        (wrapped.timestamp - clipStart / RENDERER_FPS) / rate +
+        Number(this.timeRange.timelineStart) / RENDERER_FPS
+      
+      processedBuffers.push({
+        buffer: wrapped.buffer,
+        timestamp: newTimestamp,
+        duration: wrapped.duration
+      })
     }
 
     return processedBuffers
@@ -307,7 +312,7 @@ export class BunnyClip implements IClip {
     needVideo: boolean = true,
     audioHeadFrame?: bigint,
   ): Promise<{
-    audio: AudioSample[]
+    audio: WrappedAudioBuffer[]
     video: VideoSample | null
     state: 'success' | 'outofrange' | 'skip'
   }> {
@@ -330,7 +335,7 @@ export class BunnyClip implements IClip {
       if (audioHeadFrame === null || audioHeadFrame === undefined)
         audioHeadFrame = BigInt(Math.round(AUDIO_SCHEDULE_AHEAD * RENDERER_FPS))
       const [audio, video] = await Promise.all([
-        this.audioSampleFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
+        this.audioBufferFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
         this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
       ])
       return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
@@ -346,7 +351,7 @@ export class BunnyClip implements IClip {
    */
   async getSampleN(
     clipTimeN: bigint,
-  ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
+  ): Promise<{ audio: WrappedAudioBuffer[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
     if (clipTimeN < 0n || this.durationN < clipTimeN) {
       return this.tickInterceptor(clipTimeN, {
         audio: [],

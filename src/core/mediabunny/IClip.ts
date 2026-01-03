@@ -1,4 +1,4 @@
-import type { VideoSample, AudioSample } from 'mediabunny'
+import type { VideoSample, WrappedAudioBuffer } from 'mediabunny'
 import type { TimeRange } from './types'
 
 /**
@@ -53,10 +53,8 @@ export interface IClip {
    * @param timeN 时间点（帧数）
    * @returns 音视频数据和状态
    */
-  tickN(
-    timeN: bigint,
-  ): Promise<{
-    audio: AudioSample[]
+  tickN(timeN: bigint): Promise<{
+    audio: WrappedAudioBuffer[]
     video: VideoSample | null
     state: 'success' | 'outofrange' | 'skip'
   }>
