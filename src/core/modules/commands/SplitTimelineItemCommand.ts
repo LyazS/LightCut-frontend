@@ -28,6 +28,9 @@ import type {
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
+import type { GetAnimation } from '@/core/timelineitem/bunnytype'
+import { splitKeyframesAtPosition } from '@/core/utils/keyframePositionUtils'
+
 // ==================== 新架构工具导入 ====================
 
 import { TimelineItemFactory } from '@/core/timelineitem'
@@ -128,12 +131,60 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       timelineEndTime: timelineEndTimeFrames,
     }
 
+    // ==================== 新增：处理关键帧动画 ====================
+    let firstAnimation: GetAnimation<MediaType> | undefined
+    let secondAnimation: GetAnimation<MediaType> | undefined
+
+    if (this.originalTimelineItemData.animation && this.originalTimelineItemData.animation.keyframes.length > 0) {
+      console.log('🎬 [Split] 检测到关键帧动画，开始处理...')
+
+      // 计算切割位置的百分比（相对于原始 clip）
+      const splitPositionPercentage = relativeRatio
+
+      // 计算新的时长
+      const firstDurationFrames = splitTimeFrames - timelineStartTimeFrames
+      const secondDurationFrames = timelineEndTimeFrames - splitTimeFrames
+
+      console.log('🎬 [Split] 关键帧切割参数:', {
+        splitPositionPercentage,
+        originalDuration: clipDurationFrames,
+        firstDuration: firstDurationFrames,
+        secondDuration: secondDurationFrames,
+        originalKeyframeCount: this.originalTimelineItemData.animation.keyframes.length,
+      })
+
+      // 切割关键帧
+      const { firstKeyframes, secondKeyframes, splitKeyframe } = splitKeyframesAtPosition(
+        this.originalTimelineItemData.animation.keyframes,
+        splitPositionPercentage,
+        clipDurationFrames,
+        firstDurationFrames,
+        secondDurationFrames
+      )
+
+      console.log('🎬 [Split] 关键帧切割结果:', {
+        firstKeyframeCount: firstKeyframes.length,
+        secondKeyframeCount: secondKeyframes.length,
+        hasSplitKeyframe: !!splitKeyframe,
+      })
+
+      // 创建动画配置 - 使用类型断言解决泛型类型问题
+      if (firstKeyframes.length > 0) {
+        firstAnimation = { keyframes: firstKeyframes as any }
+      }
+      if (secondKeyframes.length > 0) {
+        secondAnimation = { keyframes: secondKeyframes as any }
+      }
+    }
+    // ==================== 关键帧处理结束 ====================
+
     // 使用 TimelineItemFactory.rebuildForCmd 创建第一个分割片段
     const firstRebuildResult = await TimelineItemFactory.rebuildForCmd({
       originalTimelineItemData: {
         ...this.originalTimelineItemData,
         id: this.firstItemId,
         timeRange: firstTimeRange,
+        animation: firstAnimation, // 应用处理后的关键帧
       },
       getMediaItem: this.mediaModule.getMediaItem,
       logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems first',
@@ -167,6 +218,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         ...this.originalTimelineItemData,
         id: this.secondItemId,
         timeRange: secondTimeRange,
+        animation: secondAnimation, // 应用处理后的关键帧
       },
       getMediaItem: this.mediaModule.getMediaItem,
       logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems second',
