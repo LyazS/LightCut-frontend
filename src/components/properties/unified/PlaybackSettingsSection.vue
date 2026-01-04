@@ -147,6 +147,9 @@ const speedToNormalized = (speed: number) => {
 // 更新播放速度
 const updatePlaybackRate = async (newRate?: number) => {
   if (props.selectedTimelineItem && isVideoTimelineItem(props.selectedTimelineItem)) {
+    // 暂停播放
+    unifiedStore.pause()
+    
     const rate = newRate || playbackRate.value
     await unifiedStore.updateTimelineItemTransformWithHistory(props.selectedTimelineItem.id, {
       playbackRate: rate,
@@ -175,7 +178,48 @@ const handleTimecodeError = (errorMessage: string) => {
 
 // 更新目标时长
 const updateTargetDurationFrames = async (newDurationFrames: number) => {
-  throw new Error('TODO: 实现时长更新逻辑')
+  if (!props.selectedTimelineItem) {
+    console.warn('⚠️ 没有选中的时间轴项目')
+    return
+  }
+
+  // 验证新时长
+  if (newDurationFrames <= 0) {
+    unifiedStore.messageError(t('properties.errors.invalidDuration'))
+    return
+  }
+
+  const timeRange = props.selectedTimelineItem.timeRange
+  const currentDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
+
+  // 检查时长是否有变化
+  if (Math.abs(currentDurationFrames - newDurationFrames) < 1) {
+    console.log('⚠️ 时长没有变化，跳过更新')
+    return
+  }
+
+  // 暂停播放
+  unifiedStore.pause()
+
+  // 计算新的时间范围
+  const newTimeRange = {
+    timelineStartTime: timeRange.timelineStartTime,
+    timelineEndTime: timeRange.timelineStartTime + newDurationFrames,
+    clipStartTime: timeRange.clipStartTime,
+    clipEndTime: timeRange.clipEndTime,
+  }
+
+  try {
+    // 使用 resizeTimelineItemWithHistory 更新时长
+    await unifiedStore.resizeTimelineItemWithHistory(props.selectedTimelineItem.id, newTimeRange)
+    console.log('✅ 时长更新成功:', {
+      oldDuration: currentDurationFrames,
+      newDuration: newDurationFrames,
+    })
+  } catch (error) {
+    console.error('❌ 时长更新失败:', error)
+    unifiedStore.messageError(t('properties.errors.updateFailed'))
+  }
 }
 </script>
 
