@@ -8,11 +8,12 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/core'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { cleanupMediaItemSync } from '@/core/managers/media'
-import { useUnifiedStore } from '@/core/unifiedStore'
 import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedProjectModule } from '@/core/modules/UnifiedProjectModule'
+import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import { getDataSourceRegistry } from '@/core/datasource/registry'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 
@@ -426,22 +427,27 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    */
   async function cleanupRelatedTimelineItems(mediaItemId: string): Promise<void> {
     try {
-      // 获取统一存储实例
-      const unifiedStore = useUnifiedStore()
+      // 通过 registry 获取时间轴模块
+      const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+
+      if (!timelineModule) {
+        console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目清理')
+        return
+      }
 
       // 获取所有时间轴项目
-      const timelineItems = unifiedStore.timelineItems
+      const timelineItems = timelineModule.timelineItems.value
 
       // 找出使用该素材的所有时间轴项目
       const relatedTimelineItems = timelineItems.filter(
-        (item: any) => item.mediaItemId === mediaItemId,
+        (item: UnifiedTimelineItemData) => item.mediaItemId === mediaItemId,
       )
 
       // 清理每个相关的时间轴项目
-      relatedTimelineItems.forEach(async (timelineItem: any) => {
+      for (const timelineItem of relatedTimelineItems) {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
-        await unifiedStore.removeTimelineItem(timelineItem.id)
-      })
+        await timelineModule.removeTimelineItem(timelineItem.id)
+      }
 
       console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)
     } catch (error) {
