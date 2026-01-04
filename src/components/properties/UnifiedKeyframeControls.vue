@@ -45,14 +45,14 @@
       </HoverButton>
 
       <!-- 调试按钮 - 开发时使用 -->
-      <!-- <HoverButton
+      <HoverButton
         v-if="showDebugButton"
         @click="$emit('debug-keyframes')"
         class="debug-btn"
         :title="t('properties.keyframes.debugKeyframes')"
       >
         <span>{{ t('properties.keyframes.debugKeyframes') }}</span>
-      </HoverButton> -->
+      </HoverButton>
     </div>
   </div>
 </template>

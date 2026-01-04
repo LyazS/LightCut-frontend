@@ -89,43 +89,38 @@ export function createKeyframe(
   // 计算百分比位置
   const position = clampPercentage(frameToPercentage(relativeFrame, clipDurationFrames))
 
-  if (hasVisualProperties(item)) {
-    if (isVideoTimelineItem(item)) {
-      // hasVisualProperties 类型守卫已确保配置具有所需属性
-      const config = item.config
-      const keyframe = {
-        position,
-        cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
-        properties: {
-          x: config.x,
-          y: config.y,
-          width: config.width,
-          height: config.height,
-          rotation: config.rotation,
-          opacity: config.opacity,
-          volume: config.volume ?? 1,
-        },
-      } as AnimateKeyframe<'video'>
-      
-      return keyframe
-    } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
-      // hasVisualProperties 类型守卫已确保配置具有所需属性
-      const config = item.config
-      return {
-        position,
-        cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
-        properties: {
-          x: config.x,
-          y: config.y,
-          width: config.width,
-          height: config.height,
-          rotation: config.rotation,
-          opacity: config.opacity,
-        },
-      } as AnimateKeyframe<'image' | 'text'>
-    }
+  if (isVideoTimelineItem(item)) {
+    const config = item.config
+    const keyframe = {
+      position,
+      cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
+      properties: {
+        x: config.x,
+        y: config.y,
+        width: config.width,
+        height: config.height,
+        rotation: config.rotation,
+        opacity: config.opacity,
+        volume: config.volume ?? 1,
+      },
+    } as AnimateKeyframe<'video'>
+    
+    return keyframe
+  } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
+    const config = item.config
+    return {
+      position,
+      cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
+      properties: {
+        x: config.x,
+        y: config.y,
+        width: config.width,
+        height: config.height,
+        rotation: config.rotation,
+        opacity: config.opacity,
+      },
+    } as AnimateKeyframe<'image' | 'text'>
   } else if (isAudioTimelineItem(item)) {
-    // 音频类型 - hasAudioProperties 类型守卫已确保配置具有所需属性
     const config = item.config
     return {
       position,
