@@ -43,8 +43,24 @@ export type KeyframePropertiesMap = {
 }
 
 export interface AnimateKeyframe<T extends MediaType> {
-  /** 关键帧位置（相对于clip开始的帧数） */
-  framePosition: number
+  /**
+   * 关键帧位置（百分比，0-1 范围）
+   * 这是主存储，是真实数据源
+   * 0 = clip 开始
+   * 1 = clip 结束
+   * 0.5 = clip 中点
+   */
+  position: number
+  
+  /**
+   * 缓存的帧位置（相对于 clip 开始）
+   * 这是派生数据，用于快速查找和比较
+   * 在创建关键帧或 clip 时长变化时自动更新
+   *
+   * @internal 不应该直接修改此字段，应该通过修改 position 来更新
+   */
+  cachedFrame: number
+  
   /** 包含所有可动画属性的完整状态 */
   properties: KeyframePropertiesMap[T]
 }

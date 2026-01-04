@@ -51,7 +51,6 @@
         class="debug-btn"
         :title="t('properties.keyframes.debugKeyframes')"
       >
-        <RemixIcon name="delete-bin-line" size="sm" />
         <span>{{ t('properties.keyframes.debugKeyframes') }}</span>
       </HoverButton> -->
     </div>

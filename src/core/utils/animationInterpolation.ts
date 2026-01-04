@@ -1,12 +1,14 @@
 /**
  * 动画插值工具函数
  * 负责根据关键帧数据计算当前帧的属性值
+ * 使用百分比进行插值计算，提供更高精度
  */
 
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { AnimateKeyframe, KeyframePropertiesMap } from '@/core/timelineitem/bunnytype'
 import type { MediaType } from '@/core/mediaitem'
 import { absoluteFrameToRelativeFrame } from './unifiedKeyframeUtils'
+import { frameToPercentage } from './keyframePositionUtils'
 
 /**
  * 线性插值函数
@@ -21,27 +23,32 @@ function lerp(start: number, end: number, t: number): number {
 
 /**
  * 查找当前帧位置的前后关键帧
+ * ✅ 使用百分比比较，更精确
  * @param keyframes 关键帧数组
  * @param relativeFrame 相对帧位置
+ * @param clipDurationFrames clip 时长（帧数）
  * @returns 前后关键帧对象
  */
 function findSurroundingKeyframes<T extends MediaType>(
   keyframes: AnimateKeyframe<T>[],
-  relativeFrame: number
+  relativeFrame: number,
+  clipDurationFrames: number
 ): {
   before: AnimateKeyframe<T> | null
   after: AnimateKeyframe<T> | null
 } {
-  // 按位置排序（确保顺序正确）
-  const sorted = [...keyframes].sort((a, b) => a.framePosition - b.framePosition)
+  // 关键帧已按 position 排序
+  // ✅ 计算当前帧的百分比位置
+  const currentPercentage = frameToPercentage(relativeFrame, clipDurationFrames)
   
   let before: AnimateKeyframe<T> | null = null
   let after: AnimateKeyframe<T> | null = null
   
-  for (const kf of sorted) {
-    if (kf.framePosition <= relativeFrame) {
+  for (const kf of keyframes) {
+    // ✅ 使用百分比进行比较，更精确
+    if (kf.position <= currentPercentage) {
       before = kf
-    } else if (kf.framePosition > relativeFrame && !after) {
+    } else if (kf.position > currentPercentage && !after) {
       after = kf
       break
     }
@@ -52,17 +59,23 @@ function findSurroundingKeyframes<T extends MediaType>(
 
 /**
  * 计算插值属性值
+ * ✅ 使用百分比计算插值因子，更精确
  * @param before 前一个关键帧
  * @param after 后一个关键帧
  * @param relativeFrame 当前相对帧位置
+ * @param clipDurationFrames clip 时长（帧数）
  * @returns 插值后的属性值
  */
 function interpolateProperties<T extends MediaType>(
   before: AnimateKeyframe<T>,
   after: AnimateKeyframe<T>,
-  relativeFrame: number
+  relativeFrame: number,
+  clipDurationFrames: number
 ): Partial<KeyframePropertiesMap[T]> {
-  const t = (relativeFrame - before.framePosition) / (after.framePosition - before.framePosition)
+  // ✅ 核心改进：使用百分比计算插值因子，避免帧位置的舍入误差
+  const currentPercentage = frameToPercentage(relativeFrame, clipDurationFrames)
+  const t = (currentPercentage - before.position) / (after.position - before.position)
+  
   const result: any = {}
   
   // 遍历所有可动画属性
@@ -96,29 +109,34 @@ export function applyAnimationToConfig(
 ): void {
   // 1. 检查是否有动画
   if (!item.animation || item.animation.keyframes.length === 0) {
-    return // 无动画，直接返回
+    return
   }
   
   // 2. 检查是否在时间范围内
-  const isInTimeRange = 
+  const isInTimeRange =
     currentAbsoluteFrame >= item.timeRange.timelineStartTime &&
     currentAbsoluteFrame <= item.timeRange.timelineEndTime
   if (!isInTimeRange) {
-    return // 不在时间范围内，不需要计算
+    return
   }
   
-  // 3. 计算相对帧位置
+  // 3. 计算相对帧位置和 clip 时长
   const relativeFrame = absoluteFrameToRelativeFrame(currentAbsoluteFrame, item.timeRange)
+  const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
   
-  // 4. 查找前后关键帧
-  const { before, after } = findSurroundingKeyframes(item.animation.keyframes, relativeFrame)
+  // 4. 查找前后关键帧（✅ 传递 clipDurationFrames 用于百分比计算）
+  const { before, after } = findSurroundingKeyframes(
+    item.animation.keyframes,
+    relativeFrame,
+    clipDurationFrames
+  )
   
   // 5. 根据情况计算属性值
   let animatedProps: Partial<KeyframePropertiesMap[MediaType]>
   
   if (before && after) {
     // 情况1：在两个关键帧之间 - 进行插值
-    animatedProps = interpolateProperties(before, after, relativeFrame)
+    animatedProps = interpolateProperties(before, after, relativeFrame, clipDurationFrames)
   } else if (before && !after) {
     // 情况2：在最后一个关键帧之后 - 使用最后关键帧的值
     animatedProps = before.properties

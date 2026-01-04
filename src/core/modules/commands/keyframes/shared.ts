@@ -66,7 +66,8 @@ export async function applyKeyframeSnapshot(
     // 类型安全的动画配置恢复
     ;(item as any).animation = {
       keyframes: snapshot.animationConfig.keyframes.map((kf) => ({
-        framePosition: kf.framePosition,
+        position: kf.position,
+        cachedFrame: kf.cachedFrame,
         properties: { ...kf.properties },
       })),
     }

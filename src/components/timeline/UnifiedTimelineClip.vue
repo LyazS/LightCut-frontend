@@ -40,7 +40,7 @@
     <div v-if="hasKeyframes" class="keyframes-container">
       <div
         v-for="keyframe in visibleKeyframes"
-        :key="keyframe.framePosition"
+        :key="keyframe.cachedFrame"
         class="keyframe-marker"
         :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
         :title="t('timeline.clip.keyframeTooltip', { frame: keyframe.absoluteFrame })"
@@ -201,8 +201,8 @@ const visibleKeyframes = computed(() => {
 
   return keyframes
     .map((keyframe) => {
-      // 将相对帧数转换为绝对帧数
-      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
+      // ✅ 直接使用 cachedFrame
+      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.cachedFrame, timeRange)
 
       // 计算关键帧在整个时间轴上的像素位置（考虑缩放级别）
       const absolutePixelPosition = unifiedStore.frameToPixel(absoluteFrame, props.timelineWidth)
@@ -211,9 +211,10 @@ const visibleKeyframes = computed(() => {
       const relativePixelPosition = absolutePixelPosition - clipLeft
 
       return {
-        framePosition: keyframe.framePosition,
+        cachedFrame: keyframe.cachedFrame,
         absoluteFrame,
         pixelPosition: relativePixelPosition,
+        percentage: keyframe.position,  // 可用于显示百分比信息
         isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
       }
     })

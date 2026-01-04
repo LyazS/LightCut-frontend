@@ -86,9 +86,9 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
       if (this.playbackControls && this.beforeSnapshot.animationConfig?.keyframes?.length) {
         const firstKeyframe = this.beforeSnapshot.animationConfig.keyframes[0]
         if (firstKeyframe && item.timeRange) {
-          // 将帧位置转换为绝对帧数
+          // 使用缓存的帧位置转换为绝对帧数
           const absoluteFrame = relativeFrameToAbsoluteFrame(
-            firstKeyframe.framePosition,
+            firstKeyframe.cachedFrame,
             item.timeRange,
           )
           this.playbackControls.seekTo(absoluteFrame)

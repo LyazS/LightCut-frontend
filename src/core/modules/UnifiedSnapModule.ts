@@ -170,9 +170,9 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
           // 收集片段的关键帧
           if (item.animation && item.animation.keyframes && item.animation.keyframes.length > 0) {
             item.animation.keyframes.forEach((keyframe) => {
-              // 使用工具函数计算绝对帧数
+              // ✅ 使用缓存的帧位置计算绝对帧数
               const absoluteFrame = relativeFrameToAbsoluteFrame(
-                keyframe.framePosition,
+                keyframe.cachedFrame,
                 item.timeRange,
               )
               const keyframePoint: KeyframeSnapPoint = {
@@ -180,7 +180,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
                 frame: absoluteFrame,
                 priority: 2,
                 clipId: item.id,
-                keyframeId: `keyframe-${keyframe.framePosition}`,
+                keyframeId: `keyframe-${keyframe.cachedFrame}`,
               }
               targets.push(keyframePoint)
             })
