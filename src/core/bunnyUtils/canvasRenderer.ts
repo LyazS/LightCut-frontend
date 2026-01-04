@@ -85,7 +85,8 @@ export function renderItem(
     return
   }
 
-  const visualConfig = item.config
+  // ✅ 使用辅助函数获取渲染配置
+  const visualConfig = TimelineItemQueries.getRenderConfig(item)
 
   // 性能优化：如果没有旋转和不透明度变化，直接绘制
   const needsTransform = visualConfig.rotation !== 0 || visualConfig.opacity !== 1
@@ -244,7 +245,9 @@ export function renderToCanvas(
   for (const item of sortedItems) {
     // 性能优化：跳过完全在画布外的元素
     if (TimelineItemQueries.hasVisualProperties(item)) {
-      if (!isInBounds(item.config, canvas.width, canvas.height)) {
+      // ✅ 使用辅助函数获取渲染配置进行边界检查
+      const config = TimelineItemQueries.getRenderConfig(item)
+      if (!isInBounds(config, canvas.width, canvas.height)) {
         continue
       }
     }

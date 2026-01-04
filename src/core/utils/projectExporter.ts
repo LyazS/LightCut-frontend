@@ -257,8 +257,9 @@ export class ExportManager {
 
             // 收集音频缓冲（使用 item.id 作为键）
             if (shouldRequestAudio && audio && audio.length > 0) {
-              // 获取当前帧的音量值（已经通过 applyAnimationToConfig 应用了动画插值）
-              const currentVolume = item.config.volume ?? 1.0
+              // ✅ 使用辅助函数获取当前音量值（应用了动画插值）
+              const config = TimelineItemQueries.getRenderConfig(item)
+              const currentVolume = config.volume ?? 1.0
               audioBuffersMap.set(item.id, {
                 buffers: audio,
                 volume: currentVolume,

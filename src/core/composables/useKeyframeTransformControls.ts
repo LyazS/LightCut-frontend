@@ -54,8 +54,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.x
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.x
   })
 
   const transformY = computed(() => {
@@ -64,8 +65,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.y
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.y
   })
 
   const scaleX = computed(() => {
@@ -75,8 +77,8 @@ export function useUnifiedKeyframeTransformControls(
     )
       return 1
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const config = selectedTimelineItem.value.config
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
     // 从 mediaItem 的 bunny 对象中获取原始尺寸
     const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
     const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
@@ -90,8 +92,8 @@ export function useUnifiedKeyframeTransformControls(
     )
       return 1
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const config = selectedTimelineItem.value.config
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
     // 从 mediaItem 的 bunny 对象中获取原始尺寸
     const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
     const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
@@ -104,8 +106,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const radians = selectedTimelineItem.value.config.rotation
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    const radians = config.rotation
     return webAVRadiansToUIDegrees(radians)
   })
 
@@ -115,8 +118,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 1
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.opacity
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.opacity
   })
 
   // 音量属性（支持视频和音频，支持关键帧动画）
@@ -126,7 +130,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasAudioProperties(selectedTimelineItem.value)
     )
       return 1
-    return selectedTimelineItem.value.config.volume ?? 1
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.volume ?? 1
   })
 
   // 注意：isMuted 不需要添加到这里，保持在组件中独立处理

@@ -7,6 +7,7 @@ import type { MediaType } from '@/core/mediaitem'
 import type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
+  GetConfigs,
 } from '@/core/timelineitem/type'
 import { TimelineStatusDisplayUtils } from '@/core/timelineitem/statusdisplayutils'
 import { useUnifiedStore } from '@/core/unifiedStore'
@@ -152,6 +153,21 @@ export function getErrorInfo(data: UnifiedTimelineItemData<MediaType>): {
   }
 }
 
+// ==================== 配置访问函数 ====================
+
+/**
+ * 获取用于渲染的配置
+ * 优先返回 renderConfig（包含动画插值），否则返回 config
+ *
+ * @param item 时间轴项目
+ * @returns 用于渲染的配置对象
+ */
+export function getRenderConfig<T extends MediaType>(
+  item: UnifiedTimelineItemData<T>
+): GetConfigs<T> {
+  return item.runtime.renderConfig || item.config
+}
+
 // ==================== 导出查询工具集合 ====================
 
 export const TimelineItemQueries = {
@@ -171,4 +187,7 @@ export const TimelineItemQueries = {
   getStatusText,
   getProgressInfo,
   getErrorInfo,
+  
+  // 配置访问
+  getRenderConfig,
 }

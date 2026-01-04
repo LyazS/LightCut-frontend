@@ -320,17 +320,28 @@ export function createUnifiedAutoSaveModule(
     clearWatchers()
 
     // 监听时间轴项目变化 - 内容变化
-    // const unwatchTimelineItems = watch(
-    //   () => dataWatchers.timelineItems.value,
-    //   () => {
-    //     if (autoSaveState.value.isEnabled) {
-    //       // console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-    //       triggerAutoSave({ configChanged: true, contentChanged: true })
-    //     }
-    //   },
-    //   { deep: true },
-    // )
-    // unwatchFunctions.push(unwatchTimelineItems)
+    // ✅ 使用精确字段监听，只监听需要持久化的字段
+    const unwatchTimelineItems = watch(
+      () => dataWatchers.timelineItems.value?.map(item => ({
+        id: item.id,
+        mediaItemId: item.mediaItemId,
+        trackId: item.trackId,
+        timelineStatus: item.timelineStatus,
+        mediaType: item.mediaType,
+        timeRange: item.timeRange,
+        config: item.config,        // ✅ 监听
+        animation: item.animation,  // ✅ 监听
+        // ❌ 不监听 runtime（包括 runtime.renderConfig）
+      })),
+      () => {
+        if (autoSaveState.value.isEnabled) {
+          console.log('🔍 [AutoSave] timelineItems changed')
+          triggerAutoSave({ contentChanged: true })
+        }
+      },
+      { deep: true }
+    )
+    unwatchFunctions.push(unwatchTimelineItems)
 
     // 监听轨道变化 - 内容变化
     const unwatchTracks = watch(

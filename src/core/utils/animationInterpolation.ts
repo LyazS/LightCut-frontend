@@ -107,31 +107,40 @@ export function applyAnimationToConfig(
   item: UnifiedTimelineItemData<MediaType>,
   currentAbsoluteFrame: number
 ): void {
-  // 1. 检查是否有动画
+  // 1. 懒加载：首次使用时初始化 renderConfig
+  if (!item.runtime.renderConfig) {
+    item.runtime.renderConfig = { ...item.config }
+  }
+  
+  // 2. 检查是否有动画
   if (!item.animation || item.animation.keyframes.length === 0) {
+    // 没有动画时，确保 renderConfig 与 config 同步
+    Object.assign(item.runtime.renderConfig, item.config)
     return
   }
   
-  // 2. 检查是否在时间范围内
+  // 3. 检查是否在时间范围内
   const isInTimeRange =
     currentAbsoluteFrame >= item.timeRange.timelineStartTime &&
     currentAbsoluteFrame <= item.timeRange.timelineEndTime
   if (!isInTimeRange) {
+    // 不在范围内，使用原始 config
+    Object.assign(item.runtime.renderConfig, item.config)
     return
   }
   
-  // 3. 计算相对帧位置和 clip 时长
+  // 4. 计算相对帧位置和 clip 时长
   const relativeFrame = absoluteFrameToRelativeFrame(currentAbsoluteFrame, item.timeRange)
   const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
   
-  // 4. 查找前后关键帧（✅ 传递 clipDurationFrames 用于百分比计算）
+  // 5. 查找前后关键帧（✅ 传递 clipDurationFrames 用于百分比计算）
   const { before, after } = findSurroundingKeyframes(
     item.animation.keyframes,
     relativeFrame,
     clipDurationFrames
   )
   
-  // 5. 根据情况计算属性值
+  // 6. 根据情况计算属性值
   let animatedProps: Partial<KeyframePropertiesMap[MediaType]>
   
   if (before && after) {
@@ -148,8 +157,8 @@ export function applyAnimationToConfig(
     return
   }
   
-  // 6. 应用计算出的属性值到 item.config
-  Object.assign(item.config, animatedProps)
+  // 7. ✅ 应用到 runtime.renderConfig（不触发自动保存）
+  Object.assign(item.runtime.renderConfig, item.config, animatedProps)
 }
 
 /**

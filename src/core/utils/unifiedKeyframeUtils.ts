@@ -15,6 +15,7 @@ import {
   isImageTimelineItem,
   isTextTimelineItem,
   isAudioTimelineItem,
+  TimelineItemQueries,
 } from '@/core/timelineitem/queries'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import type { MediaType } from '../mediaitem'
@@ -85,15 +86,16 @@ export function createKeyframe(
 ): AnimateKeyframe<MediaType> {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
-  
+
   // 计算百分比位置
   const position = clampPercentage(frameToPercentage(relativeFrame, clipDurationFrames))
 
   if (isVideoTimelineItem(item)) {
-    const config = item.config
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
     const keyframe = {
       position,
-      cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
+      cachedFrame: relativeFrame,
       properties: {
         x: config.x,
         y: config.y,
@@ -104,13 +106,14 @@ export function createKeyframe(
         volume: config.volume ?? 1,
       },
     } as AnimateKeyframe<'video'>
-    
+
     return keyframe
   } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
-    const config = item.config
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
     return {
       position,
-      cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
+      cachedFrame: relativeFrame,
       properties: {
         x: config.x,
         y: config.y,
@@ -121,10 +124,11 @@ export function createKeyframe(
       },
     } as AnimateKeyframe<'image' | 'text'>
   } else if (isAudioTimelineItem(item)) {
-    const config = item.config
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
     return {
       position,
-      cachedFrame: relativeFrame,  // ✅ 创建时同步缓存
+      cachedFrame: relativeFrame,
       properties: {
         volume: config.volume ?? 1,
       },
@@ -230,7 +234,7 @@ export function removeKeyframeAtFrame(
   absoluteFrame: number,
 ): boolean {
   if (!item.animation) return false
-  
+
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
   const initialLength = item.animation.keyframes.length
 
@@ -294,8 +298,7 @@ export function adjustKeyframesForDurationChange(
 export function sortKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
   ;(item.animation as any).keyframes.sort(
-    (a: AnimateKeyframe<MediaType>, b: AnimateKeyframe<MediaType>) =>
-      a.position - b.position,  // ✅ 直接比较百分比
+    (a: AnimateKeyframe<MediaType>, b: AnimateKeyframe<MediaType>) => a.position - b.position, // ✅ 直接比较百分比
   )
 }
 
@@ -586,7 +589,7 @@ export function getPreviousKeyframeFrame(
   // ✅ 直接使用缓存的帧位置进行比较
   const previousKeyframes = item.animation.keyframes
     .filter((kf) => kf.cachedFrame < relativeFrame)
-    .sort((a, b) => b.cachedFrame - a.cachedFrame)  // 降序
+    .sort((a, b) => b.cachedFrame - a.cachedFrame) // 降序
 
   if (previousKeyframes.length === 0) return null
 
@@ -609,7 +612,7 @@ export function getNextKeyframeFrame(
   // ✅ 直接使用缓存的帧位置进行比较
   const nextKeyframes = item.animation.keyframes
     .filter((kf) => kf.cachedFrame > relativeFrame)
-    .sort((a, b) => a.cachedFrame - b.cachedFrame)  // 升序
+    .sort((a, b) => a.cachedFrame - b.cachedFrame) // 升序
 
   if (nextKeyframes.length === 0) return null
 
@@ -665,7 +668,7 @@ export function validateKeyframes(item: UnifiedTimelineItemData): boolean {
     if (keyframe.position < 0 || keyframe.position > 1) {
       console.warn('🎬 [Keyframe] Invalid keyframe position:', {
         position: keyframe.position,
-        expected: '0-1 range'
+        expected: '0-1 range',
       })
       return false
     }

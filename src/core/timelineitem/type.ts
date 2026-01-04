@@ -65,11 +65,13 @@ export type TransformDataEx = TransformData & {
  * - 支持扩展，未来可以添加更多运行时字段
  * - 与持久化数据完全分离
  */
-export interface UnifiedTimelineItemRuntime {
+export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
   /** 与时间轴项目生命周期一致 */
   // sprite?: Raw<UnifiedSprite> // 旧的webav的sprite对象
   bunnyClip?: Raw<BunnyClip> // mediabunny的clip对象
   textBitmap?: ImageBitmap // 专门用于文本渲染的ImageBitmap
+  /** 动画插值后的临时配置（运行时数据，不持久化） */
+  renderConfig?: GetConfigs<T>
 }
 // ==================== 核心接口设计 ====================
 
@@ -105,5 +107,5 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   animation?: GetAnimation<T>
 
   // ==================== 运行时数据（不可持久化） ====================
-  runtime: UnifiedTimelineItemRuntime
+  runtime: UnifiedTimelineItemRuntime<T>
 }
