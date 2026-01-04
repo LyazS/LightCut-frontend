@@ -9,6 +9,7 @@
     "totalConsumed": "总消费",
     "lastLogin": "最后登录",
     "login": "用户登录",
+    "loginText": "登录",
     "register": "用户注册",
     "logout": "退出登录",
     "loginTitle": "用户登录",

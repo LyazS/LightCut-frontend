@@ -57,6 +57,7 @@
                   :style="{ color: isUserLogin ? undefined : '#ff4444' }"
                 />
               </template>
+              <span v-if="!isUserLogin" class="login-text">{{ t('user.loginText') }}</span>
             </HoverButton>
           </div>
 
@@ -416,5 +417,11 @@ defineExpose({
 .status-bar-container.loading-hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+.login-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-xs);
 }
 </style>
