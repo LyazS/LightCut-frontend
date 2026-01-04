@@ -10,6 +10,7 @@
           :value="localText"
           @blur="updateTextContent"
           @keyup.ctrl.enter="updateTextContent"
+          :disabled="!canOperateTransforms"
           class="text-content-input"
           :placeholder="t('properties.placeholders.enterText')"
           rows="3"
@@ -23,6 +24,7 @@
           <select
             :value="localStyle.fontFamily"
             @change="handleFontFamilyChange"
+            :disabled="!canOperateTransforms"
             class="font-family-select"
           >
             <option value="Arial, sans-serif">{{ t('properties.fonts.fontFamilyArial') }}</option>
@@ -51,6 +53,7 @@
           <SliderInput
             :model-value="localStyle.fontSize"
             @input="updateFontSize"
+            :disabled="!canOperateTransforms"
             :min="12"
             :max="200"
             :step="1"
@@ -59,6 +62,7 @@
           <NumberInput
             :model-value="localStyle.fontSize"
             @change="updateFontSize"
+            :disabled="!canOperateTransforms"
             :min="12"
             :max="200"
             :step="1"
@@ -77,6 +81,7 @@
           <select
             :value="localStyle.fontWeight"
             @change="handleFontWeightChange"
+            :disabled="!canOperateTransforms"
             class="font-weight-select"
           >
             <option value="normal">{{ t('properties.effects.normal') }}</option>
@@ -86,6 +91,7 @@
           <select
             :value="localStyle.fontStyle"
             @change="handleFontStyleChange"
+            :disabled="!canOperateTransforms"
             class="font-style-select"
           >
             <option value="normal">{{ t('properties.fonts.fontStyleNormal') }}</option>
@@ -102,6 +108,7 @@
             type="color"
             :value="localStyle.color"
             @change="handleColorChange"
+            :disabled="!canOperateTransforms"
             class="color-picker"
           />
         </div>
@@ -116,13 +123,14 @@
             :value="localStyle.backgroundColor || '#000000'"
             @change="handleBackgroundColorChange"
             class="color-picker"
-            :disabled="!backgroundColorEnabled"
+            :disabled="!backgroundColorEnabled || !canOperateTransforms"
           />
           <label class="checkbox-wrapper">
             <input
               type="checkbox"
               :checked="backgroundColorEnabled"
               @change="toggleBackgroundColor"
+              :disabled="!canOperateTransforms"
               class="background-color-checkbox"
             />
           </label>
@@ -137,6 +145,7 @@
             v-for="align in textAlignOptions"
             :key="align.value"
             @click="updateTextAlign"
+            :disabled="!canOperateTransforms"
             class="align-btn"
             :class="{ active: localStyle.textAlign === align.value }"
             :title="
@@ -168,6 +177,7 @@
               type="checkbox"
               :checked="shadowEnabled"
               @change="toggleShadow"
+              :disabled="!canOperateTransforms"
               class="effect-checkbox"
             />
           </label>
@@ -178,6 +188,7 @@
                 type="color"
                 :value="shadowColor"
                 @change="handleShadowColorChange"
+                :disabled="!canOperateTransforms"
                 class="color-picker small"
               />
             </div>
@@ -186,6 +197,7 @@
               <SliderInput
                 :model-value="shadowBlur"
                 @input="updateShadowBlur"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="20"
                 :step="1"
@@ -194,6 +206,7 @@
               <NumberInput
                 :model-value="shadowBlur"
                 @change="updateShadowBlur"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="20"
                 :step="1"
@@ -208,6 +221,7 @@
               <SliderInput
                 :model-value="shadowOffsetX"
                 @input="updateShadowOffsetX"
+                :disabled="!canOperateTransforms"
                 :min="-20"
                 :max="20"
                 :step="1"
@@ -216,6 +230,7 @@
               <NumberInput
                 :model-value="shadowOffsetX"
                 @change="updateShadowOffsetX"
+                :disabled="!canOperateTransforms"
                 :min="-20"
                 :max="20"
                 :step="1"
@@ -230,6 +245,7 @@
               <SliderInput
                 :model-value="shadowOffsetY"
                 @input="updateShadowOffsetY"
+                :disabled="!canOperateTransforms"
                 :min="-20"
                 :max="20"
                 :step="1"
@@ -238,6 +254,7 @@
               <NumberInput
                 :model-value="shadowOffsetY"
                 @change="updateShadowOffsetY"
+                :disabled="!canOperateTransforms"
                 :min="-20"
                 :max="20"
                 :step="1"
@@ -260,6 +277,7 @@
               type="checkbox"
               :checked="strokeEnabled"
               @change="toggleStroke"
+              :disabled="!canOperateTransforms"
               class="effect-checkbox"
             />
           </label>
@@ -270,6 +288,7 @@
                 type="color"
                 :value="strokeColor"
                 @change="handleStrokeColorChange"
+                :disabled="!canOperateTransforms"
                 class="color-picker small"
               />
             </div>
@@ -278,6 +297,7 @@
               <SliderInput
                 :model-value="strokeWidth"
                 @input="updateStrokeWidth"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="10"
                 :step="0.5"
@@ -286,6 +306,7 @@
               <NumberInput
                 :model-value="strokeWidth"
                 @change="updateStrokeWidth"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="10"
                 :step="0.5"
@@ -308,6 +329,7 @@
               type="checkbox"
               :checked="glowEnabled"
               @change="toggleGlow"
+              :disabled="!canOperateTransforms"
               class="effect-checkbox"
             />
           </label>
@@ -318,6 +340,7 @@
                 type="color"
                 :value="glowColor"
                 @change="handleGlowColorChange"
+                :disabled="!canOperateTransforms"
                 class="color-picker small"
               />
             </div>
@@ -326,6 +349,7 @@
               <SliderInput
                 :model-value="glowBlur"
                 @input="updateGlowBlur"
+                :disabled="!canOperateTransforms"
                 :min="1"
                 :max="30"
                 :step="1"
@@ -334,6 +358,7 @@
               <NumberInput
                 :model-value="glowBlur"
                 @change="updateGlowBlur"
+                :disabled="!canOperateTransforms"
                 :min="1"
                 :max="30"
                 :step="1"
@@ -348,6 +373,7 @@
               <SliderInput
                 :model-value="glowSpread"
                 @input="updateGlowSpread"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="20"
                 :step="1"
@@ -356,6 +382,7 @@
               <NumberInput
                 :model-value="glowSpread"
                 @change="updateGlowSpread"
+                :disabled="!canOperateTransforms"
                 :min="0"
                 :max="20"
                 :step="1"
@@ -377,6 +404,7 @@ import { computed } from 'vue'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { isTextTimelineItem } from '@/core/timelineitem/queries'
+import { useUnifiedKeyframeTransformControls } from '@/core/composables'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import { IconComponents } from '@/constants/iconComponents'
@@ -385,11 +413,18 @@ import SliderInput from '@/components/base/SliderInput.vue'
 
 interface Props {
   selectedTimelineItem: UnifiedTimelineItemData<'text'> | null
+  currentFrame: number
 }
 
 const props = defineProps<Props>()
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
+
+// 获取禁用状态（当播放头不在播放范围内时禁用）
+const { canOperateTransforms } = useUnifiedKeyframeTransformControls({
+  selectedTimelineItem: computed(() => props.selectedTimelineItem),
+  currentFrame: computed(() => props.currentFrame),
+})
 
 // 获取当前文本内容
 const localText = computed(() => {

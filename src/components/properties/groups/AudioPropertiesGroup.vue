@@ -9,6 +9,7 @@
         <SliderInput
           :model-value="volume"
           @input="updateVolume"
+          :disabled="!canOperateTransforms"
           :min="0"
           :max="1"
           :step="0.01"
@@ -17,6 +18,7 @@
         <NumberInput
           :model-value="volume"
           @change="updateVolume"
+          :disabled="!canOperateTransforms"
           :min="0"
           :max="1"
           :step="0.01"
@@ -26,6 +28,7 @@
         />
         <button
           @click="toggleMute"
+          :disabled="!canOperateTransforms"
           class="mute-btn"
           :title="isMuted ? t('properties.playback.unmuteTitle') : t('properties.playback.muteTitle')"
         >
@@ -56,8 +59,8 @@ const props = defineProps<Props>()
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
-// 使用关键帧控制器获取音量（支持关键帧动画）
-const { volume, setVolume } = useUnifiedKeyframeTransformControls({
+// 使用关键帧控制器获取音量（支持关键帧动画）和禁用状态
+const { volume, setVolume, canOperateTransforms } = useUnifiedKeyframeTransformControls({
   selectedTimelineItem: computed(() => props.selectedTimelineItem),
   currentFrame: computed(() => props.currentFrame),
 })
@@ -125,5 +128,18 @@ const toggleMute = async () => {
 .mute-btn:hover {
   background: var(--color-bg-tertiary);
   border-color: var(--color-border-focus);
+}
+
+.mute-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+  border-color: var(--color-border-secondary);
+}
+
+.mute-btn:disabled:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-secondary);
 }
 </style>

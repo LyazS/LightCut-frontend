@@ -18,6 +18,7 @@
     <TextPropertiesGroup
       v-if="selectedTimelineItem && isTextTimelineItem(selectedTimelineItem)"
       :selected-timeline-item="selectedTimelineItem"
+      :current-frame="currentFrame"
     />
 
     <!-- 关键帧控制 - video/image/text（独立组件）-->
