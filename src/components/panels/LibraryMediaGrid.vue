@@ -1641,7 +1641,7 @@ async function handleExportMediaItem(item: DisplayItem): Promise<void> {
     console.log('🚀 开始导出媒体项目:', mediaItem.name)
 
     // 显示进度提示
-    unifiedStore.messageInfo(t('media.media.exportStarted', { name: mediaItem.name }))
+    unifiedStore.messageInfo(t('media.exportStarted', { name: mediaItem.name }))
 
     // 调用导出方法
     const blob = await exportMediaItem({
@@ -1661,12 +1661,12 @@ async function handleExportMediaItem(item: DisplayItem): Promise<void> {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
 
-    unifiedStore.messageSuccess(t('media.media.exportSuccess', { name: mediaItem.name }))
+    unifiedStore.messageSuccess(t('media.exportSuccess', { name: mediaItem.name }))
     console.log('✅ 媒体项目导出成功')
   } catch (error) {
     console.error('❌ 导出媒体项目失败:', error)
     unifiedStore.messageError(
-      t('media.media.exportFailed', {
+      t('media.exportFailed', {
         name: mediaItem.name,
         error: error instanceof Error ? error.message : '未知错误',
       }),

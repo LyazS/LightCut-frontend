@@ -435,7 +435,7 @@ export function useTimelineContextMenu(
       console.log('🚀 开始导出时间轴片段:', timelineItem.id)
 
       // 显示进度提示
-      unifiedStore.messageInfo(t('timeline.exportStarted', { id: timelineItem.id }))
+      unifiedStore.messageInfo(t('timeline.contextMenu.clip.exportStarted', { id: timelineItem.id }))
 
       // 调用导出方法
       const blob = await exportTimelineItem({
@@ -460,12 +460,12 @@ export function useTimelineContextMenu(
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      unifiedStore.messageSuccess(t('timeline.exportSuccess', { id: timelineItem.id }))
+      unifiedStore.messageSuccess(t('timeline.contextMenu.clip.exportSuccess', { id: timelineItem.id }))
       console.log('✅ 时间轴片段导出成功')
     } catch (error) {
       console.error('❌ 导出时间轴片段失败:', error)
       unifiedStore.messageError(
-        t('timeline.exportFailed', {
+        t('timeline.contextMenu.clip.exportFailed', {
           id: timelineItem.id,
           error: error instanceof Error ? error.message : '未知错误',
         }),
