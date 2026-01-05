@@ -8,6 +8,7 @@ import type { Raw } from 'vue'
 import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
 import { BunnyMedia } from '../mediabunny/bunny-media'
+import type { AudioWaveformLOD } from '../audiowaveform/types'
 // ==================== 类型定义 ====================
 
 /**
@@ -51,6 +52,9 @@ export interface BunnyObjects {
   thumbnailUrl?: string
   originalWidth?: number // 原始宽度（视频和图片）
   originalHeight?: number // 原始高度（视频和图片）
+  
+  // 音频波形LOD数据（按需生成）
+  waveformLOD?: AudioWaveformLOD
 }
 
 /**

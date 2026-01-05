@@ -357,8 +357,18 @@ export function createUnifiedAutoSaveModule(
     unwatchFunctions.push(unwatchTracks)
 
     // 监听媒体项目变化 - 内容变化
+    // ✅ 使用精确字段监听，只监听需要持久化的字段
     const unwatchMediaItems = watch(
-      () => dataWatchers.mediaItems.value,
+      () => dataWatchers.mediaItems.value?.map(item => ({
+        id: item.id,
+        name: item.name,
+        createdAt: item.createdAt,
+        mediaStatus: item.mediaStatus,
+        mediaType: item.mediaType,
+        source: item.source,
+        duration: item.duration,
+        // ❌ 不监听 runtime（包括 runtime.bunny.waveformLOD）
+      })),
       () => {
         if (autoSaveState.value.isEnabled) {
           // console.log('🔄 [AutoSave] 检测到媒体项目变化')

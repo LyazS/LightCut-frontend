@@ -136,6 +136,18 @@ export class BunnyMedia {
   }
 
   /**
+   * 获取音频轨道信息
+   * @returns 音频轨道信息对象，如果没有音频轨道则返回null
+   */
+  getAudioTrackInfo(): { sampleRate: number; channels: number } | null {
+    if (!this.audioTrack) return null
+    return {
+      sampleRate: this.audioTrack.sampleRate,
+      channels: this.audioTrack.numberOfChannels,
+    }
+  }
+
+  /**
    * 释放所有资源
    */
   async dispose(): Promise<void> {
