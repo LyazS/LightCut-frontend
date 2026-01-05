@@ -115,6 +115,15 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       mediaItemId: mediaItem.id,
       duration: mediaItem.duration,
       path: this.extractMediaPath(mediaItem),
+      
+      // 新增：分辨率信息
+      resolution: mediaItem.runtime.bunny?.originalWidth ? {
+        width: mediaItem.runtime.bunny.originalWidth,
+        height: mediaItem.runtime.bunny.originalHeight,
+      } : undefined,
+      
+      // 新增：来源标识
+      source: 'media-item' as const,
     }
 
     console.log('✅ 素材拖拽成功:', fileData)
@@ -161,6 +170,13 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       mediaItemId: mediaItem.id,
       duration: timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime,
       path: this.extractMediaPath(mediaItem),
+      
+      // 新增：分辨率信息
+      resolution: mediaItem.runtime.bunny?.originalWidth ? {
+        width: mediaItem.runtime.bunny.originalWidth,
+        height: mediaItem.runtime.bunny.originalHeight,
+      } : undefined,
+      
       // 时间轴特有信息
       timeRange: {
         clipStartTime: timelineItem.timeRange.clipStartTime,
@@ -168,6 +184,9 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
         timelineStartTime: timelineItem.timeRange.timelineStartTime,
         timelineEndTime: timelineItem.timeRange.timelineEndTime,
       },
+      
+      // 新增：来源标识
+      source: 'timeline-item' as const,
     }
 
     console.log('✅ 时间轴片段拖拽成功:', fileData)
