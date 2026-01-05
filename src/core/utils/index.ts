@@ -23,21 +23,9 @@ export {
 
 // ==================== 统一时间范围工具 ====================
 export {
-  // 同步工具
-  syncTimeRange,
-
   // 计算工具
   calculateDuration,
 } from './timeRangeUtils'
-
-// ==================== 统一Sprite工厂 ====================
-export {
-  // 主要工厂函数
-  createSpriteFromUnifiedMediaItem,
-
-  // 辅助函数
-  canCreateSpriteFromUnifiedMediaItem,
-} from './spriteFactory'
 
 // ==================== 坐标转换工具 ====================
 export {
@@ -47,10 +35,7 @@ export {
   // 坐标转换函数
   frameToPixel,
   pixelToFrame,
-} from './coordinateUtils'
 
-// ==================== 坐标系转换工具 ====================
-export {
   // 坐标系转换函数
   webavToProjectCoords,
   projectToWebavCoords,
@@ -62,13 +47,12 @@ export {
   // 中心缩放计算
   calculateCenterScalePosition,
   debugCenterScaling,
-} from './coordinateTransform'
+} from './coordinateUtils'
 
 // ==================== 统一时间工具 ====================
 export {
   // 时间计算工具
   calculatePixelsPerFrame,
-  expandTimelineIfNeededFrames,
   formatFileSize,
 
   // 时间码转换函数
@@ -98,21 +82,6 @@ export {
   countOverlappingItems,
 } from './timeOverlapUtils'
 
-// ==================== 统一缩略图生成器 ====================
-export {
-  // 视频缩略图生成
-  generateVideoThumbnail,
-
-  // 图片缩略图生成
-  generateImageThumbnail,
-
-  // Canvas转Blob URL
-  canvasToBlob,
-
-  // 统一媒体项目缩略图生成
-  generateThumbnailForUnifiedMediaItem,
-} from './thumbnailGenerator'
-
 // ==================== 统一时间轴搜索工具 ====================
 export {
   // 根据时间查找时间轴项目
@@ -123,9 +92,6 @@ export {
 
   // 查找孤立的时间轴项目
   findOrphanedTimelineItems,
-
-  // 根据sprite查找时间轴项目
-  findTimelineItemBySprite,
 
   // 根据时间查找所有重叠的时间轴项目
   getTimelineItemsAtFrames,
@@ -139,36 +105,9 @@ export {
 
 // ==================== 统一文本时间轴工具 ====================
 export {
-  // ID生成
-  generateTimelineItemId,
-
   // 文本时间轴项目创建
   createTextTimelineItem,
 } from './textTimelineUtils'
-
-export { TextHelper } from './TextHelper'
-// ==================== 统一动画转换器 ====================
-export {
-  // 转换核心函数
-  framesToPercentage,
-  convertKeyframeToWebAV,
-  convertToWebAVAnimation,
-
-  // 验证和工具函数
-  isValidAnimationConfig,
-  isKeyframeInRange,
-  filterKeyframesInRange,
-} from './animationConverter'
-
-// ==================== WebAV动画管理器 ====================
-export {
-  // 动画管理器类
-  WebAVAnimationManager,
-  globalWebAVAnimationManager,
-
-  // 便捷函数
-  updateWebAVAnimation,
-} from './webavAnimationManager'
 
 // ==================== 统一关键帧工具 ====================
 export {
@@ -197,7 +136,6 @@ export {
   toggleKeyframe,
 
   // 属性修改处理
-  updatePropertiesBatchViaWebAV,
   handlePropertyChange,
 
   // 关键帧导航
@@ -215,20 +153,7 @@ export {
 } from './unifiedKeyframeUtils'
 
 // ==================== 项目文件操作工具 ====================
-export * as ProjectFileOps from './ProjectFileOperations'
-
-// ==================== WebAV Clip工具 ====================
-export {
-  // Clip创建函数
-  createMP4Clip,
-  createImgClip,
-  createAudioClip,
-
-  // 克隆函数
-  cloneMP4Clip,
-  cloneImgClip,
-  cloneAudioClip,
-} from './webavClipUtils'
+export * as ProjectFileOps from './projectFileOperations'
 
 // ==================== 项目导出工具 ====================
 export {
@@ -237,12 +162,3 @@ export {
   // 导出项目参数接口
   type ExportProjectOptions,
 } from './projectExporter'
-
-// ==================== WebAV处理器 ====================
-export {
-  // WebAV处理器类
-  WebAVProcessor,
-
-  // 类型定义
-  type WebAVProcessingResult,
-} from './WebAVProcessor'

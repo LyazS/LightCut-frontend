@@ -155,8 +155,8 @@ class GlobalMetaFileManager {
         duration: mediaItem.duration,
         // 🌟 只在终态时保存 mediaStatus
         ...(terminalStatuses.includes(mediaItem.mediaStatus) && {
-          mediaStatus: mediaItem.mediaStatus as 'ready' | 'error' | 'cancelled' | 'missing'
-        })
+          mediaStatus: mediaItem.mediaStatus as 'ready' | 'error' | 'cancelled' | 'missing',
+        }),
       }
 
       // 2. 检查工作空间权限
@@ -244,7 +244,7 @@ class GlobalMetaFileManager {
       if (!file) {
         throw new Error('媒体项目缺少文件数据')
       }
-      
+
       const targetFile = file
 
       console.log(`💾 [globalMetaFileManager] 开始保存媒体到项目: ${targetFile.name}`)

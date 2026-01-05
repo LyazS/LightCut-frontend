@@ -5,9 +5,7 @@
 
 import { ref } from 'vue'
 import { throttle } from 'lodash'
-import { MP4Clip, ImgClip } from '@webav/av-cliper'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
-import type { UnifiedMediaItemData } from '@/core/mediaitem'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type {
   ThumbnailLayoutItem,
   ThumbnailBatchRequest,
@@ -19,8 +17,7 @@ import {
   createThumbnailCanvas,
   createCanvasWithSize,
   drawImageOnCanvas,
-} from '@/core/utils/thumbnailGenerator'
-import { framesToMicroseconds } from '@/core/utils/timeUtils'
+} from '@/core/bunnyUtils/thumbUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
 import type { ModuleRegistry } from './ModuleRegistry'
@@ -148,28 +145,27 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
     // 2. 按帧位置排序缩略图布局
     const sortedLayout = [...thumbnailLayout].sort((a, b) => a.framePosition - b.framePosition)
 
-    // 3. 处理视频和图片媒体项目
-    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.webav?.mp4Clip) {
-      // 视频处理逻辑
-      let mp4Clip: MP4Clip | null = null
+    // ==================== 视频处理 ====================
+    if (UnifiedMediaItemQueries.isVideo(mediaItem) && timelineItem.runtime.bunnyClip) {
+      const bunnyClip = timelineItem.runtime.bunnyClip
       let sharedCanvas: HTMLCanvasElement | null = null
       let sharedCtx: CanvasRenderingContext2D | null = null
 
       try {
-        // 等待MP4Clip准备完成
-        const meta = await mediaItem.runtime.webav.mp4Clip.ready
-        mp4Clip = await mediaItem.runtime.webav.mp4Clip.clone()
+        // ✅ 准备帧位置数组（直接转换为 bigint）
+        // framePosition 已经是 clip 内的帧位置，无需额外映射
+        const timeNs = sortedLayout.map(item => BigInt(item.framePosition))
 
         // ✅ 计算缩略图尺寸（只需计算一次）
         const sizeInfo = calculateThumbnailSize(
-          meta.width,
-          meta.height,
+          mediaItem.runtime.bunny?.originalWidth || 1920,
+          mediaItem.runtime.bunny?.originalHeight || 1080,
           THUMBNAIL_CONSTANTS.WIDTH,
           THUMBNAIL_CONSTANTS.HEIGHT,
           ThumbnailMode.FILL,
         )
 
-        // ✅ 在循环外创建共享 Canvas（只创建一次）
+        // ✅ 创建共享 Canvas（只创建一次）
         const canvasResult = createCanvasWithSize(
           sizeInfo.containerWidth,
           sizeInfo.containerHeight
@@ -177,27 +173,26 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
         sharedCanvas = canvasResult.canvas
         sharedCtx = canvasResult.ctx
 
-        for (const item of sortedLayout) {
-          let videoFrame: VideoFrame | null = null
+        // ✅ 使用 thumbnailIter 批量获取帧
+        let index = 0
+        for await (const { frame, state } of bunnyClip.thumbnailIter(timeNs)) {
+          if (!state || !frame) {
+            console.warn(`⚠️ 无法获取视频帧 ${index}`)
+            index++
+            continue
+          }
+
+          const item = sortedLayout[index]
+          if (!item) {
+            frame.close()
+            break
+          }
+
           try {
-            // 计算时间位置
-            const timePosition = framesToMicroseconds(item.framePosition)
+            // ✅ 在共享 Canvas 上绘制
+            drawImageOnCanvas(sharedCtx, frame, sizeInfo)
 
-            // 执行tick调用
-            const tickResult = await mp4Clip.tick(timePosition)
-
-            if (tickResult.state !== 'success' || !tickResult.video) {
-              console.error(
-                `❌ 无法获取视频帧${item.framePosition}: ${tickResult.state} ${tickResult.video}`,
-              )
-              continue
-            }
-            videoFrame = tickResult.video
-
-            // ✅ 在共享 Canvas 上绘制（无需创建新 Canvas）
-            drawImageOnCanvas(sharedCtx, videoFrame, sizeInfo)
-
-            // ✅ 直接转换并缓存（不收集 Promise，实现渐进式显示）
+            // ✅ 异步转换并缓存（渐进式显示）
             canvasToBlob(sharedCanvas)
               .then((thumbnailUrl) => {
                 cacheThumbnail({
@@ -212,74 +207,50 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
               .catch((error) => {
                 console.error('❌ canvas转换失败:', error)
               })
-          } catch (error) {
-            console.error('❌ mp4Clip.tick调用失败:', error)
           } finally {
-            // 清理VideoFrame资源
-            if (videoFrame) {
-              videoFrame.close()
-            }
+            // ✅ 清理 VideoFrame 资源
+            frame.close()
           }
+
+          index++
         }
       } catch (error) {
         console.error('❌ 批量视频缩略图生成失败:', error)
-      } finally {
-        if (mp4Clip) {
-          mp4Clip.destroy()
-        }
-        // Canvas 会被 GC 自动回收，无需手动清理
       }
-    } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.runtime.webav?.imgClip) {
-      // 图片处理逻辑 - 所有帧使用相同的缩略图
-      let imgClip: ImgClip | null = null
+      // 注意：不需要销毁 bunnyClip，因为它是时间轴项目的运行时对象
+    }
+    
+    // ==================== 图片处理 ====================
+    else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
       try {
-        // 等待ImgClip准备完成
-        const meta = await mediaItem.runtime.webav.imgClip.ready
-        imgClip = await mediaItem.runtime.webav.imgClip.clone()
+        const imageBitmap = mediaItem.runtime.bunny.imageClip
 
-        // 使用tick获取图片数据（时间参数对静态图片无意义，传0即可）
-        const tickResult = await imgClip.tick(0)
-
-        if (tickResult.state !== 'success' || !tickResult.video) {
-          console.error('❌ 无法获取图片数据')
-          return
-        }
-
-        // 计算缩略图尺寸（使用FILL模式填满容器）
+        // 计算缩略图尺寸
         const sizeInfo = calculateThumbnailSize(
-          meta.width,
-          meta.height,
+          imageBitmap.width,
+          imageBitmap.height,
           THUMBNAIL_CONSTANTS.WIDTH,
           THUMBNAIL_CONSTANTS.HEIGHT,
           ThumbnailMode.FILL,
         )
 
-        // 创建缩略图canvas
-        const canvas = createThumbnailCanvas(tickResult.video, sizeInfo)
+        // 创建缩略图 canvas
+        const canvas = createThumbnailCanvas(imageBitmap, sizeInfo)
 
-        // 生成缩略图URL
+        // 生成缩略图 URL
         const thumbnailUrl = await canvasToBlob(canvas)
 
-        // 对于图片类型，所有帧使用相同的缩略图，只需要设置一次缓存
+        // 对于图片类型，所有帧使用相同的缩略图
         cacheThumbnail({
           blobUrl: thumbnailUrl,
           timestamp: Date.now(),
           timelineItemId: timelineItem.id,
-          framePosition: 0, // 图片使用固定帧位置0
-          clipStartTime: 0, // 图片使用固定clipStartTime 0
-          clipEndTime: 0, // 图片使用固定clipEndTime 0
+          framePosition: 0,
+          clipStartTime: 0,
+          clipEndTime: 0,
         })
-
-        // 清理VideoFrame资源
-        if ('close' in tickResult.video) {
-          tickResult.video.close()
-        }
       } catch (error) {
         console.error('❌ 批量图片缩略图生成失败:', error)
-      } finally {
-        if (imgClip) {
-          imgClip.destroy()
-        }
       }
     } else {
       console.warn('⚠️ 批量处理器只支持视频和图片媒体项目，跳过非支持项目:', mediaItem.mediaType)

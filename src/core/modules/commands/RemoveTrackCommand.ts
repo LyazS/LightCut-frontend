@@ -1,16 +1,14 @@
 import type { Ref } from 'vue'
-import type { VideoResolution } from '@/core/types'
 import { generateCommandId } from '@/core/utils/idGenerator'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { setupMediaSync } from '@/core/managers/media/UnifiedMediaSyncManager'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { MediaSyncFactory } from '@/core/managers/media'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**
  * 删除轨道命令
@@ -22,6 +20,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly description: string
   private trackData: UnifiedTrackData // 保存被删除的轨道数据
   private affectedTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的时间轴项目的重建元数据
+  private _isDisposed = false
 
   constructor(
     private trackId: string,
@@ -35,7 +34,6 @@ export class RemoveTrackCommand implements SimpleCommand {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private mediaModule: {
@@ -92,12 +90,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         if (TimelineItemQueries.isLoading(item)) {
           const mediaItem = this.mediaModule.getMediaItem(item.mediaItemId)
           if (mediaItem) {
-            setupMediaSync({
-              commandId: this.id,
-              mediaItemId: mediaItem.id,
-              description: this.description,
-              scenario: 'command',
-            })
+            MediaSyncFactory.forCommand(this.id, mediaItem.id).setup()
           }
         }
       }
@@ -139,7 +132,6 @@ export class RemoveTrackCommand implements SimpleCommand {
         const rebuildResult = await TimelineItemFactory.rebuildForCmd({
           originalTimelineItemData: itemData,
           getMediaItem: this.mediaModule.getMediaItem,
-          setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
           logIdentifier: 'RemoveTrackCommand',
         })
 
@@ -154,13 +146,11 @@ export class RemoveTrackCommand implements SimpleCommand {
 
         // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
         if (TimelineItemQueries.isLoading(newTimelineItem)) {
-          setupMediaSync({
-            commandId: this.id,
-            mediaItemId: newTimelineItem.mediaItemId,
-            timelineItemId: newTimelineItem.id,
-            description: this.description,
-            scenario: 'command',
-          })
+          MediaSyncFactory.forCommand(
+            this.id,
+            newTimelineItem.mediaItemId,
+            newTimelineItem.id,
+          ).setup()
         }
         console.log(`✅ 轨道删除撤销已撤销删除时间轴项目: ${itemData.id}`)
       }
@@ -192,11 +182,11 @@ export class RemoveTrackCommand implements SimpleCommand {
 
       // 从 webav 对象中获取原始尺寸信息
       if (
-        mediaData.runtime.webav?.originalWidth !== undefined &&
-        mediaData.runtime.webav?.originalHeight !== undefined
+        mediaData.runtime.bunny?.originalWidth !== undefined &&
+        mediaData.runtime.bunny?.originalHeight !== undefined
       ) {
-        config.width = mediaData.runtime.webav.originalWidth
-        config.height = mediaData.runtime.webav.originalHeight
+        config.width = mediaData.runtime.bunny.originalWidth
+        config.height = mediaData.runtime.bunny.originalHeight
       }
 
       if (mediaData.duration !== undefined) {
@@ -223,5 +213,24 @@ export class RemoveTrackCommand implements SimpleCommand {
         break
       }
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [RemoveTrackCommand] 命令资源已清理: ${this.id}`)
   }
 }

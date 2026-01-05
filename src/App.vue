@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  NConfigProvider,
-  NNotificationProvider,
-  NMessageProvider,
-  NDialogProvider,
-  darkTheme,
-} from 'naive-ui'
+import { NConfigProvider, NMessageProvider, darkTheme } from 'naive-ui'
 import AppProvider from './AppProvider.vue'
 </script>
 
@@ -13,11 +7,7 @@ import AppProvider from './AppProvider.vue'
   <div id="app">
     <n-config-provider :theme="darkTheme">
       <n-message-provider>
-        <n-notification-provider>
-          <n-dialog-provider>
-            <AppProvider />
-          </n-dialog-provider>
-        </n-notification-provider>
+        <AppProvider />
       </n-message-provider>
     </n-config-provider>
   </div>

@@ -2,18 +2,14 @@ import { ref, computed, type Ref } from 'vue'
 import type { UnifiedProjectConfig, UnifiedProjectTimeline } from '@/core/project/types'
 import type { UnifiedDirectoryConfig } from '@/core/directory/types'
 import { ProjectFileOps } from '@/core/utils'
-import { TimelineItemFactory } from '@/core/timelineitem/TimelineItemFactory'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import { TimelineItemFactory } from '@/core/timelineitem/factory'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
-import {
-  setupMediaSync,
-  cleanupCommandMediaSync,
-  cleanupProjectLoadMediaSync,
-} from '@/core/managers/media/UnifiedMediaSyncManager'
+import { MediaSyncFactory, cleanupProjectLoadMediaSync } from '@/core/managers/media'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { i18n } from '@/locales'
@@ -22,7 +18,7 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
-import type { UnifiedWebavModule } from './UnifiedWebavModule'
+import type { UnifiedMediaBunnyModule } from './UnifiedMediaBunnyModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 
 /**
@@ -169,7 +165,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
           duration: calculatedDuration,
           settings: {
             videoResolution: configModule.videoResolution.value,
-            frameRate: configModule.frameRate.value,
             timelineDurationFrames: configModule.timelineDurationFrames.value,
           },
           // ❌ 移除目录配置部分
@@ -303,6 +298,8 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
       updateLoadingProgress(t('project.progress.contentComplete'), 100)
       isProjectTimelineReady.value = true
+      const mediabunnyModule = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+      mediabunnyModule.seekToFrame(0)
     } catch (error) {
       console.error('❌ [Content Load] 加载项目内容失败:', error)
       throw error
@@ -526,7 +523,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
             const rebuildResult = await TimelineItemFactory.rebuildForCmd({
               originalTimelineItemData: itemData,
               getMediaItem: mediaModule.getMediaItem,
-              setupTimelineItemSprite: timelineModule.setupTimelineItemSprite,
               logIdentifier: 'restoreTimelineItems',
             })
 
@@ -542,12 +538,10 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
             // 2. 针对loading状态的项目设置状态同步
             if (newTimelineItem.timelineStatus === 'loading') {
-              setupMediaSync({
-                mediaItemId: newTimelineItem.mediaItemId,
-                timelineItemId: newTimelineItem.id,
-                description: `restoreTimelineItems ${newTimelineItem.id}`,
-                scenario: 'projectLoad',
-              })
+              MediaSyncFactory.forProjectLoad(
+                newTimelineItem.mediaItemId,
+                newTimelineItem.id,
+              ).setup()
             }
 
             console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)

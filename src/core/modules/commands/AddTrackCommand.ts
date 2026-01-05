@@ -22,6 +22,7 @@ export class AddTrackCommand implements SimpleCommand {
   public readonly description: string
   private newTrackId: string | undefined = undefined // 新创建的轨道ID
   private trackData: UnifiedTrackData // 保存轨道数据
+  private _isDisposed = false
 
   constructor(
     private trackType: UnifiedTrackType, // 轨道类型
@@ -87,5 +88,24 @@ export class AddTrackCommand implements SimpleCommand {
       console.error(`❌ 撤销添加轨道失败: ${this.trackData.name}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [AddTrackCommand] 命令资源已清理: ${this.id}`)
   }
 }

@@ -49,8 +49,8 @@ export class MediaStatusManager {
   validateTransition(fromStatus: MediaStatus, toStatus: MediaStatus): boolean {
     const validTransitions: Record<MediaStatus, MediaStatus[]> = {
       pending: ['asyncprocessing', 'error', 'cancelled'],
-      asyncprocessing: ['webavdecoding', 'error', 'cancelled'],
-      webavdecoding: ['ready', 'error', 'cancelled'],
+      asyncprocessing: ['decoding', 'error', 'cancelled'],
+      decoding: ['ready', 'error', 'cancelled'],
       ready: ['error'],
       error: ['pending', 'cancelled'],
       cancelled: ['pending'],
@@ -78,8 +78,8 @@ export class MediaStatusManager {
   getAllowedTransitions(currentStatus: MediaStatus): MediaStatus[] {
     const validTransitions: Record<MediaStatus, MediaStatus[]> = {
       pending: ['asyncprocessing', 'error', 'cancelled'],
-      asyncprocessing: ['webavdecoding', 'error', 'cancelled'],
-      webavdecoding: ['ready', 'error', 'cancelled'],
+      asyncprocessing: ['decoding', 'error', 'cancelled'],
+      decoding: ['ready', 'error', 'cancelled'],
       ready: ['error'],
       error: ['pending', 'cancelled'],
       cancelled: ['pending'],
@@ -118,7 +118,7 @@ export class MediaStatusManager {
     const stats: Record<MediaStatus, number> = {
       pending: 0,
       asyncprocessing: 0,
-      webavdecoding: 0,
+      decoding: 0,
       ready: 0,
       error: 0,
       cancelled: 0,

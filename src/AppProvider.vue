@@ -2,15 +2,14 @@
 import { watch } from 'vue'
 import { NMessageProvider } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
-import { useDialog, useMessage, useNotification } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { useUnifiedStore } from '@/core/unifiedStore'
-const { updatePageTitle, locale } = useAppI18n()
+const { updatePageTitle, locale, t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 unifiedStore.initApi({
-  dialog: useDialog(),
   message: useMessage(),
-  notification: useNotification(),
+  t,
 })
 // 监听语言变化，更新页面标题
 watch(locale, () => {

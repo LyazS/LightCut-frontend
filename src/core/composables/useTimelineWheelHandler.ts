@@ -47,23 +47,23 @@ export function useTimelineWheelHandler(
         mouseX -= 150 // 时间轴主体区域需要减去轨道控制区域宽度
       }
 
-      const mouseFrames = unifiedStore.pixelToFrame(mouseX, unifiedStore.timelineWidth)
+      const mouseFrames = unifiedStore.pixelToFrame(mouseX, unifiedStore.TimelineContentWidth)
 
       // 统一使用1.1的缩放因子
       if (event.deltaY < 0) {
         // 向上滚动：放大
-        unifiedStore.zoomIn(1.1, unifiedStore.timelineWidth)
+        unifiedStore.zoomIn(1.1, unifiedStore.TimelineContentWidth)
       } else {
         // 向下滚动：缩小
-        unifiedStore.zoomOut(1.1, unifiedStore.timelineWidth)
+        unifiedStore.zoomOut(1.1, unifiedStore.TimelineContentWidth)
       }
 
       // 调整滚动偏移量，使鼠标位置保持在相同的帧数点
-      const newMousePixel = unifiedStore.frameToPixel(mouseFrames, unifiedStore.timelineWidth)
+      const newMousePixel = unifiedStore.frameToPixel(mouseFrames, unifiedStore.TimelineContentWidth)
       const offsetAdjustment = newMousePixel - mouseX
       const newScrollOffset = unifiedStore.scrollOffset + offsetAdjustment
 
-      unifiedStore.setScrollOffset(newScrollOffset, unifiedStore.timelineWidth)
+      unifiedStore.setScrollOffset(newScrollOffset, unifiedStore.TimelineContentWidth)
     } else if (event.shiftKey) {
       // Shift + 滚轮：水平滚动
       event.preventDefault()
@@ -73,10 +73,10 @@ export function useTimelineWheelHandler(
 
       if (scrollAmount < 0) {
         // 向左滚动
-        unifiedStore.scrollLeft(-scrollAmount, unifiedStore.timelineWidth)
+        unifiedStore.scrollLeft(-scrollAmount, unifiedStore.TimelineContentWidth)
       } else if (scrollAmount > 0) {
         // 向右滚动
-        unifiedStore.scrollRight(scrollAmount, unifiedStore.timelineWidth)
+        unifiedStore.scrollRight(scrollAmount, unifiedStore.TimelineContentWidth)
       }
     } else if (defaultOptions.source === TimelineWheelSource.TIME_SCALE) {
       // 时间刻度区域：普通滚轮不处理（保持原有行为）

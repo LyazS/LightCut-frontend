@@ -1,47 +1,46 @@
 import {
-  Input,
-  BlobSource,
-  VideoSampleSink,
-  AudioSampleSink,
-  ALL_FORMATS,
   VideoSample,
-  AudioSample,
+  type AnyIterable,
+  type WrappedAudioBuffer,
 } from 'mediabunny'
 import {
   RENDERER_FPS,
   VIDEO_SEEK_THRESHOLD,
-  VIDEO_SEEK_THRESHOLD_N,
   AUDIO_SCHEDULE_AHEAD,
-  AUDIO_SCHEDULE_AHEAD_N,
   AUDIO_ANOMALY_THRESHOLD,
-  AUDIO_ANOMALY_THRESHOLD_N,
-  AUDIO_DEFAULT_SAMPLE_RATE,
 } from './constant'
 import type { TimeRange } from './types'
 import type { IClip } from './IClip'
+import { BunnyMedia } from './bunny-media'
 /**
  * 媒体播放器核心类 - 统一管理视频和音频播放状态
  */
 export class BunnyClip implements IClip {
-  private originalFile: File | null = null
-  private input: Input | null = null
-  public readonly ready: Promise<void>
-
+  private bunnyMedia: BunnyMedia
   private needResetVideo: boolean = false
   private needResetAudio: boolean = false
+  private isTicking: boolean = false
 
   // 视频相关属性
-  private videoSink: VideoSampleSink | null = null
+  private videoSampleAtTSFunc:
+    | ((timestamps: AnyIterable<number>) => AsyncGenerator<VideoSample | null, void, unknown>)
+    | null = null
+  private videoGetSampleFunc: ((timestamps: number) => Promise<VideoSample | null>) | null = null
   private videoIteratorN: AsyncGenerator<VideoSample | null, void, unknown> | null = null
   private videoInTimeN: bigint = 0n
   private nextFrameN: VideoSample | null = null
 
   // 音频相关属性
-  private audioSink: AudioSampleSink | null = null
-  private audioIterator: AsyncGenerator<AudioSample, void, unknown> | null = null
+  private audioBufferFunc:
+    | ((
+        startTimestamp?: number | undefined,
+        endTimestamp?: number | undefined,
+      ) => AsyncGenerator<WrappedAudioBuffer, void, unknown>)
+    | null = null
+  private audioIterator: AsyncGenerator<WrappedAudioBuffer, void, unknown> | null = null
   private audioInTime: number = 0
 
-  // 时间相关
+  // 公开属性
   public timeRange: TimeRange = {
     clipStart: 0n,
     clipEnd: 0n,
@@ -52,67 +51,19 @@ export class BunnyClip implements IClip {
   public duration: number = 0
   public durationN: bigint = 0n
 
-  constructor(file: File) {
-    this.ready = this.loadFile(file)
-  }
-
-  /**
-   * 加载媒体文件
-   * @param file 要加载的文件
-   */
-  private async loadFile(file: File): Promise<void> {
-    console.log('📁 开始加载文件:', file.name)
-    this.originalFile = file
-    try {
-      // 创建 Input 实例
-      this.input = new Input({
-        source: new BlobSource(file),
-        formats: ALL_FORMATS,
-      })
-      this.duration = await this.input.computeDuration()
-      this.durationN = BigInt(Math.ceil(this.duration * RENDERER_FPS))
-      this.setTimeRange({
-        clipStart: 0n,
-        clipEnd: this.durationN,
-        timelineStart: 0n,
-        timelineEnd: this.durationN,
-      })
-
-      // 获取视频和音频轨道
-      const videoTrack = await this.input.getPrimaryVideoTrack()
-      const audioTrack = await this.input.getPrimaryAudioTrack()
-
-      console.log(
-        `📊 找到视频轨道: ${videoTrack ? '是' : '否'}, 音频轨道: ${audioTrack ? '是' : '否'}`,
-      )
-
-      // 初始化视频轨道
-      if (videoTrack) {
-        console.log(`🎬 视频轨道信息:`, {
-          codec: videoTrack.codec,
-          width: videoTrack.displayWidth,
-          height: videoTrack.displayHeight,
-          rotation: videoTrack.rotation,
-        })
-
-        this.videoSink = new VideoSampleSink(videoTrack)
-      }
-
-      // 初始化音频轨道
-      if (audioTrack) {
-        console.log(`🎵 音频轨道信息:`, {
-          codec: audioTrack.codec,
-          channels: audioTrack.numberOfChannels,
-          sampleRate: audioTrack.sampleRate,
-        })
-
-        this.audioSink = new AudioSampleSink(audioTrack)
-      }
-      console.log(`✅ 文件加载完成，总时长: ${this.duration.toFixed(2)}s`)
-    } catch (error) {
-      console.error('❌ 文件加载失败:', error)
-      throw error
-    }
+  constructor(bunnyMedia: BunnyMedia) {
+    this.bunnyMedia = bunnyMedia
+    this.duration = bunnyMedia.duration
+    this.durationN = bunnyMedia.durationN
+    this.videoSampleAtTSFunc = bunnyMedia.videoSamplesAtTimestamps()
+    this.videoGetSampleFunc = bunnyMedia.videoGetSample()
+    this.audioBufferFunc = bunnyMedia.audioBuffersFunc()
+    this.setTimeRange({
+      clipStart: 0n,
+      clipEnd: this.durationN,
+      timelineStart: 0n,
+      timelineEnd: this.durationN,
+    })
   }
 
   // ==================== 视频相关方法 ====================
@@ -131,11 +82,10 @@ export class BunnyClip implements IClip {
   }
 
   private async ensureVideoIteratorN(startN: bigint): Promise<void> {
-    if (!this.videoIteratorN && this.videoSink) {
-      this.videoIteratorN = this.videoSink.samplesAtTimestamps(this.generateTimestamps(startN))
+    if (!this.videoIteratorN && this.videoSampleAtTSFunc) {
+      this.videoIteratorN = this.videoSampleAtTSFunc(this.generateTimestamps(startN))
       this.nextFrameN = (await this.videoIteratorN.next()).value ?? null
       this.videoInTimeN = startN
-      console.log(`📌 [视频] 创建迭代器，起始时间: ${startN}帧`)
     }
   }
 
@@ -153,9 +103,8 @@ export class BunnyClip implements IClip {
       this.needResetVideo ||
       !this.videoIteratorN ||
       timeN < this.videoInTimeN || // 如果是往回seek
-      timeN - this.videoInTimeN > VIDEO_SEEK_THRESHOLD_N // 如果往前seek太远
+      timeN - this.videoInTimeN > BigInt(Math.round(VIDEO_SEEK_THRESHOLD * RENDERER_FPS)) // 如果往前seek太远
     ) {
-      console.log(`⏰ [视频] 时间检查 - 当前: ${timeN}帧, 上次: ${this.videoInTimeN}帧`)
       await this.resetVideoN(timeN)
     }
 
@@ -165,7 +114,8 @@ export class BunnyClip implements IClip {
       // 1. 检查 nextFrameN 是否存在
       if (!this.nextFrameN) {
         // 从迭代器获取新帧
-        this.nextFrameN = (await this.videoIteratorN.next()).value ?? null
+        const sample_res = await this.videoIteratorN?.next?.()
+        this.nextFrameN = sample_res?.value ?? null
         this.videoInTimeN = this.videoInTimeN + 1n
       }
 
@@ -186,13 +136,12 @@ export class BunnyClip implements IClip {
 
       // 情况3：帧在时间点之后（未来帧）
       // nextFrameN 保持不变，跳出循环，等待下一次调用
+      console.log(`🎞️ [视频] 未来帧 - 当前: ${timeN}帧, 上次: ${this.videoInTimeN}帧`)
       return null
     }
   }
 
   private async resetVideoN(startN: bigint): Promise<void> {
-    console.log(`⏩ 视频 Seek 到`)
-
     // 清理缓存的下一帧
     this.nextFrameN?.close()
     this.nextFrameN = null
@@ -215,13 +164,12 @@ export class BunnyClip implements IClip {
    * @param startTime 迭代器起始时间，默认从0开始
    */
   private async ensureAudioIterator(startTime: number = 0): Promise<void> {
-    if (!this.audioIterator && this.audioSink) {
-      this.audioIterator = this.audioSink.samples(startTime)
-      console.log(`📌 [音频] 创建迭代器，起始时间: ${startTime.toFixed(2)}s`)
+    if (!this.audioIterator && this.audioBufferFunc) {
+      this.audioIterator = this.audioBufferFunc(startTime)
     }
   }
 
-  private async findAudioBuffersN(timeN: bigint): Promise<AudioSample[]> {
+  private async findAudioBuffersN(timeN: bigint, headFrame: bigint): Promise<WrappedAudioBuffer[]> {
     // 超出时间范围直接返回 null，这样可以确保在范围之内
     if (timeN < this.timeRange.timelineStart || timeN > this.timeRange.timelineEnd) {
       return []
@@ -231,10 +179,9 @@ export class BunnyClip implements IClip {
     const tlDuration = Number(this.timeRange.timelineEnd - this.timeRange.timelineStart)
     const clipStart = Number(this.timeRange.clipStart)
     const clipTimeN =
-      (Number(timeN + AUDIO_SCHEDULE_AHEAD_N - this.timeRange.timelineStart) / tlDuration) *
-        clipDuration +
+      (Number(timeN + headFrame - this.timeRange.timelineStart) / tlDuration) * clipDuration +
       clipStart
-    const anomaly_th = (Number(AUDIO_ANOMALY_THRESHOLD_N) / tlDuration) * clipDuration
+    const anomaly_th = ((AUDIO_ANOMALY_THRESHOLD * RENDERER_FPS) / tlDuration) * clipDuration
     // timeN是时间轴上的帧点
     // 这是映射到clip上的时间点
     const currentTime = clipTimeN / RENDERER_FPS
@@ -246,35 +193,37 @@ export class BunnyClip implements IClip {
       currentTime < this.audioInTime ||
       currentTime - this.audioInTime > anomaly_th
     ) {
-      console.log(
-        `⏰ [音频] 时间检查 - 当前: ${currentTime.toFixed(2)}s, 上次: ${this.audioInTime.toFixed(2)}s`,
-      )
       await this.resetAudio(currentTime)
     }
 
     this.audioInTime = currentTime
     if (!this.audioIterator) return []
-    const result: AudioSample[] = []
+    const result: WrappedAudioBuffer[] = []
     while (1) {
       const result_buffer = await this.audioIterator.next()
       if (result_buffer.done || !result_buffer.value) {
         break
       }
-      const audioBuffer = result_buffer.value
-      result.push(audioBuffer)
-      if (audioBuffer.timestamp + audioBuffer.duration >= currentTime) {
+      const wrappedBuffer = result_buffer.value
+      result.push(wrappedBuffer)
+      if (wrappedBuffer.timestamp + wrappedBuffer.duration >= currentTime) {
         break
       }
     }
     const rate = this.getPlaybackRate()
-    const processedBuffers: AudioSample[] = []
+    const processedBuffers: WrappedAudioBuffer[] = []
 
-    for (const buf of result) {
-      buf.setTimestamp(
-        (buf.timestamp - clipStart / RENDERER_FPS) / rate +
-          Number(this.timeRange.timelineStart) / RENDERER_FPS,
-      )
-      processedBuffers.push(buf)
+    for (const wrapped of result) {
+      // 创建新的 WrappedAudioBuffer 对象，更新时间戳
+      const newTimestamp =
+        (wrapped.timestamp - clipStart / RENDERER_FPS) / rate +
+        Number(this.timeRange.timelineStart) / RENDERER_FPS
+      
+      processedBuffers.push({
+        buffer: wrapped.buffer,
+        timestamp: newTimestamp,
+        duration: wrapped.duration
+      })
     }
 
     return processedBuffers
@@ -285,8 +234,6 @@ export class BunnyClip implements IClip {
    * @param timestamp 目标时间戳
    */
   private async resetAudio(timestamp: number): Promise<void> {
-    console.log(`⏩ 音频 Seek 到: ${timestamp.toFixed(2)}s`)
-
     // 清理旧迭代器并创建新的
     await this.cleanupAudioIterator()
     await this.ensureAudioIterator(timestamp)
@@ -301,129 +248,8 @@ export class BunnyClip implements IClip {
     this.audioIterator = null
   }
 
-  /**
-   * 对AudioSample应用播放速率变化
-   * @param buf 原始AudioSample
-   * @param rate 播放速率
-   * @param clipStart clip起始帧数
-   * @returns 处理后的AudioSample数组
-   */
-  private applyPlaybackRateToAudioSample(
-    buf: AudioSample,
-    rate: number,
-    clipStart: number,
-  ): AudioSample[] {
-    const channels = buf.numberOfChannels
-    const sourceSampleRate = buf.sampleRate
-    const targetSampleRate = AUDIO_DEFAULT_SAMPLE_RATE // 48000Hz
-    const frameCount = buf.numberOfFrames
-
-    // 为每个声道应用重采样（同时处理倍速和采样率转换）
-    const resampledChannels: Float32Array[] = []
-    for (let ch = 0; ch < channels; ch++) {
-      // 提取单声道数据
-      const channelData = new Float32Array(frameCount)
-      buf.copyTo(channelData, {
-        planeIndex: ch,
-        format: 'f32-planar',
-      })
-
-      // ✨ 一次性完成倍速和采样率转换
-      const resampled = this.resampleWithRateAndSpeed(
-        channelData,
-        sourceSampleRate,
-        targetSampleRate,
-        rate,
-      )
-      resampledChannels.push(resampled)
-    }
-
-    // 计算新的时间戳（倍速影响）
-    const newTimestamp =
-      (buf.timestamp - clipStart / RENDERER_FPS) / rate +
-      Number(this.timeRange.timelineStart) / RENDERER_FPS
-
-    // 创建AudioBuffer，使用目标采样率
-    const audioBuffer = new AudioBuffer({
-      length: resampledChannels[0]?.length ?? 0,
-      numberOfChannels: channels,
-      sampleRate: targetSampleRate, // ✅ 使用48000Hz
-    })
-
-    // 复制重采样后的数据
-    for (let ch = 0; ch < channels; ch++) {
-      const channelData = resampledChannels[ch]
-      if (channelData) {
-        const buffer = audioBuffer.getChannelData(ch)
-        buffer.set(channelData)
-      }
-    }
-
-    // 创建AudioSample数组
-    const newSamples = AudioSample.fromAudioBuffer(audioBuffer, newTimestamp)
-
-    return newSamples
-  }
-
-  /**
-   * 同时处理倍速和采样率转换的重采样
-   * @param pcmData 原始PCM数据
-   * @param sourceSampleRate 原始采样率
-   * @param targetSampleRate 目标采样率（48000Hz）
-   * @param playbackRate 播放速率
-   * @returns 重采样后的PCM数据
-   */
-  private resampleWithRateAndSpeed(
-    pcmData: Float32Array,
-    sourceSampleRate: number,
-    targetSampleRate: number,
-    playbackRate: number,
-  ): Float32Array {
-    // 参数验证
-    if (sourceSampleRate <= 0 || targetSampleRate <= 0) {
-      throw new Error('采样率必须大于0')
-    }
-    if (playbackRate <= 0) {
-      throw new Error('播放速率必须大于0')
-    }
-    if (pcmData.length === 0) {
-      return new Float32Array(0)
-    }
-
-    // 计算综合重采样比率
-    const resampleRatio = (sourceSampleRate / targetSampleRate) * playbackRate
-
-    // 计算输出样本数
-    const outputLength = Math.floor(pcmData.length / resampleRatio)
-    const output = new Float32Array(outputLength)
-
-    // 线性插值重采样
-    for (let i = 0; i < outputLength; i++) {
-      // 在原始数据中的位置
-      const sourceIndex = i * resampleRatio
-      const intIndex = Math.floor(sourceIndex)
-      const frac = sourceIndex - intIndex
-
-      // 边界检查和插值
-      if (intIndex + 1 < pcmData.length) {
-        const sample1 = pcmData[intIndex]!
-        const sample2 = pcmData[intIndex + 1]!
-        output[i] = sample1 * (1 - frac) + sample2 * frac
-      } else if (intIndex < pcmData.length) {
-        output[i] = pcmData[intIndex]!
-      }
-    }
-
-    return output
-  }
-
   // ==================== 公共接口 ====================
-  setTimeRange(timeRange: {
-    clipStart?: bigint
-    clipEnd?: bigint
-    timelineStart?: bigint
-    timelineEnd?: bigint
-  }): void {
+  setTimeRange(timeRange: Partial<TimeRange>): void {
     // 计算新的时间范围值
     const newClipStart = timeRange.clipStart ?? this.timeRange.clipStart
     const newClipEnd = timeRange.clipEnd ?? this.timeRange.clipEnd
@@ -473,31 +299,97 @@ export class BunnyClip implements IClip {
     this.previewRate = rate
   }
 
-  tickInterceptor: <T>(time: number | bigint, result: T) => Promise<T> =
-    async (_, result) => result
+  tickInterceptor: <T>(time: number | bigint, result: T) => Promise<T> = async (_, result) => result
 
+  /**
+   * 播放时获取指定时间点的音视频帧
+   * @param timeN 时间轴上的帧位置
+   * @returns 包含音频样本数组、视频帧和状态
+   */
   async tickN(
     timeN: bigint,
-  ): Promise<{ audio: AudioSample[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
-    if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
+    needAudio: boolean = true,
+    needVideo: boolean = true,
+    audioHeadFrame?: bigint,
+  ): Promise<{
+    audio: WrappedAudioBuffer[]
+    video: VideoSample | null
+    state: 'success' | 'outofrange' | 'skip'
+  }> {
+    if (this.isTicking) {
       return this.tickInterceptor(timeN, {
+        audio: [],
+        video: null,
+        state: 'skip',
+      })
+    }
+    try {
+      this.isTicking = true
+      if (timeN < this.timeRange.timelineStart || this.timeRange.timelineEnd < timeN) {
+        return this.tickInterceptor(timeN, {
+          audio: [],
+          video: null,
+          state: 'outofrange',
+        })
+      }
+      if (audioHeadFrame === null || audioHeadFrame === undefined)
+        audioHeadFrame = BigInt(Math.round(AUDIO_SCHEDULE_AHEAD * RENDERER_FPS))
+      const [audio, video] = await Promise.all([
+        this.audioBufferFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
+        this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
+      ])
+      return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+    } finally {
+      this.isTicking = false
+    }
+  }
+
+  /**
+   * 获取指定时间点的视频帧（仅视频，不含音频）
+   * @param clipTimeN Clip上的帧位置
+   * @returns 包含视频帧和状态，音频数组始终为空
+   */
+  async getSampleN(
+    clipTimeN: bigint,
+  ): Promise<{ audio: WrappedAudioBuffer[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
+    if (clipTimeN < 0n || this.durationN < clipTimeN) {
+      return this.tickInterceptor(clipTimeN, {
         audio: [],
         video: null,
         state: 'outofrange',
       })
     }
-    const [audio, video] = await Promise.all([
-      this.audioSink ? this.findAudioBuffersN(timeN) : [],
-      this.videoSink ? this.findVideoFrameN(timeN) : null,
-    ])
-    return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+    const video = (await this.videoGetSampleFunc?.(Number(clipTimeN) / RENDERER_FPS)) ?? null
+    return await this.tickInterceptor(clipTimeN, { audio: [], video, state: 'success' })
   }
 
-  async clone(): Promise<IClip> {
-    if (!this.originalFile) {
-      throw new Error('❌ 无法克隆 BunnyClip：原始文件不存在')
+  /**
+   * 批量生成缩略图的异步迭代器，用于时间轴缩略图显示
+   * @param clipTimeNs 时间点数组（帧位置）
+   * @yields 每次返回 { frame: VideoFrame | null, state: boolean }
+   */
+  async *thumbnailIter(
+    clipTimeNs: bigint[],
+  ): AsyncGenerator<{ frame: VideoFrame | null; state: boolean }, void, unknown> {
+    if (this.videoSampleAtTSFunc) {
+      const timeIter = clipTimeNs.map((n) => Number(n) / RENDERER_FPS)[Symbol.iterator]()
+      for await (const sample of this.videoSampleAtTSFunc(timeIter)) {
+        const frame = sample?.toVideoFrame() ?? null
+        sample?.close()
+        yield { frame, state: true }
+      }
+    } else {
+      yield { frame: null, state: false }
     }
-    const newClip = new BunnyClip(this.originalFile)
+  }
+
+  /**
+   * 克隆当前 Clip 实例
+   * @returns 克隆后的新 Clip 实例
+   */
+  clone(): BunnyClip {
+    const newClip = new BunnyClip(this.bunnyMedia)
+    newClip.setTimeRange(this.timeRange)
     return newClip
   }
 
@@ -511,15 +403,9 @@ export class BunnyClip implements IClip {
     this.nextFrameN?.close() // 释放缓存的视频帧
     this.nextFrameN = null
     await this.cleanupVideoIteratorN() // 清理视频迭代器
-    this.videoSink = null
 
     // 清理音频相关资源
     await this.cleanupAudioIterator() // 等待音频迭代器清理完成
-    this.audioSink = null
-
-    // 清理 Input
-    this.input?.dispose()
-    this.input = null
 
     console.log('✅ BunnyClip 资源清理完成')
   }

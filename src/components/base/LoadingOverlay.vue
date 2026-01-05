@@ -163,7 +163,7 @@ const currentStage = computed(() => {
     var(--color-accent-secondary, #2196f3)
   );
   border-radius: 4px;
-  transition: width 0.5s ease-out;
+  transition: width 0.1s ease-out;
   position: relative;
   overflow: hidden;
   min-width: 2px; /* 确保即使进度为0也有一些可见的宽度 */

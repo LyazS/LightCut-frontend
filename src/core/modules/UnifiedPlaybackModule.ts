@@ -1,21 +1,22 @@
 import { ref, computed } from 'vue'
 import { alignFramesToFrame, framesToTimecode } from '@/core/utils/timeUtils'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
-import type { UnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
+import type { UnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
 
 /**
  * 播放控制管理模块
  * 负责管理播放状态和时间控制
+ *
+ * 架构说明：
+ * - UnifiedPlaybackModule 作为主控，管理所有播放状态
+ * - 通过 MediaBunny 模块进行实际的渲染
+ * - 完全移除 WebAV 依赖
  */
 export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
-  // 通过注册中心获取依赖模块
-  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
-  const frameRate = configModule.frameRate
   // ==================== 状态定义 ====================
 
   // 播放相关状态
-  const currentFrame = ref(0) // 当前播放帧数（整数）
-  const currentWebAVFrame = ref(0) // 当前播放帧数（整数）
+  const currentFrame = ref(0) // 当前UI播放帧数（整数）
   const isPlaying = ref(false) // 是否正在播放
   const playbackRate = ref(1) // 播放速度倍率
 
@@ -65,40 +66,13 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
    * 跳转到指定帧数
    * @param frames 目标帧数
    */
-  function seekToFrame(frames: number) {
+  async function seekToFrame(frames: number): Promise<void> {
+    // const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+    // if (mediabunny.isMediaBunnyAvailable()) {
+    //   await mediabunny.seekToFrame(frames)
+    // }
     setCurrentFrame(frames)
     console.log('🎯 跳转到帧:', frames, `(${framesToTimecode(frames)})`)
-  }
-
-  /**
-   * 相对跳转（帧数）
-   * @param deltaFrames 帧数偏移量（可为负数）
-   */
-  function seekByFrames(deltaFrames: number) {
-    const newFrames = currentFrame.value + deltaFrames
-    setCurrentFrame(newFrames)
-    console.log('⏭️ 相对跳转:', {
-      deltaFrames,
-      oldFrame: currentFrame.value - deltaFrames,
-      newFrame: currentFrame.value,
-      timecode: framesToTimecode(currentFrame.value),
-    })
-  }
-
-  /**
-   * 跳转到下一帧
-   */
-  function nextFrame() {
-    seekByFrames(1)
-    console.log('⏭️ 下一帧')
-  }
-
-  /**
-   * 跳转到上一帧
-   */
-  function previousFrame() {
-    seekByFrames(-1)
-    console.log('⏮️ 上一帧')
   }
 
   /**
@@ -115,14 +89,22 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   /**
    * 播放
    */
-  function play() {
+  async function play(): Promise<void> {
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.startPlayback()
+    }
     setPlaying(true)
   }
 
   /**
    * 暂停
    */
-  function pause() {
+  async function pause(): Promise<void> {
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.stopPlayback()
+    }
     setPlaying(false)
   }
 
@@ -137,7 +119,12 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   /**
    * 停止播放并回到开始
    */
-  function stop() {
+  async function stop(): Promise<void> {
+    const mediabunny = registry.get<UnifiedMediaBunnyModule>(MODULE_NAMES.MEDIABUNNY)
+    if (mediabunny.isMediaBunnyAvailable()) {
+      await mediabunny.stopPlayback()
+      await mediabunny.seekToFrame(0)
+    }
     setPlaying(false)
     setCurrentFrame(0)
     console.log('⏹️ 停止播放')
@@ -172,21 +159,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   }
 
   /**
-   * 获取播放状态摘要
-   * @returns 播放状态摘要对象
-   */
-  function getPlaybackSummary() {
-    return {
-      currentFrame: currentFrame.value,
-      formattedCurrentTime: formattedCurrentTime.value,
-      isPlaying: isPlaying.value,
-      playbackRate: playbackRate.value,
-      playbackRateText: playbackRateText.value,
-      frameRate: frameRate.value,
-    }
-  }
-
-  /**
    * 重置播放状态为默认值
    */
   function resetToDefaults() {
@@ -201,7 +173,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
   return {
     // 状态
     currentFrame,
-    currentWebAVFrame,
     isPlaying,
     playbackRate,
 
@@ -212,9 +183,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     // 帧数控制方法
     setCurrentFrame,
     seekToFrame,
-    seekByFrames,
-    nextFrame,
-    previousFrame,
 
     // 播放控制方法
     setPlaying,
@@ -224,7 +192,6 @@ export function createUnifiedPlaybackModule(registry: ModuleRegistry) {
     stop,
     setPlaybackRate,
     resetPlaybackRate,
-    getPlaybackSummary,
     resetToDefaults,
   }
 }

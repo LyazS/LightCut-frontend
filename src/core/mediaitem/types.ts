@@ -5,9 +5,9 @@
 
 import { reactive } from 'vue'
 import type { Raw } from 'vue'
-import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
-import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
+import { BunnyMedia } from '../mediabunny/bunny-media'
+import type { AudioWaveformLOD } from '../audiowaveform/types'
 // ==================== 类型定义 ====================
 
 /**
@@ -16,7 +16,7 @@ import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 export type MediaStatus =
   | 'pending' // 等待开始处理
   | 'asyncprocessing' // 异步获取中（抽象状态，对应各种数据源的获取阶段）
-  | 'webavdecoding' // WebAV解析中
+  | 'decoding' // 解析中
   | 'ready' // 就绪
   | 'error' // 错误
   | 'cancelled' // 取消
@@ -32,24 +32,15 @@ export type MediaType = 'video' | 'image' | 'audio' | 'text'
  */
 export type MediaTypeOrUnknown = MediaType | 'unknown'
 
-/**
- * WebAV对象接口
- */
-export interface WebAVObjects {
-  mp4Clip?: Raw<MP4Clip>
-  imgClip?: Raw<ImgClip>
-  audioClip?: Raw<AudioClip>
-  thumbnailUrl?: string
-  // WebAV解析得到的原始尺寸信息
-  originalWidth?: number // 原始宽度（视频和图片）
-  originalHeight?: number // 原始高度（视频和图片）
-}
-
 export interface BunnyObjects {
-  bunnyClip?: Raw<BunnyClip>
+  bunnyMedia?: Raw<BunnyMedia>
+  imageClip?: ImageBitmap
   thumbnailUrl?: string
   originalWidth?: number // 原始宽度（视频和图片）
   originalHeight?: number // 原始高度（视频和图片）
+  
+  // 音频波形LOD数据（按需生成）
+  waveformLOD?: AudioWaveformLOD
 }
 
 /**
@@ -70,14 +61,12 @@ export interface UnifiedMediaItemData {
 
   // ==================== 运行时对象（状态相关） ====================
   runtime: {
-    webav?: WebAVObjects
     bunny?: BunnyObjects
     refCount?: number // 引用计数：有多少个文件夹引用了这个素材
   }
 
   // ==================== 元数据（状态相关） ====================
-  duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
-  durationN?: bigint // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、WebAV解析等
+  duration?: number // 媒体时长（帧数），可能在不同阶段获得：服务器提供、用户输入、解析等
 }
 
 // ==================== 专门的状态类型定义 ====================
@@ -89,6 +78,7 @@ export interface UnifiedMediaItemData {
 export type ReadyMediaItem = UnifiedMediaItemData & {
   mediaStatus: 'ready'
   duration: number
+  // durationN: bigint
 }
 
 /**
@@ -96,7 +86,7 @@ export type ReadyMediaItem = UnifiedMediaItemData & {
  * 当媒体项目处于处理中状态时，保证 mediaStatus 为处理中的状态之一
  */
 export type ProcessingMediaItem = UnifiedMediaItemData & {
-  mediaStatus: 'asyncprocessing' | 'webavdecoding'
+  mediaStatus: 'asyncprocessing' | 'decoding'
 }
 
 /**

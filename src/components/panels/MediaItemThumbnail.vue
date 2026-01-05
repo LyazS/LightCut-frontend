@@ -41,8 +41,8 @@
           </div>
         </template>
 
-        <!-- WebAV解析中状态 -->
-        <template v-else-if="item?.mediaStatus === 'webavdecoding'">
+        <!-- 解析中状态 -->
+        <template v-else-if="item?.mediaStatus === 'decoding'">
           <div class="thumbnail-placeholder">
             <div class="loading-spinner"></div>
           </div>
@@ -80,17 +80,16 @@
 
         <!-- 就绪状态：显示缩略图 -->
         <template v-else-if="item">
+          <!-- 优先使用缩略图 -->
+          <img
+            v-if="item.runtime.bunny?.thumbnailUrl"
+            :src="item.runtime.bunny.thumbnailUrl"
+            class="thumbnail-image"
+          />
           <!-- 音频类型显示音乐图标 -->
-          <div v-if="item.mediaType === 'audio'" class="audio-icon-container">
+          <div v-else-if="item.mediaType === 'audio'" class="audio-icon-container">
             <component :is="IconComponents.MUSIC" size="48px" />
           </div>
-          <!-- WebAV生成的缩略图 -->
-          <img
-            v-else-if="item.runtime.webav?.thumbnailUrl"
-            :src="item.runtime.webav.thumbnailUrl"
-            class="thumbnail-image"
-            alt="缩略图"
-          />
           <!-- 缩略图生成中的占位符 -->
           <div v-else class="thumbnail-placeholder">
             <component :is="IconComponents.IMAGE_SMALL" size="20px" />
@@ -182,7 +181,7 @@ const statusIcon = computed(() => {
       return IconComponents.TIME
     case 'asyncprocessing':
       return IconComponents.LOADING
-    case 'webavdecoding':
+    case 'decoding':
       return IconComponents.SEARCH
     case 'error':
       return IconComponents.WARNING
@@ -204,8 +203,8 @@ const statusText = computed(() => {
       return t('media.tooltip.pending')
     case 'asyncprocessing':
       return `${t('media.tooltip.processing')}: ${item.value.source.progress.toFixed(2)}%`
-    case 'webavdecoding':
-      return t('media.tooltip.webavDecoding')
+    case 'decoding':
+      return t('media.tooltip.decoding')
     case 'error':
       return t('media.tooltip.error')
     case 'cancelled':
@@ -242,8 +241,8 @@ const detailInfo = computed<string[]>(() => {
     }
   }
   
-  // webavdecoding 状态：显示鼓励信息
-  if (status === 'webavdecoding') {
+  // decoding 状态：显示鼓励信息
+  if (status === 'decoding') {
     info.push(t('media.tooltip.almostDone'))
   }
   
@@ -270,9 +269,9 @@ const detailInfo = computed<string[]>(() => {
     }
     
     // 分辨率（视频和图片）
-    if ((item.value.mediaType === 'video' || item.value.mediaType === 'image') && item.value.runtime.webav?.originalWidth) {
-      const width = item.value.runtime.webav.originalWidth
-      const height = item.value.runtime.webav.originalHeight
+    if ((item.value.mediaType === 'video' || item.value.mediaType === 'image') && item.value.runtime.bunny?.originalWidth) {
+      const width = item.value.runtime.bunny.originalWidth
+      const height = item.value.runtime.bunny.originalHeight
       info.push(`${t('media.tooltip.resolution')}: ${width}x${height}`)
     }
   }

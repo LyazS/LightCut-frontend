@@ -23,6 +23,7 @@ export interface MediaMetaFile {
 
   // 媒体元数据
   duration?: number // 媒体时长
+  durationN?: number // 本应该是bigint，但是需要是number才能序列化保存
 
   // 🌟 新增：可选的终态状态
   // 只在媒体达到终态时保存（ready/error/cancelled/missing）

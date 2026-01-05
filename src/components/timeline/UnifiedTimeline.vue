@@ -163,7 +163,7 @@
             :style="{
               left:
                 LayoutConstants.TRACK_CONTROL_WIDTH +
-                unifiedStore.frameToPixel(line.time, unifiedStore.timelineWidth) +
+                unifiedStore.frameToPixel(line.time, unifiedStore.TimelineContentWidth) +
                 'px',
             }"
           ></div>
@@ -174,7 +174,7 @@
     <div class="snap-indicator-container">
       <UnifiedSnapIndicator
         :snap-result="currentSnapResult"
-        :timeline-width="unifiedStore.timelineWidth"
+        :timeline-width="unifiedStore.TimelineContentWidth"
         :total-duration-frames="unifiedStore.totalDurationFrames"
         :zoom-level="unifiedStore.zoomLevel"
         :scroll-offset="unifiedStore.scrollOffset"
@@ -183,7 +183,7 @@
 
     <!-- 全局播放头组件 - 覆盖整个时间轴 -->
     <UnifiedPlayhead
-      :timeline-width="unifiedStore.timelineWidth"
+      :timeline-width="unifiedStore.TimelineContentWidth"
       :track-control-width="LayoutConstants.TRACK_CONTROL_WIDTH"
       :wheel-container="timelineBody"
     />
@@ -229,11 +229,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, h, computed } from 'vue'
-import { calculateViewportFrameRange } from '@/core/utils/thumbnailAlgorithms'
+import { calculateViewportFrameRange } from '@/core/utils/thumbnailLayout'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { NScrollbar } from 'naive-ui'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { SnapResultState } from '@/core/composables/useTimelineSnap'
 
@@ -277,7 +277,7 @@ const { t } = useAppI18n()
 // 计算视口帧范围
 const viewportFrameRange = computed(() => {
   return calculateViewportFrameRange(
-    unifiedStore.timelineWidth,
+    unifiedStore.TimelineContentWidth,
     unifiedStore.totalDurationFrames,
     unifiedStore.zoomLevel,
     unifiedStore.scrollOffset,
@@ -304,7 +304,7 @@ const {
 
 // 初始化项目操作模块
 const {
-  createMediaClipFromMediaItem,
+  createTimelineItemFromMediaItem,
   moveSingleItem,
   moveMultipleItems,
   handleTimelineItemRemove,
@@ -371,7 +371,7 @@ const { gridLines } = useTimelineGridLines()
 
 // 初始化拖拽预览模块
 const { handleDragPreview, hidePreview } = useTimelineDragPreview({
-  frameToPixel: (frames: number) => unifiedStore.frameToPixel(frames, unifiedStore.timelineWidth),
+  frameToPixel: (frames: number) => unifiedStore.frameToPixel(frames, unifiedStore.TimelineContentWidth),
   getCurrentDragData: (event: DragEvent) => unifiedStore.getCurrentDragData(event),
   getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
   getTimelineItemsByTrack: (trackId: string) => unifiedStore.getTimelineItemsByTrack(trackId),
@@ -414,9 +414,8 @@ function renderTimelineItem(item: UnifiedTimelineItemData, track: UnifiedTrackDa
     data: item,
     isSelected: unifiedStore.isTimelineItemSelected(item.id),
     isMultiSelected: unifiedStore.isMultiSelectMode,
-    currentFrame: unifiedStore.currentFrame,
     trackHeight: track.height,
-    timelineWidth: unifiedStore.timelineWidth,
+    timelineWidth: unifiedStore.TimelineContentWidth,
     viewportFrameRange: viewportFrameRange.value,
     // 事件处理
     onSelect: (event: MouseEvent, id: string) => handleSelectClip(event, id),

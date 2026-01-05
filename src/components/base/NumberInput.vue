@@ -3,7 +3,7 @@
     <input
       :value="displayValue"
       @blur="handleConfirm"
-      @keyup.enter="handleConfirm"
+      @keyup.enter="handleEnter"
       @input="handleInput"
       type="number"
       :disabled="disabled"
@@ -133,7 +133,7 @@ const handleInput = (event: Event) => {
   }
 }
 
-// 处理确认（失焦或回车）
+// 处理确认（失焦）
 const handleConfirm = (event: Event) => {
   const input = event.target as HTMLInputElement
   const value = parseFloat(input.value)
@@ -146,6 +146,13 @@ const handleConfirm = (event: Event) => {
     emit('update:modelValue', formatted)
     emit('change', formatted)
   }
+}
+
+// 处理回车键
+const handleEnter = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  handleConfirm(event)
+  input.blur()
 }
 
 // 处理增加

@@ -145,9 +145,9 @@ export class TimelineTrackTargetHandler implements DropTargetHandler {
     // 4. 确保位置不小于0
     const finalDropTime = Math.max(0, alignedDropTime)
 
-    // 5. 调用 createMediaClipFromMediaItem 创建片段
+    // 5. 调用 createTimelineItemFromMediaItem 创建片段
     try {
-      await this.timelineItemOperations.createMediaClipFromMediaItem(
+      await this.timelineItemOperations.createTimelineItemFromMediaItem(
         mediaData.mediaItemId,
         finalDropTime,
         targetInfo.targetId,

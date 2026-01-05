@@ -9,46 +9,30 @@ export type {
   UnifiedTimelineItemData,
   TimelineItemStatus,
   TransformData,
-  CreateTimelineItemOptions,
-  UnknownMediaConfig,
-  TextStyleConfig,
+  TransformDataEx,
   VideoMediaConfig,
   AudioMediaConfig,
-} from './TimelineItemData'
+} from './type'
+
+// 从 texttype.ts 导出文本相关类型
+export type { TextStyleConfig } from './texttype'
+export { DEFAULT_TEXT_STYLE } from './texttype'
 
 // 动画类型导出
-export type {
-  AnimationConfig,
-  Keyframe,
-  KeyframeButtonState,
-  KeyframeUIState,
-  WebAVAnimationConfig,
-} from './AnimationTypes'
-
-// 从mediaitem模块导入MediaType
-export type { MediaType } from '../mediaitem'
-
-// ==================== 常量导出 ====================
-export { VALID_TIMELINE_TRANSITIONS, MEDIA_TO_TIMELINE_STATUS_MAP } from './TimelineItemData'
+export type { KeyframeButtonState, KeyframeUIState } from './animationtypes'
 
 // ==================== 工厂函数导出 ====================
-export {
-  // 工厂函数集合
-  TimelineItemFactory,
-} from './TimelineItemFactory'
+export { TimelineItemFactory } from './factory'
 
 // ==================== 状态显示工具导出 ====================
 export {
   // 状态显示工具类
   TimelineStatusDisplayUtils,
   createStatusDisplayComputeds,
-} from './TimelineStatusDisplayUtils'
+} from './statusdisplayutils'
 
 // 状态显示类型导出
-export type { StatusDisplayInfo } from './TimelineStatusDisplayUtils'
+export type { StatusDisplayInfo } from './statusdisplayutils'
 
 // ==================== 查询工具导出 ====================
-export {
-  // 查询工具集合
-  TimelineItemQueries,
-} from './TimelineItemQueries'
+export { TimelineItemQueries } from './queries'

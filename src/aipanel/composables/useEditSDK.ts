@@ -18,7 +18,6 @@ import type {
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
-  UnifiedWebavModule,
   UnifiedMediaModule,
   UnifiedConfigModule,
   UnifiedTrackModule,
@@ -63,8 +62,6 @@ export interface VisualMediaProperties {
   rotation: number
   /** 透明度（0-1） */
   opacity: number
-  /** 层级 */
-  zIndex: number
 }
 
 /**
@@ -153,7 +150,6 @@ export interface AgentTimelineItemInfo {
 export function useEditSDK(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
@@ -165,7 +161,6 @@ export function useEditSDK(
   const batchCommandBuilder = useBatchCommandBuilder(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
@@ -388,7 +383,7 @@ export function useEditSDK(
       switch (mediaItem.mediaStatus) {
         case 'pending':
         case 'asyncprocessing':
-        case 'webavdecoding':
+        case 'decoding':
           agentMediaType = 'loading'
           break
         case 'error':
@@ -419,11 +414,11 @@ export function useEditSDK(
       // 对于视频和图片素材，添加宽高信息（仅在就绪状态下）
       if (
         mediaItem.mediaStatus === 'ready' &&
-        mediaItem.runtime.webav?.originalWidth &&
-        mediaItem.runtime.webav?.originalHeight
+        mediaItem.runtime.bunny?.originalWidth &&
+        mediaItem.runtime.bunny?.originalHeight
       ) {
-        baseInfo.width = mediaItem.runtime.webav.originalWidth
-        baseInfo.height = mediaItem.runtime.webav.originalHeight
+        baseInfo.width = mediaItem.runtime.bunny.originalWidth
+        baseInfo.height = mediaItem.runtime.bunny.originalHeight
       }
 
       return baseInfo
@@ -448,7 +443,7 @@ export function useEditSDK(
       // 需要从统一存储获取总时长和容器宽度
       const unifiedStore = useUnifiedStore()
       const { startFrames, endFrames } = calculateVisibleFrameRange(
-        unifiedStore.containerWidth, // 使用统一存储的容器宽度
+        unifiedStore.TimelineContainerWidth, // 使用统一存储的容器宽度
         unifiedStore.totalDurationFrames,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,
@@ -483,7 +478,7 @@ export function useEditSDK(
           switch (mediaItem.mediaStatus) {
             case 'pending':
             case 'asyncprocessing':
-            case 'webavdecoding':
+            case 'decoding':
               agentMediaType = 'loading'
               break
             case 'error':
@@ -536,7 +531,6 @@ export function useEditSDK(
                   height: config.height || 0,
                   rotation: config.rotation || 0,
                   opacity: config.opacity || 1,
-                  zIndex: config.zIndex || 0,
                 }
               if ('y' in config && baseInfo.visual) baseInfo.visual.y = config.y
               if ('width' in config && baseInfo.visual) baseInfo.visual.width = config.width
@@ -544,7 +538,6 @@ export function useEditSDK(
               if ('rotation' in config && baseInfo.visual)
                 baseInfo.visual.rotation = config.rotation
               if ('opacity' in config && baseInfo.visual) baseInfo.visual.opacity = config.opacity
-              if ('zIndex' in config && baseInfo.visual) baseInfo.visual.zIndex = config.zIndex
 
               // 视频特有属性
               if (timelineItem.mediaType === 'video') {
@@ -587,7 +580,6 @@ export function useEditSDK(
                   gain: 0,
                 }
               if ('isMuted' in config && baseInfo.audio) baseInfo.audio.isMuted = config.isMuted
-              if ('gain' in config && baseInfo.audio) baseInfo.audio.gain = config.gain
               break
           }
         }

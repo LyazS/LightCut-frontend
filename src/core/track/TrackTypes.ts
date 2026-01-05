@@ -4,7 +4,8 @@
  */
 
 import { reactive } from 'vue'
-import { generateTrackId, getDefaultTrackName, getDefaultTrackHeight } from './TrackUtils'
+import { getDefaultTrackName, getDefaultTrackHeight } from './TrackUtils'
+import { generateTrackId } from '@/core/utils/idGenerator'
 
 // ==================== 基础类型定义 ====================
 

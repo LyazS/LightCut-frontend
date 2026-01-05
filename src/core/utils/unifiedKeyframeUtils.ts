@@ -1,15 +1,12 @@
 /**
  * 统一关键帧工具函数
  * 实现统一关键帧系统的核心逻辑，包括关键帧的增删改查、状态判断和交互逻辑
- * 适配新架构版本
+ * 适配新架构版本 - 使用百分比 + 缓存系统
  */
 
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
-import type {
-  Keyframe,
-  KeyframeButtonState,
-  KeyframeUIState,
-} from '@/core/timelineitem/AnimationTypes'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import type { KeyframeButtonState, KeyframeUIState } from '@/core/timelineitem/animationtypes'
+import type { AnimateKeyframe } from '@/core/timelineitem/bunnytype'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import {
   hasVisualProperties,
@@ -18,23 +15,31 @@ import {
   isImageTimelineItem,
   isTextTimelineItem,
   isAudioTimelineItem,
-} from '@/core/timelineitem/TimelineItemQueries'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
+  TimelineItemQueries,
+} from '@/core/timelineitem/queries'
+import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
+import type { MediaType } from '../mediaitem'
+import {
+  percentageToFrame,
+  frameToPercentage,
+  clampPercentage,
+  updateAllKeyframesCachedFrames,
+} from './keyframePositionUtils'
 
 // ==================== 关键帧位置转换工具函数 ====================
 
 /**
- * 将绝对帧数转换为相对于clip开始的帧数
+ * 将绝对帧数转换为相对于clip在时间轴上的开始的帧数
  * @param absoluteFrame 绝对帧数（相对于整个项目时间轴）
- * @param timeRange clip的时间范围
- * @returns 相对于clip开始的帧数
+ * @param timeRange 时间范围
+ * @returns 相对于clip在时间轴上的开始的帧数
  */
 export function absoluteFrameToRelativeFrame(
   absoluteFrame: number,
   timeRange: UnifiedTimeRange,
 ): number {
-  const clipStartFrame = timeRange.timelineStartTime
-  const relativeFrame = absoluteFrame - clipStartFrame
+  const tlStartFrame = timeRange.timelineStartTime
+  const relativeFrame = absoluteFrame - tlStartFrame
 
   // 确保相对帧数不小于0
   return Math.max(0, relativeFrame)
@@ -75,52 +80,59 @@ export function initializeAnimation(item: UnifiedTimelineItemData): void {
  * @param absoluteFrame 绝对帧数（相对于整个项目时间轴）
  * @returns 新创建的关键帧
  */
-export function createKeyframe(item: UnifiedTimelineItemData, absoluteFrame: number): Keyframe {
+export function createKeyframe(
+  item: UnifiedTimelineItemData,
+  absoluteFrame: number,
+): AnimateKeyframe<MediaType> {
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
+  const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
 
-  if (hasVisualProperties(item)) {
-    if (isVideoTimelineItem(item)) {
-      // hasVisualProperties 类型守卫已确保配置具有所需属性
-      const config = item.config
-      return {
-        framePosition: relativeFrame,
-        properties: {
-          x: config.x,
-          y: config.y,
-          width: config.width,
-          height: config.height,
-          rotation: config.rotation,
-          opacity: config.opacity,
-          zIndex: config.zIndex,
-          volume: config.volume ?? 1,
-        },
-      } as Keyframe
-    } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
-      // hasVisualProperties 类型守卫已确保配置具有所需属性
-      const config = item.config
-      return {
-        framePosition: relativeFrame,
-        properties: {
-          x: config.x,
-          y: config.y,
-          width: config.width,
-          height: config.height,
-          rotation: config.rotation,
-          opacity: config.opacity,
-          zIndex: config.zIndex,
-        },
-      } as Keyframe
-    }
-  } else if (isAudioTimelineItem(item)) {
-    // 音频类型 - hasAudioProperties 类型守卫已确保配置具有所需属性
-    const config = item.config
+  // 计算百分比位置
+  const position = clampPercentage(frameToPercentage(relativeFrame, clipDurationFrames))
+
+  if (isVideoTimelineItem(item)) {
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
+    const keyframe = {
+      position,
+      cachedFrame: relativeFrame,
+      properties: {
+        x: config.x,
+        y: config.y,
+        width: config.width,
+        height: config.height,
+        rotation: config.rotation,
+        opacity: config.opacity,
+        volume: config.volume ?? 1,
+      },
+    } as AnimateKeyframe<'video'>
+
+    return keyframe
+  } else if (isImageTimelineItem(item) || isTextTimelineItem(item)) {
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
     return {
-      framePosition: relativeFrame,
+      position,
+      cachedFrame: relativeFrame,
+      properties: {
+        x: config.x,
+        y: config.y,
+        width: config.width,
+        height: config.height,
+        rotation: config.rotation,
+        opacity: config.opacity,
+      },
+    } as AnimateKeyframe<'image' | 'text'>
+  } else if (isAudioTimelineItem(item)) {
+    // ✅ 使用辅助函数获取当前显示的值（包含动画插值）
+    const config = TimelineItemQueries.getRenderConfig(item)
+    return {
+      position,
+      cachedFrame: relativeFrame,
       properties: {
         volume: config.volume ?? 1,
-        zIndex: config.zIndex,
       },
-    } as Keyframe
+    } as AnimateKeyframe<'audio'>
   }
 
   throw new Error(`Unsupported media type: ${item.mediaType}`)
@@ -135,6 +147,7 @@ export function hasAnimation(item: UnifiedTimelineItemData): boolean {
 
 /**
  * 检查当前帧是否在关键帧位置
+ * ✅ 直接使用 cachedFrame，无需重新计算
  */
 export function isCurrentFrameOnKeyframe(
   item: UnifiedTimelineItemData,
@@ -144,7 +157,8 @@ export function isCurrentFrameOnKeyframe(
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
 
-  return item.animation.keyframes.some((kf) => kf.framePosition === relativeFrame)
+  // ✅ 直接使用缓存的帧位置进行比较
+  return item.animation.keyframes.some((kf) => kf.cachedFrame === relativeFrame)
 }
 
 /**
@@ -182,16 +196,18 @@ export function getKeyframeUIState(
 
 /**
  * 在指定帧位置查找关键帧
+ * ✅ 直接使用 cachedFrame，无需重新计算
  */
 function findKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
-): Keyframe | undefined {
+): AnimateKeyframe<MediaType> | undefined {
   if (!item.animation) return undefined
 
   const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
 
-  return item.animation.keyframes.find((kf) => kf.framePosition === relativeFrame)
+  // ✅ 直接使用缓存的帧位置进行比较
+  return item.animation.keyframes.find((kf) => kf.cachedFrame === relativeFrame)
 }
 
 /**
@@ -211,33 +227,35 @@ export function disableAnimation(item: UnifiedTimelineItemData): void {
 
 /**
  * 删除指定帧位置的关键帧
+ * ✅ 直接使用 cachedFrame 比较
  */
 export function removeKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
 ): boolean {
-  if (item.animation) {
-    const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
-    const initialLength = item.animation.keyframes.length
+  if (!item.animation) return false
 
-    ;(item.animation as any).keyframes = item.animation.keyframes.filter(
-      (kf) => kf.framePosition !== relativeFrame,
-    )
+  const relativeFrame = absoluteFrameToRelativeFrame(absoluteFrame, item.timeRange)
+  const initialLength = item.animation.keyframes.length
 
-    const removed = item.animation.keyframes.length < initialLength
-    if (removed) {
-      console.log('🎬 [Unified Keyframe] Removed keyframe at frame:', absoluteFrame)
-    }
+  // ✅ 直接使用缓存的帧位置进行过滤
+  ;(item.animation as any).keyframes = item.animation.keyframes.filter(
+    (kf) => kf.cachedFrame !== relativeFrame,
+  )
 
-    return removed
+  const removed = item.animation.keyframes.length < initialLength
+  if (removed) {
+    console.log('🎬 [Unified Keyframe] Removed keyframe at frame:', absoluteFrame)
   }
-  return false
+
+  return removed
 }
 
 // ==================== 关键帧时长变化处理 ====================
 
 /**
- * 当clip时长变化时，重新计算所有关键帧的位置
+ * 当 clip 时长变化时处理关键帧
+ * ✅ 只需更新缓存，百分比保持不变
  * @param item 时间轴项目
  * @param oldDurationFrames 原始时长（帧数）
  * @param newDurationFrames 新时长（帧数）
@@ -248,55 +266,39 @@ export function adjustKeyframesForDurationChange(
   newDurationFrames: number,
 ): void {
   if (!item.animation || item.animation.keyframes.length === 0) return
-  if (oldDurationFrames <= 0 || newDurationFrames <= 0) return
 
-  console.log('🎬 [Unified Keyframe] Adjusting keyframes for duration change:', {
+  console.log('🎬 [Keyframe] Adjusting keyframes for duration change:', {
     itemId: item.id,
     oldDuration: oldDurationFrames,
     newDuration: newDurationFrames,
     keyframeCount: item.animation.keyframes.length,
   })
 
-  // 为每个关键帧重新计算位置
-  item.animation.keyframes.forEach((keyframe) => {
-    // 计算在原时长中的百分比位置
-    const percentagePosition = keyframe.framePosition / oldDurationFrames
+  // ✅ 核心优势：百分比不变，只需更新缓存
+  updateAllKeyframesCachedFrames(item.animation.keyframes, newDurationFrames)
 
-    // 根据新时长计算新的帧位置
-    const newFramePosition = Math.round(percentagePosition * newDurationFrames)
+  // 移除超出范围的关键帧（position > 1.0）
+  const validKeyframes = item.animation.keyframes.filter((kf) => kf.position <= 1.0)
 
-    // 确保新位置在有效范围内
-    ;(keyframe as any).framePosition = Math.max(0, Math.min(newDurationFrames, newFramePosition))
-
-    console.log('🎬 [Unified Keyframe] Adjusted keyframe position:', {
-      oldPosition: keyframe.framePosition,
-      percentage: percentagePosition,
-      newPosition: keyframe.framePosition,
-    })
-  })
-
-  // 移除超出新时长范围的关键帧
-  const validKeyframes = item.animation.keyframes.filter(
-    (kf) => kf.framePosition <= newDurationFrames,
-  )
-  const removedCount = item.animation.keyframes.length - validKeyframes.length
-
-  if (removedCount > 0) {
+  if (validKeyframes.length < item.animation.keyframes.length) {
+    const removedCount = item.animation.keyframes.length - validKeyframes.length
     ;(item.animation as any).keyframes = validKeyframes
-    console.log('🎬 [Unified Keyframe] Removed keyframes beyond new duration:', removedCount)
+    console.log('🎬 [Keyframe] Removed keyframes beyond clip end:', removedCount)
   }
 
-  // 按位置排序关键帧
+  // 确保关键帧顺序正确（防御性编程）
   sortKeyframes(item)
+
+  console.log('🎬 [Keyframe] Duration changed, cached frames updated')
 }
 
 /**
- * 按帧位置排序关键帧
+ * 按百分比位置排序关键帧
  */
 export function sortKeyframes(item: UnifiedTimelineItemData): void {
   if (!item.animation) return
   ;(item.animation as any).keyframes.sort(
-    (a: Keyframe, b: Keyframe) => a.framePosition - b.framePosition,
+    (a: AnimateKeyframe<MediaType>, b: AnimateKeyframe<MediaType>) => a.position - b.position, // ✅ 直接比较百分比
   )
 }
 
@@ -312,9 +314,6 @@ function handleClick_NoAnimation(item: UnifiedTimelineItemData, currentFrame: nu
   // 2. 在当前帧创建包含所有属性的关键帧
   const keyframe = createKeyframe(item, currentFrame)
   ;(item.animation as any)!.keyframes.push(keyframe)
-
-  // 3. 排序关键帧
-  sortKeyframes(item)
 
   console.log('🎬 [Unified Keyframe] Created initial keyframe:', {
     itemId: item.id,
@@ -356,9 +355,6 @@ function handleClick_BetweenKeyframes(item: UnifiedTimelineItemData, currentFram
   const keyframe = createKeyframe(item, currentFrame)
   ;(item.animation as any)!.keyframes.push(keyframe)
 
-  // 2. 排序关键帧
-  sortKeyframes(item)
-
   console.log('🎬 [Unified Keyframe] Created new keyframe:', {
     itemId: item.id,
     frame: currentFrame,
@@ -389,217 +385,47 @@ export function toggleKeyframe(item: UnifiedTimelineItemData, currentFrame: numb
       handleClick_BetweenKeyframes(item, currentFrame)
       break
   }
+
+  // 统一在操作后排序关键帧，确保顺序正确
+  if (item.animation && item.animation.keyframes.length > 0) {
+    sortKeyframes(item)
+  }
 }
 
 // ==================== 属性修改处理 ====================
 
 /**
- * 批量更新属性值（优化版本，避免重复位置计算）
- * 特别适用于同时更新width和height的情况
- */
-export async function updatePropertiesBatchViaWebAV(
-  item: UnifiedTimelineItemData,
-  properties: Record<string, any>,
-): Promise<void> {
-  const sprite = item.runtime.sprite
-  if (!sprite) {
-    console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
-    return
-  }
-
-  try {
-    // 检查是否同时更新width和height
-    const hasWidth = 'width' in properties
-    const hasHeight = 'height' in properties
-
-    if (hasWidth && hasHeight && hasVisualProperties(item)) {
-      // 🎯 批量处理尺寸更新：一次性计算位置，避免重复计算
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateTransform')
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      // 获取当前中心位置（项目坐标系）
-      const config = item.config
-      const currentCenterX = config.x
-      const currentCenterY = config.y
-      const newWidth = properties.width
-      const newHeight = properties.height
-
-      // 同时更新尺寸
-      sprite.rect.w = newWidth
-      sprite.rect.h = newHeight
-
-      // 一次性重新计算WebAV坐标（保持中心位置不变）
-      const webavCoords = projectToWebavCoords(
-        currentCenterX,
-        currentCenterY,
-        newWidth,
-        newHeight,
-        unifiedStore.videoResolution.width,
-        unifiedStore.videoResolution.height,
-      )
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
-
-      console.log('🎯 [Batch Center Scale] Size adjustment:', {
-        itemId: item.id,
-        centerPosition: { x: currentCenterX, y: currentCenterY },
-        oldSize: { w: config.width, h: config.height },
-        newSize: { w: newWidth, h: newHeight },
-        newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
-      })
-
-      // 移除已处理的属性
-      const remainingProperties = { ...properties }
-      delete remainingProperties.width
-      delete remainingProperties.height
-
-      // 处理剩余属性
-      for (const [prop, val] of Object.entries(remainingProperties)) {
-        await updatePropertyViaWebAV(item, prop, val)
-      }
-    } else {
-      // 逐个处理属性（原有逻辑）
-      for (const [prop, val] of Object.entries(properties)) {
-        await updatePropertyViaWebAV(item, prop, val)
-      }
-    }
-
-    // 触发渲染更新
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const unifiedStore = useUnifiedStore()
-    unifiedStore.seekToFrame(unifiedStore.currentFrame)
-  } catch (error) {
-    console.error('批量更新属性失败:', error)
-  }
-}
-
-/**
  * 通过WebAV更新属性值（遵循正确的数据流向）
+ * 直接设置进 item.config 的对应位置
  */
-async function updatePropertyViaWebAV(
+async function updateProperty(
   item: UnifiedTimelineItemData,
   property: string,
   value: any,
 ): Promise<void> {
-  const sprite = item.runtime.sprite
-  if (!sprite) {
-    console.warn('🎬 [Unified Keyframe] No sprite found for item:', item.id)
-    return
-  }
-
   try {
-    if (property === 'x' || property === 'y') {
-      // 位置更新需要坐标转换
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateTransform')
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      // 类型安全的配置访问（使用类型守卫）
-      if (!hasVisualProperties(item)) {
-        console.warn('🎬 [Unified Keyframe] Item does not have visual properties:', item.mediaType)
-        return
-      }
-
-      const config = item.config
-      const webavCoords = projectToWebavCoords(
-        property === 'x' ? value : config.x,
-        property === 'y' ? value : config.y,
-        config.width,
-        config.height,
-        unifiedStore.videoResolution.width,
-        unifiedStore.videoResolution.height,
-      )
-      sprite.rect.x = webavCoords.x
-      sprite.rect.y = webavCoords.y
-    } else if (property === 'width') {
-      // 中心缩放：保持中心位置不变，更新宽度
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateTransform')
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      if (hasVisualProperties(item)) {
-        // 获取当前中心位置（项目坐标系）
-        const config = item.config
-        const currentCenterX = config.x
-        const currentCenterY = config.y
-        const newWidth = value
-        const currentHeight = config.height
-
-        // 更新尺寸
-        sprite.rect.w = newWidth
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          newWidth,
-          currentHeight,
-          unifiedStore.videoResolution.width,
-          unifiedStore.videoResolution.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-
-        console.log('🎯 [Center Scale] Width adjustment:', {
-          itemId: item.id,
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          oldSize: { w: config.width, h: currentHeight },
-          newSize: { w: newWidth, h: currentHeight },
-          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
-        })
-      }
-    } else if (property === 'height') {
-      // 中心缩放：保持中心位置不变，更新高度
-      const { projectToWebavCoords } = await import('@/core/utils/coordinateTransform')
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
-      const unifiedStore = useUnifiedStore()
-
-      if (hasVisualProperties(item)) {
-        // 获取当前中心位置（项目坐标系）
-        const config = item.config
-        const currentCenterX = config.x
-        const currentCenterY = config.y
-        const currentWidth = config.width
-        const newHeight = value
-
-        // 更新尺寸
-        sprite.rect.h = newHeight
-
-        // 根据新尺寸重新计算WebAV坐标（保持中心位置不变）
-        const webavCoords = projectToWebavCoords(
-          currentCenterX,
-          currentCenterY,
-          currentWidth,
-          newHeight,
-          unifiedStore.videoResolution.width,
-          unifiedStore.videoResolution.height,
-        )
-        sprite.rect.x = webavCoords.x
-        sprite.rect.y = webavCoords.y
-
-        console.log('🎯 [Center Scale] Height adjustment:', {
-          itemId: item.id,
-          centerPosition: { x: currentCenterX, y: currentCenterY },
-          oldSize: { w: currentWidth, h: config.height },
-          newSize: { w: currentWidth, h: newHeight },
-          oldWebAVPos: { x: sprite.rect.x, y: sprite.rect.y },
-          newWebAVPos: { x: webavCoords.x, y: webavCoords.y },
-        })
-      }
-    } else if (property === 'rotation') {
-      sprite.rect.angle = value
-    } else if (property === 'opacity') {
-      sprite.opacity = value
+    // 验证 property 是否在 config 中存在
+    const config = item.config as Record<string, any>
+    if (!(property in config)) {
+      console.warn('🎬 [Unified Keyframe] Property not found in item.config:', {
+        itemId: item.id,
+        mediaType: item.mediaType,
+        property,
+        availableProperties: Object.keys(config),
+      })
+      return
     }
 
-    // 触发渲染更新
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const unifiedStore = useUnifiedStore()
-    unifiedStore.seekToFrame(unifiedStore.currentFrame)
+    // 直接更新 item.config 的对应属性
+    config[property] = value
+
+    console.log('🎬 [Unified Keyframe] Updated property in item.config:', {
+      itemId: item.id,
+      property,
+      value,
+    })
   } catch (error) {
-    console.error('🎬 [Unified Keyframe] Failed to update property via WebAV:', error)
+    console.error('🎬 [Unified Keyframe] Failed to update property:', error)
   }
 }
 
@@ -612,7 +438,7 @@ async function handlePropertyChange_NoAnimation(
   value: any,
 ): Promise<void> {
   // 通过WebAV更新属性值，propsChange事件会自动同步到TimelineItem
-  await updatePropertyViaWebAV(item, property, value)
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Property updated without animation via WebAV:', {
     itemId: item.id,
@@ -644,18 +470,15 @@ async function handlePropertyChange_OnKeyframe(
         currentFrame,
         property,
         value,
-        keyframePosition: keyframe.framePosition,
+        keyframePosition: keyframe.cachedFrame,
       })
     } else {
       console.warn('🎬 [Unified Keyframe] Property not found in keyframe:', property)
     }
   }
 
-  // 2. 更新WebAV动画（使用新的关键帧数据）
-  await updateWebAVAnimation(item)
-
-  // 3. 立即更新当前属性值到sprite（确保立即生效）
-  await updatePropertyViaWebAV(item, property, value)
+  // 2. 立即更新当前属性值到sprite（确保立即生效）
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Updated keyframe property:', {
     itemId: item.id,
@@ -693,14 +516,11 @@ async function handlePropertyChange_BetweenKeyframes(
     currentFrame,
     property,
     value,
-    keyframePosition: keyframe.framePosition,
+    keyframePosition: keyframe.cachedFrame,
   })
 
-  // 2. 更新WebAV动画（使用新的关键帧数据）
-  await updateWebAVAnimation(item)
-
-  // 3. 立即更新当前属性值到sprite（确保立即生效）
-  await updatePropertyViaWebAV(item, property, value)
+  // 2. 立即更新当前属性值到sprite（确保立即生效）
+  await updateProperty(item, property, value)
 
   console.log('🎬 [Unified Keyframe] Created keyframe for property change:', {
     itemId: item.id,
@@ -727,23 +547,36 @@ export async function handlePropertyChange(
 
   const buttonState = getKeyframeButtonState(item, currentFrame)
 
+  let result: 'no-animation' | 'updated-keyframe' | 'created-keyframe'
+
   switch (buttonState) {
     case 'none':
       await handlePropertyChange_NoAnimation(item, property, value)
-      return 'no-animation'
+      result = 'no-animation'
+      break
     case 'on-keyframe':
       await handlePropertyChange_OnKeyframe(item, currentFrame, property, value)
-      return 'updated-keyframe'
+      result = 'updated-keyframe'
+      break
     case 'between-keyframes':
       await handlePropertyChange_BetweenKeyframes(item, currentFrame, property, value)
-      return 'created-keyframe'
+      result = 'created-keyframe'
+      break
   }
+
+  // 统一在操作后排序关键帧，确保顺序正确
+  if (item.animation && item.animation.keyframes.length > 0) {
+    sortKeyframes(item)
+  }
+
+  return result
 }
 
 // ==================== 关键帧导航 ====================
 
 /**
  * 获取上一个关键帧的帧数
+ * ✅ 直接使用 cachedFrame 比较和排序
  */
 export function getPreviousKeyframeFrame(
   item: UnifiedTimelineItemData,
@@ -751,21 +584,22 @@ export function getPreviousKeyframeFrame(
 ): number | null {
   if (!item.animation || item.animation.keyframes.length === 0) return null
 
-  const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
+  const relativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
 
-  // 找到所有在当前位置之前的关键帧
+  // ✅ 直接使用缓存的帧位置进行比较
   const previousKeyframes = item.animation.keyframes
-    .filter((kf) => kf.framePosition < currentRelativeFrame)
-    .sort((a, b) => b.framePosition - a.framePosition) // 按位置降序排列
+    .filter((kf) => kf.cachedFrame < relativeFrame)
+    .sort((a, b) => b.cachedFrame - a.cachedFrame) // 降序
 
   if (previousKeyframes.length === 0) return null
 
   // 返回最近的上一个关键帧的绝对帧数
-  return relativeFrameToAbsoluteFrame(previousKeyframes[0].framePosition, item.timeRange)
+  return relativeFrameToAbsoluteFrame(previousKeyframes[0].cachedFrame, item.timeRange)
 }
 
 /**
  * 获取下一个关键帧的帧数
+ * ✅ 直接使用 cachedFrame 比较和排序
  */
 export function getNextKeyframeFrame(
   item: UnifiedTimelineItemData,
@@ -773,17 +607,17 @@ export function getNextKeyframeFrame(
 ): number | null {
   if (!item.animation || item.animation.keyframes.length === 0) return null
 
-  const currentRelativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
+  const relativeFrame = absoluteFrameToRelativeFrame(currentFrame, item.timeRange)
 
-  // 找到所有在当前位置之后的关键帧
+  // ✅ 直接使用缓存的帧位置进行比较
   const nextKeyframes = item.animation.keyframes
-    .filter((kf) => kf.framePosition > currentRelativeFrame)
-    .sort((a, b) => a.framePosition - b.framePosition) // 按位置升序排列
+    .filter((kf) => kf.cachedFrame > relativeFrame)
+    .sort((a, b) => a.cachedFrame - b.cachedFrame) // 升序
 
   if (nextKeyframes.length === 0) return null
 
   // 返回最近的下一个关键帧的绝对帧数
-  return relativeFrameToAbsoluteFrame(nextKeyframes[0].framePosition, item.timeRange)
+  return relativeFrameToAbsoluteFrame(nextKeyframes[0].cachedFrame, item.timeRange)
 }
 
 // ==================== 清理和重置 ====================
@@ -809,12 +643,13 @@ export function getKeyframeCount(item: UnifiedTimelineItemData): number {
 
 /**
  * 获取所有关键帧的帧数列表（按时间顺序）
+ * ✅ 直接使用 cachedFrame
  */
 export function getAllKeyframeFrames(item: UnifiedTimelineItemData): number[] {
   if (!item.animation) return []
 
   return item.animation.keyframes
-    .map((kf) => relativeFrameToAbsoluteFrame(kf.framePosition, item.timeRange))
+    .map((kf) => relativeFrameToAbsoluteFrame(kf.cachedFrame, item.timeRange))
     .sort((a, b) => a - b)
 }
 
@@ -829,11 +664,22 @@ export function validateKeyframes(item: UnifiedTimelineItemData): boolean {
   const clipDurationFrames = item.timeRange.timelineEndTime - item.timeRange.timelineStartTime
 
   for (const keyframe of item.animation.keyframes) {
-    // 检查位置是否在有效范围内（使用帧数）
-    if (keyframe.framePosition < 0 || keyframe.framePosition > clipDurationFrames) {
-      console.warn('🎬 [Unified Keyframe] Invalid keyframe position:', {
-        framePosition: keyframe.framePosition,
-        clipDuration: clipDurationFrames,
+    // 检查位置是否在有效范围内（0-1）
+    if (keyframe.position < 0 || keyframe.position > 1) {
+      console.warn('🎬 [Keyframe] Invalid keyframe position:', {
+        position: keyframe.position,
+        expected: '0-1 range',
+      })
+      return false
+    }
+
+    // ✅ 验证缓存是否正确
+    const expectedCachedFrame = percentageToFrame(keyframe.position, clipDurationFrames)
+    if (keyframe.cachedFrame !== expectedCachedFrame) {
+      console.warn('🎬 [Keyframe] Cached frame mismatch:', {
+        position: keyframe.position,
+        cachedFrame: keyframe.cachedFrame,
+        expectedCachedFrame,
       })
       return false
     }
@@ -852,7 +698,7 @@ export function validateKeyframes(item: UnifiedTimelineItemData): boolean {
         typeof visualProps.rotation !== 'number' ||
         typeof visualProps.opacity !== 'number'
       ) {
-        console.warn('🎬 [Unified Keyframe] Invalid visual keyframe property types:', props)
+        console.warn('🎬 [Keyframe] Invalid visual keyframe property types:', props)
         return false
       }
 
@@ -860,7 +706,7 @@ export function validateKeyframes(item: UnifiedTimelineItemData): boolean {
       if (isVideoTimelineItem(item)) {
         const videoProps = props as any
         if (typeof videoProps.volume !== 'number') {
-          console.warn('🎬 [Unified Keyframe] Invalid video audio property type:', props)
+          console.warn('🎬 [Keyframe] Invalid video audio property type:', props)
           return false
         }
       }
@@ -868,7 +714,7 @@ export function validateKeyframes(item: UnifiedTimelineItemData): boolean {
       // 音频类型验证音频属性值
       const audioProps = props as any
       if (typeof audioProps.volume !== 'number') {
-        console.warn('🎬 [Unified Keyframe] Invalid audio keyframe property type:', props)
+        console.warn('🎬 [Keyframe] Invalid audio keyframe property type:', props)
         return false
       }
     }

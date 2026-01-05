@@ -120,7 +120,7 @@
       "status": "Status",
       "pending": "Waiting to process...",
       "processing": "Processing",
-      "webavDecoding": "Parsing media information...",
+      "decoding": "Parsing media information...",
       "error": "Processing failed",
       "cancelled": "Task cancelled",
       "ready": "Ready",

@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { nanoid } from 'nanoid'
+import { generateDirectoryId, generateTabId } from '@/core/utils/idGenerator'
 import type {
   VirtualDirectory,
   DisplayTab,
@@ -70,7 +70,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function createDirectory(name: string, parentId: string | null = null): VirtualDirectory {
     const newDir: VirtualDirectory = {
-      id: `dir_${nanoid()}`,
+      id: generateDirectoryId(),
       name,
       parentId,
       createdAt: new Date().toISOString(),
@@ -243,7 +243,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function openTab(dirId: string, switchToNewTab: boolean = false): DisplayTab {
     const newTab: DisplayTab = {
-      id: `tab_${nanoid()}`,
+      id: generateTabId(),
       dirId,
       extra: {
         viewMode: 'grid',

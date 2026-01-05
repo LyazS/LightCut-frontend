@@ -2,7 +2,7 @@ import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
@@ -16,6 +16,7 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
   public readonly description: string
   private previousSelection: Set<string> // 保存操作前的选择状态
   private newSelection: Set<string> // 保存操作后的选择状态
+  private _isDisposed = false
 
   constructor(
     private itemIds: string[],
@@ -147,5 +148,24 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
     // 直接更新选择状态，不通过selectTimelineItems方法以避免循环调用
     this.selectionModule.selectedTimelineItemIds.value.clear()
     selection.forEach((id) => this.selectionModule.selectedTimelineItemIds.value.add(id))
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [SelectTimelineItemsCommand] 命令资源已清理: ${this.id}`)
   }
 }

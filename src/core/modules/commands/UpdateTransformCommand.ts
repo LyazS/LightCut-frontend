@@ -1,6 +1,6 @@
 /**
  * 更新变换属性命令
- * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
+ * 支持变换属性（位置、大小、旋转、透明度、时长、倍速）修改的撤销/重做操作
  */
 
 import { generateCommandId } from '@/core/utils/idGenerator'
@@ -13,57 +13,28 @@ import type {
   AudioMediaConfig,
   UnifiedTimelineItemData,
   TransformData,
+  TransformDataEx,
 } from '@/core/timelineitem'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem'
 
 // ==================== 新架构工具导入 ====================
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
-
-import {
-  isUnifiedVideoVisibleSprite,
-  isUnifiedAudioVisibleSprite,
-  hasAudioCapabilities,
-} from '@/core/utils/spriteTypeGuards'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import { TimelineItemFactory } from '@/core/timelineitem'
 
 /**
  * 更新变换属性命令
- * 支持变换属性（位置、大小、旋转、透明度、zIndex、时长、倍速）修改的撤销/重做操作
+ * 支持变换属性（位置、大小、旋转、透明度、时长、倍速）修改的撤销/重做操作
  */
 export class UpdateTransformCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
-    private oldValues: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-      duration?: number // 时长（帧数）
-      playbackRate?: number // 倍速
-      volume?: number // 音量（0-1之间）
-      isMuted?: boolean // 静音状态
-      gain?: number // 音频增益（dB）
-    },
-    private newValues: {
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-      rotation?: number
-      opacity?: number
-      zIndex?: number
-      duration?: number // 时长（帧数）
-      playbackRate?: number // 倍速
-      volume?: number // 音量（0-1之间）
-      isMuted?: boolean // 静音状态
-      gain?: number // 音频增益（dB）
-    },
+    private oldValues: TransformDataEx,
+    private newValues: TransformDataEx,
     private timelineModule: {
       updateTimelineItemTransform: (id: string, transform: TransformData) => void
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
@@ -100,21 +71,22 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 应用新的变换属性（位置、大小、旋转、透明度、层级）
-      const transformValues = {
+      // 应用新的变换属性（位置、大小、旋转、透明度、音量、静音）
+      const transformValues: TransformData = {
         x: this.newValues.x,
         y: this.newValues.y,
         width: this.newValues.width,
         height: this.newValues.height,
         rotation: this.newValues.rotation,
         opacity: this.newValues.opacity,
-        zIndex: this.newValues.zIndex,
+        volume: this.newValues.volume,
+        isMuted: this.newValues.isMuted,
       }
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
         Object.entries(transformValues).filter(([_, value]) => value !== undefined),
-      )
+      ) as TransformData
 
       if (Object.keys(filteredTransform).length > 0) {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
@@ -132,56 +104,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (this.newValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.newValues.duration)
       }
-
-      // 处理音量更新（对视频和音频有效）
-      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-        if (this.newValues.volume !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.volume !== undefined) {
-            config.volume = this.newValues.volume
-          }
-          const sprite = timelineItem.runtime.sprite
-          if (sprite && hasAudioCapabilities(sprite)) {
-            sprite.setVolume?.(this.newValues.volume)
-          }
-        }
-
-        if (this.newValues.isMuted !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.isMuted !== undefined) {
-            config.isMuted = this.newValues.isMuted
-          }
-          const sprite = timelineItem.runtime.sprite
-          if (sprite && hasAudioCapabilities(sprite)) {
-            sprite.setMuted(this.newValues.isMuted)
-          }
-        }
-      }
-
-      // 处理音频增益更新（仅对音频有效）
-      if (
-        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
-        this.newValues.gain !== undefined
-      ) {
-        // 类型安全的音频配置更新
-        const config = timelineItem.config as AudioMediaConfig
-        if (config.gain !== undefined) {
-          config.gain = this.newValues.gain
-        }
-        const sprite = timelineItem.runtime.sprite
-        if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
-          sprite.setGain(this.newValues.gain)
-        }
-      }
-
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`🎯 已更新变换属性: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 更新变换属性失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 更新变换属性失败: `, error)
       throw error
     }
   }
@@ -198,21 +122,22 @@ export class UpdateTransformCommand implements SimpleCommand {
         return
       }
 
-      // 恢复到旧的变换属性（位置、大小、旋转、透明度、层级）
-      const transformValues = {
+      // 恢复到旧的变换属性（位置、大小、旋转、透明度、音量、静音）
+      const transformValues: TransformData = {
         x: this.oldValues.x,
         y: this.oldValues.y,
         width: this.oldValues.width,
         height: this.oldValues.height,
         rotation: this.oldValues.rotation,
         opacity: this.oldValues.opacity,
-        zIndex: this.oldValues.zIndex,
+        volume: this.oldValues.volume,
+        isMuted: this.oldValues.isMuted,
       }
 
       // 过滤掉undefined的值
       const filteredTransform = Object.fromEntries(
         Object.entries(transformValues).filter(([_, value]) => value !== undefined),
-      )
+      ) as TransformData
 
       if (Object.keys(filteredTransform).length > 0) {
         this.timelineModule.updateTimelineItemTransform(this.timelineItemId, filteredTransform)
@@ -230,56 +155,8 @@ export class UpdateTransformCommand implements SimpleCommand {
       if (this.oldValues.duration !== undefined) {
         this.updateTimelineItemDuration(this.timelineItemId, this.oldValues.duration)
       }
-
-      // 处理音量恢复（对视频和音频有效）
-      if (TimelineItemQueries.hasAudioProperties(timelineItem)) {
-        if (this.oldValues.volume !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.volume !== undefined) {
-            config.volume = this.oldValues.volume
-          }
-          const sprite = timelineItem.runtime.sprite
-          if (sprite && hasAudioCapabilities(sprite)) {
-            sprite.setVolume(this.oldValues.volume)
-          }
-        }
-
-        if (this.oldValues.isMuted !== undefined) {
-          const config = timelineItem.config as VideoMediaConfig | AudioMediaConfig
-          if (config.isMuted !== undefined) {
-            config.isMuted = this.oldValues.isMuted
-          }
-          const sprite = timelineItem.runtime.sprite
-          if (sprite && hasAudioCapabilities(sprite)) {
-            sprite.setMuted(this.oldValues.isMuted)
-          }
-        }
-      }
-
-      // 处理音频增益恢复（仅对音频有效）
-      if (
-        TimelineItemQueries.isAudioTimelineItem(timelineItem) &&
-        this.oldValues.gain !== undefined
-      ) {
-        // 类型安全的音频配置恢复
-        const config = timelineItem.config as AudioMediaConfig
-        if (config.gain !== undefined) {
-          config.gain = this.oldValues.gain
-        }
-        const sprite = timelineItem.runtime.sprite
-        if (sprite && isUnifiedAudioVisibleSprite(sprite)) {
-          sprite.setGain(this.oldValues.gain)
-        }
-      }
-
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      console.log(`↩️ 已撤销变换属性更新: ${mediaItem?.name || '未知素材'}`)
     } catch (error) {
-      const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
-      const mediaItem = timelineItem
-        ? this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-        : null
-      console.error(`❌ 撤销变换属性更新失败: ${mediaItem?.name || '未知素材'}`, error)
+      console.error(`❌ 撤销变换属性更新失败: `, error)
       throw error
     }
   }
@@ -331,9 +208,6 @@ export class UpdateTransformCommand implements SimpleCommand {
       changes.push(`透明度: ${oldOpacity}% → ${newOpacity}%`)
     }
 
-    if (this.newValues.zIndex !== undefined && this.oldValues.zIndex !== undefined) {
-      changes.push(`层级: ${this.oldValues.zIndex} → ${this.newValues.zIndex}`)
-    }
 
     if (this.newValues.duration !== undefined && this.oldValues.duration !== undefined) {
       changes.push(
@@ -359,12 +233,6 @@ export class UpdateTransformCommand implements SimpleCommand {
       changes.push(`静音状态: ${oldMuteText} → ${newMuteText}`)
     }
 
-    if (this.newValues.gain !== undefined && this.oldValues.gain !== undefined) {
-      changes.push(
-        `增益: ${this.oldValues.gain.toFixed(1)}dB → ${this.newValues.gain.toFixed(1)}dB`,
-      )
-    }
-
     const changeText = changes.length > 0 ? ` (${changes.join(', ')})` : ''
     return `更新变换属性: ${mediaName}${changeText}`
   }
@@ -378,63 +246,39 @@ export class UpdateTransformCommand implements SimpleCommand {
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     if (!timelineItem) return
 
-    const sprite = timelineItem.runtime.sprite
-    if (!sprite) return
-
-    const timeRange = sprite.getTimeRange()
-    const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-
-    if (!mediaItem) return
-
-    // 直接使用帧数进行计算，timeRange中的时间已经是帧数
-    const timelineStartFrames = timeRange.timelineStartTime
+    // 直接使用帧数进行计算
+    const timelineStartFrames = timelineItem.timeRange.timelineStartTime
     const newTimelineEndFrames = timelineStartFrames + newDurationFrames
-    const newTimelineEndTime = framesToMicroseconds(newTimelineEndFrames)
 
-    if (TimelineItemQueries.isVideoTimelineItem(timelineItem)) {
-      // 更新sprite的时间范围
-      sprite.setTimeRange({
-        ...timeRange,
-        timelineEndTime: newTimelineEndTime,
-      })
-    } else if (TimelineItemQueries.isAudioTimelineItem(timelineItem)) {
-      // 更新sprite的时间范围
-      sprite.setTimeRange({
-        ...timeRange,
-        timelineEndTime: newTimelineEndTime,
-      })
-    } else if (TimelineItemQueries.isImageTimelineItem(timelineItem)) {
-      // 对于图片，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-        clipStartTime: -1,
-        clipEndTime: -1,
-      })
-    } else if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
-      // 对于文本，与图片类似，直接更新显示时长（使用帧数），clipStartTime和clipEndTime设置为-1
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: newTimelineEndTime,
-        clipStartTime: -1,
-        clipEndTime: -1,
-      })
-      console.log('📝 [UpdateTimelineItemDuration] 文本时长已更新:', {
-        startTime: timeRange.timelineStartTime,
-        endTime: newTimelineEndTime,
-        duration: newDurationFrames,
-      })
+    // 使用 TimelineItemFactory.setTimeRange 设置时间范围
+    TimelineItemFactory.setTimeRange(timelineItem, {
+      timelineEndTime: newTimelineEndFrames,
+    })
+
+    console.log('📝 [UpdateTimelineItemDuration] 时长已更新:', {
+      mediaType: timelineItem.mediaType,
+      startTime: timelineStartFrames,
+      endTime: newTimelineEndFrames,
+      duration: newDurationFrames,
+    })
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
     }
 
-    // 同步timeRange到TimelineItem
-    timelineItem.timeRange = sprite.getTimeRange()
-
-    // 如果有动画，需要重新设置WebAV动画时长
-    if (timelineItem.animation && timelineItem.animation.keyframes.length > 0) {
-      // 异步更新动画，不阻塞命令执行
-      console.log(
-        '🎬 [Command] Timeline item has animation, but animation update is not yet implemented in unified architecture',
-      )
-    }
+    this._isDisposed = true
+    console.log(`🗑️ [UpdateTransformCommand] 命令资源已清理: ${this.id}`)
   }
 }

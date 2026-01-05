@@ -1,24 +1,9 @@
 <template>
-  <div class="property-section unified-keyframe-section">
-    <div class="section-header">
-      <h4>{{ t('properties.keyframes.keyframeAnimation') }}</h4>
-    </div>
+  <div class="property-section">
+    <h4>{{ t('properties.keyframes.keyframeAnimation') }}</h4>
 
     <!-- 关键帧控制按钮组 - 一行显示 -->
     <div class="keyframe-controls-row">
-      <!-- 主关键帧按钮 -->
-      <HoverButton
-        :class="`unified-keyframe-toggle ${keyframeButtonState === 'none' ? 'state-none' : ''} ${keyframeButtonState === 'on-keyframe' ? 'state-on-keyframe' : ''} ${keyframeButtonState === 'between-keyframes' ? 'state-between-keyframes' : ''}`"
-        @click="$emit('toggle-keyframe')"
-        :disabled="!canOperateKeyframes"
-        :title="keyframeTooltip"
-      >
-        <template #icon>
-          <component :is="IconComponents.KEYFRAME" size="16px" />
-        </template>
-        <span>{{ t('properties.keyframes.keyframes') }}</span>
-      </HoverButton>
-
       <!-- 上一个关键帧 -->
       <HoverButton
         @click="$emit('go-to-previous')"
@@ -30,6 +15,19 @@
           <component :is="IconComponents.PREV_KEYFRAME" size="16px" />
         </template>
         <span>{{ t('properties.keyframes.goToPrevious') }}</span>
+      </HoverButton>
+
+      <!-- 主关键帧按钮 -->
+      <HoverButton
+        :class="`unified-keyframe-toggle ${keyframeButtonState === 'none' ? 'state-none' : ''} ${keyframeButtonState === 'on-keyframe' ? 'state-on-keyframe' : ''} ${keyframeButtonState === 'between-keyframes' ? 'state-between-keyframes' : ''}`"
+        @click="$emit('toggle-keyframe')"
+        :disabled="!canOperateKeyframes"
+        :title="keyframeTooltip"
+      >
+        <template #icon>
+          <component :is="IconComponents.KEYFRAME" size="16px" />
+        </template>
+        <span>{{ t('properties.keyframes.keyframes') }}</span>
       </HoverButton>
 
       <!-- 下一个关键帧 -->
@@ -53,7 +51,6 @@
         class="debug-btn"
         :title="t('properties.keyframes.debugKeyframes')"
       >
-        <RemixIcon name="delete-bin-line" size="sm" />
         <span>{{ t('properties.keyframes.debugKeyframes') }}</span>
       </HoverButton> -->
     </div>
@@ -88,29 +85,12 @@ defineEmits<Emits>()
 </script>
 
 <style scoped>
-.unified-keyframe-section {
-  border-bottom: 1px solid var(--color-border-secondary);
-  padding-bottom: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
-}
-
-.section-header {
-  margin-bottom: var(--spacing-sm);
-}
-
-.section-header h4 {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: 600;
-}
-
 .keyframe-controls-row {
   display: flex;
   gap: 6px;
   align-items: stretch;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-wrap: nowrap;
 }
 
 /* 主关键帧按钮 */

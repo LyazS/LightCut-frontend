@@ -8,7 +8,6 @@ import type {
   MediaStatus,
   MediaType,
   MediaTypeOrUnknown,
-  WebAVObjects,
 } from './types'
 import { UnifiedMediaItemQueries } from './queries'
 
@@ -34,21 +33,6 @@ export const UnifiedMediaItemActions = {
     console.log(`媒体项目状态转换: ${item.name} ${oldStatus} → ${newStatus}`)
 
     return true
-  },
-
-  // 设置WebAV对象
-  setWebAVObjects(item: UnifiedMediaItemData, webav: WebAVObjects): void {
-    item.runtime.webav = webav
-  },
-
-  // 设置时长
-  setDuration(item: UnifiedMediaItemData, duration: number): void {
-    item.duration = duration
-  },
-
-  // 设置媒体类型
-  setMediaType(item: UnifiedMediaItemData, mediaType: MediaType): void {
-    item.mediaType = mediaType
   },
 
   // 更新名称

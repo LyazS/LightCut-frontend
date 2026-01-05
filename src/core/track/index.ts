@@ -17,7 +17,6 @@ export { isVideoTrack, isAudioTrack, isTextTrack, createUnifiedTrackData } from 
 
 // ==================== 工具函数导出 ====================
 export {
-  generateTrackId,
   getDefaultTrackName,
   getDefaultTrackHeight,
   mapMediaTypeToTrackType,

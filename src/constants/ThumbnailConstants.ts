@@ -14,7 +14,7 @@ export const THUMBNAIL_CONSTANTS = {
   /** 可见性计算缓冲帧数 */
   VISIBILITY_BUFFER_FRAMES: 100,
 
-  /** 媒体项缩略图最长边尺寸（像素） - 用于 WebAVProcessor 生成缩略图 */
+  /** 媒体项缩略图最长边尺寸（像素） */
   MEDIA_ITEM_MAX_EDGE: 240,
 } as const
 

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { fetchClient } from '@/utils/fetchClient'
+import { generateChatMessageId } from '@/core/utils/idGenerator'
 import { API_ENDPOINTS } from '@/aipanel/services/apiTypes'
 import type {
   CreateSessionResponse,
@@ -168,7 +169,7 @@ export class SessionManager {
       })
     }
     return {
-      id: `${ChatMessageType.AUTO_REPLY}-${Date.now()}`,
+      id: generateChatMessageId(ChatMessageType.AUTO_REPLY),
       type: ChatMessageType.AUTO_REPLY,
       content: [
         {
@@ -230,7 +231,7 @@ export class SessionManager {
 
         // 添加用户消息
         const userMessage: ChatMessageUser = {
-          id: `${sendType}-${Date.now()}`,
+          id: generateChatMessageId(sendType),
           type: sendType as ChatMessageType.USER | ChatMessageType.AUTO_REPLY,
           content: [
             {
@@ -244,7 +245,7 @@ export class SessionManager {
           this.messages.value.push(userMessage)
 
           // 添加助手消息占位符（初始为空内容）
-          this.currentAIMessageId = `assistant-${Date.now()}`
+          this.currentAIMessageId = generateChatMessageId('assistant')
           const aiMessage: ChatMessage = {
             id: this.currentAIMessageId,
             type: ChatMessageType.ASSISTANT,

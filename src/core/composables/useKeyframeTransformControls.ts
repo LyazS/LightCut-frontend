@@ -8,8 +8,9 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/core/utils/rotationTransform'
 import { useUnifiedKeyframeUI } from '@/core/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
+import { debugKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -53,8 +54,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.x
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.x
   })
 
   const transformY = computed(() => {
@@ -63,8 +65,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.y
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.y
   })
 
   const scaleX = computed(() => {
@@ -74,9 +77,12 @@ export function useUnifiedKeyframeTransformControls(
     )
       return 1
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const config = selectedTimelineItem.value.config
-    return config.width / config.originalWidth
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    return config.width / originalWidth
   })
 
   const scaleY = computed(() => {
@@ -86,9 +92,12 @@ export function useUnifiedKeyframeTransformControls(
     )
       return 1
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const config = selectedTimelineItem.value.config
-    return config.height / config.originalHeight
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    return config.height / originalHeight
   })
 
   const rotation = computed(() => {
@@ -97,8 +106,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    const radians = selectedTimelineItem.value.config.rotation
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    const radians = config.rotation
     return webAVRadiansToUIDegrees(radians)
   })
 
@@ -108,14 +118,24 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 1
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-    return selectedTimelineItem.value.config.opacity
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.opacity
   })
 
-  const zIndex = computed(() => {
-    if (!selectedTimelineItem.value) return 0
-    return selectedTimelineItem.value.config.zIndex
+  // 音量属性（支持视频和音频，支持关键帧动画）
+  const volume = computed(() => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasAudioProperties(selectedTimelineItem.value)
+    )
+      return 1
+    // ✅ 使用辅助函数获取渲染配置
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    return config.volume ?? 1
   })
+
+  // 注意：isMuted 不需要添加到这里，保持在组件中独立处理
 
   // 等比缩放相关（每个clip独立状态）
   const proportionalScale = computed({
@@ -149,7 +169,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    return selectedTimelineItem.value.config.originalWidth
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    return mediaItem?.runtime.bunny?.originalWidth ?? 0
   })
 
   const elementHeight = computed(() => {
@@ -158,7 +180,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    return selectedTimelineItem.value.config.originalHeight
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    return mediaItem?.runtime.bunny?.originalHeight ?? 0
   })
 
   // ==================== 关键帧控制方法 ====================
@@ -194,7 +218,6 @@ export function useUnifiedKeyframeTransformControls(
     }
 
     try {
-      const { debugKeyframes } = await import('../utils/unifiedKeyframeUtils')
       debugKeyframes(selectedTimelineItem.value)
     } catch (error) {
       console.error('🎬 [Unified Debug] 调试失败:', error)
@@ -213,7 +236,7 @@ export function useUnifiedKeyframeTransformControls(
     height?: number
     rotation?: number
     opacity?: number
-    zIndex?: number
+    volume?: number      // 新增：音量支持关键帧
   }) => {
     if (!selectedTimelineItem.value) return
 
@@ -229,7 +252,7 @@ export function useUnifiedKeyframeTransformControls(
         : 0,
       rotation: rotation.value,
       opacity: opacity.value,
-      zIndex: zIndex.value,
+      volume: volume.value,      // 新增：音量
     }
 
     // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
@@ -264,20 +287,8 @@ export function useUnifiedKeyframeTransformControls(
     if (finalTransform.opacity !== undefined) {
       await updateUnifiedProperty('opacity', finalTransform.opacity)
     }
-
-    // 对于其他属性（如zIndex），仍然使用原来的更新方式
-    const otherTransform: any = {}
-    if (finalTransform.zIndex !== undefined) {
-      otherTransform.zIndex = finalTransform.zIndex
-    }
-
-    if (Object.keys(otherTransform).length > 0) {
-      // 使用带历史记录的变换属性更新方法（仅用于非关键帧属性）
-      await unifiedStore.updateTimelineItemTransformWithHistory(
-        selectedTimelineItem.value.id,
-        otherTransform,
-      )
-      console.log('✅ 其他变换属性更新成功')
+    if (finalTransform.volume !== undefined) {
+      await updateUnifiedProperty('volume', finalTransform.volume)
     }
 
     console.log('✅ 统一关键帧变换属性更新完成')
@@ -291,7 +302,7 @@ export function useUnifiedKeyframeTransformControls(
     if (!selectedTimelineItem.value) return
 
     try {
-      // 使用统一关键帧处理逻辑（已经包含了正确的WebAV更新流程）
+      // 使用统一关键帧处理逻辑
       await handleUnifiedPropertyChange(property, value)
 
       console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {
@@ -321,9 +332,13 @@ export function useUnifiedKeyframeTransformControls(
     ) {
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
+      // 从 mediaItem 的 bunny 对象中获取原始尺寸
+      const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+      const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+      const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
       const newSize = {
-        width: config.originalWidth * scaleX.value,
-        height: config.originalHeight * scaleX.value, // 使用X缩放值保持等比
+        width: originalWidth * scaleX.value,
+        height: originalHeight * scaleX.value, // 使用X缩放值保持等比
       }
       updateTransform({ width: newSize.width, height: newSize.height })
     }
@@ -340,9 +355,13 @@ export function useUnifiedKeyframeTransformControls(
     ) {
       // hasVisualProperties 类型守卫确保了 config 具有视觉属性
       const config = selectedTimelineItem.value.config
+      // 从 mediaItem 的 bunny 对象中获取原始尺寸
+      const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+      const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+      const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
       const newSize = {
-        width: config.originalWidth * newScale,
-        height: config.originalHeight * newScale,
+        width: originalWidth * newScale,
+        height: originalHeight * newScale,
       }
       updateTransform({ width: newSize.width, height: newSize.height })
     }
@@ -360,9 +379,12 @@ export function useUnifiedKeyframeTransformControls(
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
     const newScaleX = Math.max(0.01, Math.min(5, value))
     const newSize = {
-      width: config.originalWidth * newScaleX,
+      width: originalWidth * newScaleX,
       height: config.height, // 保持Y尺寸不变
     }
     updateTransform({ width: newSize.width, height: newSize.height })
@@ -380,10 +402,13 @@ export function useUnifiedKeyframeTransformControls(
 
     // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
+    // 从 mediaItem 的 bunny 对象中获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
     const newScaleY = Math.max(0.01, Math.min(5, value))
     const newSize = {
       width: config.width, // 保持X尺寸不变
-      height: config.originalHeight * newScaleY,
+      height: originalHeight * newScaleY,
     }
     updateTransform({ width: newSize.width, height: newSize.height })
   }
@@ -404,32 +429,46 @@ export function useUnifiedKeyframeTransformControls(
     updateTransform({ opacity: newOpacity })
   }
 
+  /**
+   * 设置音量绝对值的方法（支持关键帧）
+   */
+  const setVolume = (value: number) => {
+    const newVolume = Math.max(0, Math.min(1, value))
+    updateTransform({ volume: newVolume })
+  }
+
+  // 注意：toggleMute 不需要添加到这里，保持在组件中独立处理
+
   // ==================== 对齐控制方法 ====================
 
   /**
    * 实现对齐功能（基于项目坐标系：中心为原点）
    */
   const alignHorizontal = (alignment: 'left' | 'center' | 'right') => {
-    if (!selectedTimelineItem.value || !selectedTimelineItem.value.runtime.sprite) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
-    const sprite = selectedTimelineItem.value.runtime.sprite
+    const config = selectedTimelineItem.value.config
     const canvasWidth = unifiedStore.videoResolution.width
-    const spriteWidth = sprite.rect.w || canvasWidth
+    const elementWidth = config.width
 
     try {
       let newProjectX = 0
       switch (alignment) {
         case 'left':
-          // 左对齐：sprite左边缘贴画布左边缘
-          newProjectX = -canvasWidth / 2 + spriteWidth / 2
+          // 左对齐：元素左边缘贴画布左边缘
+          newProjectX = -canvasWidth / 2 + elementWidth / 2
           break
         case 'center':
-          // 居中：sprite中心对齐画布中心
+          // 居中：元素中心对齐画布中心
           newProjectX = 0
           break
         case 'right':
-          // 右对齐：sprite右边缘贴画布右边缘
-          newProjectX = canvasWidth / 2 - spriteWidth / 2
+          // 右对齐：元素右边缘贴画布右边缘
+          newProjectX = canvasWidth / 2 - elementWidth / 2
           break
       }
 
@@ -442,26 +481,30 @@ export function useUnifiedKeyframeTransformControls(
   }
 
   const alignVertical = (alignment: 'top' | 'middle' | 'bottom') => {
-    if (!selectedTimelineItem.value) return
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
 
-    const sprite = selectedTimelineItem.value.runtime.sprite!
+    const config = selectedTimelineItem.value.config
     const canvasHeight = unifiedStore.videoResolution.height
-    const spriteHeight = sprite.rect.h || canvasHeight
+    const elementHeight = config.height
 
     try {
       let newProjectY = 0
       switch (alignment) {
         case 'top':
-          // 顶对齐：sprite上边缘贴画布上边缘
-          newProjectY = -canvasHeight / 2 + spriteHeight / 2
+          // 顶对齐：元素上边缘贴画布上边缘
+          newProjectY = -canvasHeight / 2 + elementHeight / 2
           break
         case 'middle':
-          // 居中：sprite中心对齐画布中心
+          // 居中：元素中心对齐画布中心
           newProjectY = 0
           break
         case 'bottom':
-          // 底对齐：sprite下边缘贴画布下边缘
-          newProjectY = canvasHeight / 2 - spriteHeight / 2
+          // 底对齐：元素下边缘贴画布下边缘
+          newProjectY = canvasHeight / 2 - elementHeight / 2
           break
       }
 
@@ -490,7 +533,7 @@ export function useUnifiedKeyframeTransformControls(
     scaleY,
     rotation,
     opacity,
-    zIndex,
+    volume,      // 新增：音量属性
     proportionalScale,
     uniformScale,
     elementWidth,
@@ -517,9 +560,12 @@ export function useUnifiedKeyframeTransformControls(
     // 旋转和透明度控制方法
     setRotation,
     setOpacity,
+    setVolume,   // 新增：音量控制方法
 
     // 对齐控制方法
     alignHorizontal,
     alignVertical,
+    
+    // 注意：isMuted 和 toggleMute 不导出，保持在组件中独立处理
   }
 }

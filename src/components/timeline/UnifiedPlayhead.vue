@@ -57,7 +57,6 @@ const handleMouseDown = (event: MouseEvent) => {
   event.preventDefault()
   event.stopPropagation()
 
-  // 暂停WebAV播放
   unifiedStore.pause()
 
   isDragging.value = true
@@ -109,8 +108,8 @@ const handleMouseMove = (event: MouseEvent) => {
       }
     }
 
-    // 更新当前帧
-    unifiedStore.setCurrentFrame(Math.max(0, Math.floor(frame)))
+    // 更新当前帧（使用四舍五入而不是向下取整）
+    unifiedStore.setCurrentFrame(Math.max(0, Math.round(frame)))
   }
 }
 

@@ -24,29 +24,9 @@
       <div v-else-if="selectedTimelineItem" class="properties-content">
         <!-- 只在ready状态时显示完整属性面板 -->
         <template v-if="selectedTimelineItem.timelineStatus === 'ready'">
-          <!-- 根据选中项目类型显示不同的属性组件 -->
-          <UnifiedVideoClipProperties
-            v-if="
-              selectedTimelineItem.mediaType === 'video' ||
-              selectedTimelineItem.mediaType === 'image'
-            "
-            :selected-timeline-item="
-              selectedTimelineItem as UnifiedTimelineItemData<'video' | 'image'>
-            "
-            :current-frame="currentFrame"
-          />
-
-          <!-- 文本项目属性组件 -->
-          <UnifiedTextClipProperties
-            v-else-if="selectedTimelineItem.mediaType === 'text'"
-            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'text'>"
-            :current-frame="currentFrame"
-          />
-
-          <!-- 音频项目属性组件 -->
-          <UnifiedAudioClipProperties
-            v-else-if="selectedTimelineItem.mediaType === 'audio'"
-            :selected-timeline-item="selectedTimelineItem as UnifiedTimelineItemData<'audio'>"
+          <!-- 统一属性组件 - 根据媒体类型自动组合不同的属性组 -->
+          <UnifiedClipProperties
+            :selected-timeline-item="selectedTimelineItem"
             :current-frame="currentFrame"
           />
         </template>
@@ -82,14 +62,12 @@ import { computed } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { NScrollbar } from 'naive-ui'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
-import { getStatusText } from '@/core/timelineitem/TimelineItemQueries'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import { getStatusText } from '@/core/timelineitem/queries'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { IconComponents } from '@/constants/iconComponents'
 
-import UnifiedVideoClipProperties from '@/components/properties/UnifiedVideoClipProperties.vue'
-import UnifiedTextClipProperties from '@/components/properties/UnifiedTextClipProperties.vue'
-import UnifiedAudioClipProperties from '@/components/properties/UnifiedAudioClipProperties.vue'
+import UnifiedClipProperties from '@/components/properties/unified/UnifiedClipProperties.vue'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()

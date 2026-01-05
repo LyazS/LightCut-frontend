@@ -8,7 +8,7 @@ import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
@@ -20,6 +20,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 export class MoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -145,5 +146,24 @@ export class MoveTimelineItemCommand implements SimpleCommand {
       console.error(`❌ 撤销移动时间轴项目失败: ${itemName}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [MoveTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

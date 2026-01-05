@@ -34,7 +34,7 @@ export const UnifiedMediaItemQueries = {
   },
 
   isProcessing(item: UnifiedMediaItemData): item is ProcessingMediaItem {
-    return item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'webavdecoding'
+    return item.mediaStatus === 'asyncprocessing' || item.mediaStatus === 'decoding'
   },
 
   hasError(item: UnifiedMediaItemData): item is ErrorMediaItem & { mediaStatus: 'error' } {
@@ -57,8 +57,8 @@ export const UnifiedMediaItemQueries = {
   canTransitionTo(item: UnifiedMediaItemData, newStatus: MediaStatus): boolean {
     const validTransitions: Record<MediaStatus, MediaStatus[]> = {
       pending: ['asyncprocessing', 'error', 'cancelled'],
-      asyncprocessing: ['webavdecoding', 'error', 'cancelled'],
-      webavdecoding: ['ready', 'error', 'cancelled'],
+      asyncprocessing: ['decoding', 'error', 'cancelled'],
+      decoding: ['ready', 'error', 'cancelled'],
       ready: ['error'],
       error: ['pending', 'cancelled'],
       cancelled: ['pending'],
@@ -68,33 +68,12 @@ export const UnifiedMediaItemQueries = {
     return validTransitions[item.mediaStatus]?.includes(newStatus) || false
   },
 
-  // 获取进度信息
-  getProgress(item: UnifiedMediaItemData): number {
-    if (item.mediaStatus === 'asyncprocessing') {
-      return item.source.progress / 100 // 转换为 0-1 范围
-    }
-    if (item.mediaStatus === 'ready') {
-      return 1
-    }
-    return 0
-  },
-
-  // 获取错误信息
-  getError(item: UnifiedMediaItemData): string | undefined {
-    return item.source.errorMessage
-  },
-
-  // 获取时长
-  getDuration(item: UnifiedMediaItemData): number | undefined {
-    return item.duration
-  },
-
   // 获取原始尺寸
   getOriginalSize(item: UnifiedMediaItemData): { width: number; height: number } | undefined {
-    if (item.runtime.webav?.originalWidth && item.runtime.webav?.originalHeight) {
+    if (item.runtime.bunny?.originalWidth && item.runtime.bunny?.originalHeight) {
       return {
-        width: item.runtime.webav.originalWidth,
-        height: item.runtime.webav.originalHeight,
+        width: item.runtime.bunny.originalWidth,
+        height: item.runtime.bunny.originalHeight,
       }
     }
     return undefined

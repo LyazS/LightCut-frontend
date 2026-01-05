@@ -47,12 +47,7 @@
         <div class="clip-management-toolbar">
           <UnifiedClipManagementToolbar />
         </div>
-        <!-- 只有WebAV初始化完成后才显示Timeline -->
-        <UnifiedTimeline v-if="unifiedStore.isWebAVReady" />
-        <div v-else class="timeline-loading">
-          <div class="loading-spinner"></div>
-          <p>{{ t('editor.initializingWebAV') }}</p>
-        </div>
+        <UnifiedTimeline />
       </div>
     </div>
 
@@ -85,7 +80,6 @@ import UnifiedPropertiesPanel from '@/components/panels/UnifiedPropertiesPanel.v
 import AIPanel from '@/aipanel/components/AIPanel.vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useKeyboardShortcuts } from '@/core/composables'
-import { logWebAVReadyStateChange, logComponentLifecycle } from '@/core/utils/webavDebug'
 import { useAppI18n } from '@/core/composables/useI18n'
 
 // 定义props和emit
@@ -111,15 +105,6 @@ const SPLITTER_WIDTH = 8
 // 注册全局快捷键
 useKeyboardShortcuts()
 
-// 添加WebAV就绪状态监听
-watch(
-  () => unifiedStore.isWebAVReady,
-  (isReady, wasReady) => {
-    logWebAVReadyStateChange(isReady, wasReady)
-  },
-  { immediate: true },
-)
-
 // 窗口大小变化时调整面板宽度
 const adjustPanelWidths = () => {
   const container = document.querySelector('.video-preview-engine')
@@ -138,11 +123,6 @@ const adjustPanelWidths = () => {
 }
 
 onMounted(() => {
-  logComponentLifecycle('VideoPreviewEngine', 'mounted', {
-    isWebAVReady: unifiedStore.isWebAVReady,
-    hasAVCanvas: !!unifiedStore.avCanvas,
-  })
-
   // 初始化百分比宽度（基于当前像素宽度）
   initializePanelPercentages()
 

@@ -15,12 +15,10 @@ export { ToggleKeyframeCommand } from './ToggleKeyframeCommand'
 export type {
   KeyframeSnapshot,
   TimelineModule,
-  WebAVAnimationManager,
   PlaybackControls,
 } from './shared'
 
 export {
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,

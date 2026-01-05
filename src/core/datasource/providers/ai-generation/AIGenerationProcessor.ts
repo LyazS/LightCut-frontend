@@ -545,13 +545,13 @@ export class AIGenerationProcessor extends DataSourceProcessor {
         mediaItem.mediaType = mediaType
       }
 
-      // 6. WebAV 处理
-      this.transitionMediaStatus(mediaItem, 'webavdecoding')
-      const webavResult = await this.webavProcessor.processMedia(mediaItem, file)
+      // 6. 解析处理
+      this.transitionMediaStatus(mediaItem, 'decoding')
+      const bunnyResult = await this.bunnyProcessor.processMedia(mediaItem, file)
 
       // 7. 直接设置元数据
-      UnifiedMediaItemActions.setWebAVObjects(mediaItem, webavResult.webavObjects)
-      UnifiedMediaItemActions.setDuration(mediaItem, webavResult.duration)
+      mediaItem.runtime.bunny = bunnyResult.bunnyObjects
+      mediaItem.duration = Number(bunnyResult.durationN)
       console.log(`🔧 [AIGenerationProcessor] 元数据设置完成: ${mediaItem.name}`)
 
       // 8. 🌟 根据标志决定保存策略（分别调用 saveMediaFile 和 saveMetaFile）
@@ -579,7 +579,6 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       this.transitionMediaStatus(mediaItem, 'ready')
       console.log(`✅ [AIGenerationProcessor] 媒体项目处理完成: ${mediaItem.name}`)
     } catch (error) {
-      // 处理 WebAV 或其他步骤的错误
       console.error(`❌ [AIGenerationProcessor] 媒体项目处理失败: ${mediaItem.name}`, error)
       this.transitionMediaStatus(mediaItem, 'error')
       source.errorMessage = error instanceof Error ? error.message : '处理失败'

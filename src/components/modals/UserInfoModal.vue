@@ -28,7 +28,7 @@
           <span class="value">{{ user.balance.toFixed(2) }}</span>
         </div>
 
-        <div class="detail-item">
+        <!-- <div class="detail-item">
           <span class="label">{{ t('user.totalRecharged') }}：</span>
           <span class="value">{{ user.total_recharged.toFixed(2) }}</span>
         </div>
@@ -36,7 +36,7 @@
         <div class="detail-item">
           <span class="label">{{ t('user.totalConsumed') }}：</span>
           <span class="value">{{ user.total_consumed.toFixed(2) }}</span>
-        </div>
+        </div> -->
 
         <div v-if="user.last_login_at" class="detail-item">
           <span class="label">{{ t('user.lastLogin') }}：</span>

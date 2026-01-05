@@ -120,7 +120,7 @@
       "status": "状态",
       "pending": "等待处理中...",
       "processing": "处理中",
-      "webavDecoding": "正在解析媒体信息...",
+      "decoding": "正在解析媒体信息...",
       "error": "处理失败",
       "cancelled": "任务已取消",
       "ready": "就绪",

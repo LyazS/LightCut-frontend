@@ -40,7 +40,7 @@
     <div v-if="hasKeyframes" class="keyframes-container">
       <div
         v-for="keyframe in visibleKeyframes"
-        :key="keyframe.framePosition"
+        :key="keyframe.cachedFrame"
         class="keyframe-marker"
         :style="getKeyframeMarkerStyles(keyframe.pixelPosition)"
         :title="t('timeline.clip.keyframeTooltip', { frame: keyframe.absoluteFrame })"
@@ -58,7 +58,6 @@ import type { UnifiedTimelineClipProps, ContentTemplateProps } from '@/core/type
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { ContentRendererFactory } from '@/components/cliprenderers/ContentRendererFactory'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { usePlaybackControls } from '@/core/composables'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { alignFramesToFrame } from '@/core/utils/timeUtils'
 import { relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
@@ -73,7 +72,6 @@ const props = defineProps<UnifiedTimelineClipProps>()
 
 // 获取统一store实例
 const unifiedStore = useUnifiedStore()
-const { pauseForEditing } = usePlaybackControls()
 const { t } = useAppI18n()
 
 // 获取素材名称
@@ -112,7 +110,6 @@ const templateProps = computed<ContentTemplateProps>(() => ({
   data: props.data,
   isSelected: props.isSelected,
   isMultiSelected: props.isMultiSelected,
-  currentFrame: props.currentFrame,
   trackHeight: props.trackHeight,
   timelineWidth: props.timelineWidth,
   viewportFrameRange: props.viewportFrameRange,
@@ -204,8 +201,8 @@ const visibleKeyframes = computed(() => {
 
   return keyframes
     .map((keyframe) => {
-      // 将相对帧数转换为绝对帧数
-      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.framePosition, timeRange)
+      // ✅ 直接使用 cachedFrame
+      const absoluteFrame = relativeFrameToAbsoluteFrame(keyframe.cachedFrame, timeRange)
 
       // 计算关键帧在整个时间轴上的像素位置（考虑缩放级别）
       const absolutePixelPosition = unifiedStore.frameToPixel(absoluteFrame, props.timelineWidth)
@@ -214,9 +211,10 @@ const visibleKeyframes = computed(() => {
       const relativePixelPosition = absolutePixelPosition - clipLeft
 
       return {
-        framePosition: keyframe.framePosition,
+        cachedFrame: keyframe.cachedFrame,
         absoluteFrame,
         pixelPosition: relativePixelPosition,
+        percentage: keyframe.position,  // 可用于显示百分比信息
         isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
       }
     })
@@ -287,7 +285,7 @@ function handleDragStart(event: DragEvent) {
   }
 
   // 3. 暂停播放
-  pauseForEditing(t('timeline.clip.dragStartReason'))
+  unifiedStore.pause()
 
   // 4. 确保项目被选中
   if (!unifiedStore.selectedTimelineItemIds.has(props.data.id)) {
@@ -346,7 +344,7 @@ function handleResizeStart(direction: 'left' | 'right', event: MouseEvent) {
   console.log('🔧 [CleanTimelineClip] 开始调整大小:', direction, props.data.id)
 
   // 暂停播放以便进行编辑
-  pauseForEditing(t('timeline.clip.resizeStartReason'))
+  unifiedStore.pause()
 
   isResizing.value = true
   resizeDirection.value = direction
@@ -568,12 +566,11 @@ function jumpToKeyframe(absoluteFrame: number) {
   })
 
   // 暂停播放以便进行时间跳转
-  pauseForEditing(t('timeline.clip.keyframeJumpReason'))
+  unifiedStore.pause()
 
-  // 通过WebAV进行时间跳转，这会触发画布渲染更新
+  // 使用统一接口进行时间跳转
   try {
-    // 使用webAVSeekTo方法，确保画布渲染得到更新
-    unifiedStore.webAVSeekTo(absoluteFrame)
+    unifiedStore.seekToFrame(absoluteFrame)
   } catch (error) {
     console.error('❌ [CleanTimelineClip] 关键帧跳转失败:', error)
   }

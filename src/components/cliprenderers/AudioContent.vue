@@ -18,16 +18,26 @@ import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { throttle } from 'lodash'
 import type { ContentTemplateProps } from '@/core/types/clipRenderer'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { calculateClipWidthPixels } from '@/core/utils/thumbnailAlgorithms'
+import { calculateClipWidthPixels } from '@/core/utils/thumbnailLayout'
 import { DEFAULT_TRACK_HEIGHTS, DEFAULT_TRACK_PADDING } from '@/constants/TrackConstants'
-import { microsecondsToFrames } from '@/core/utils/timeUtils'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem'
+import { AudioWaveformLODGenerator } from '@/core/audiowaveform/AudioWaveformLODGenerator'
+import { AudioWaveformLODSelector } from '@/core/audiowaveform/AudioWaveformLODSelector'
+import { AudioWaveformRenderer } from '@/core/audiowaveform/AudioWaveformRenderer'
+import type { BunnyMedia } from '@/core/mediabunny/bunny-media'
+import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 
 const props = defineProps<ContentTemplateProps<'audio'>>()
 const unifiedStore = useUnifiedStore()
 
 const waveformCanvas = ref<HTMLCanvasElement>()
 const canvasLeft = ref(0)
+
+// LOD选择器和渲染器实例
+const lodSelector = new AudioWaveformLODSelector()
+const waveformRenderer = new AudioWaveformRenderer()
+
+// ⚠️ 关键：每个实例维护自己的版本号（用于多实例同步）
+const currentLODVersion = ref(0)
 
 // 采样波形计算属性
 const sampleWaveform = computed(() => {
@@ -61,7 +71,7 @@ const sampleWaveform = computed(() => {
   }
 })
 
-// 核心渲染逻辑
+// 核心渲染逻辑 - 使用LOD系统（带版本号机制）
 function renderWaveformInComponent() {
   if (!waveformCanvas.value || !sampleWaveform.value) {
     return
@@ -69,16 +79,115 @@ function renderWaveformInComponent() {
 
   const { viewportTLStartFrame, viewportTLEndFrame, clipWidthPixels } = sampleWaveform.value
 
-  if (waveformCanvas.value) {
-    renderWaveformDirectly(
-      waveformCanvas.value,
-      props.data,
-      viewportTLStartFrame,
-      viewportTLEndFrame,
-      clipWidthPixels,
-      DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING,
-    )
+  // 获取mediaItem
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+  if (!mediaItem?.runtime.bunny?.bunnyMedia) {
+    return
   }
+  
+  // ⚠️ 按需初始化LOD对象
+  if (!mediaItem.runtime.bunny.waveformLOD) {
+    mediaItem.runtime.bunny.waveformLOD = {
+      levels: new Map(),
+      metadata: {
+        sampleRate: 0,
+        channels: 0,
+        duration: 0,
+        totalSamples: 0,
+      },
+      status: 'pending',
+      progress: 0,
+      isGenerating: false,
+      version: 0,
+    }
+  }
+  
+  const waveformLOD = mediaItem.runtime.bunny.waveformLOD
+  
+  // ⚠️ 检查是否需要触发生成
+  if (waveformLOD.status !== 'ready') {
+    // 清空Canvas
+    const ctx = waveformCanvas.value.getContext('2d')
+    if (ctx) {
+      ctx.clearRect(0, 0, waveformCanvas.value.width, waveformCanvas.value.height)
+    }
+    
+    // ⚠️ 防止重复生成
+    if (!waveformLOD.isGenerating) {
+      waveformLOD.isGenerating = true
+      generateWaveformLODAsync(mediaItem, mediaItem.runtime.bunny.bunnyMedia)
+    }
+    
+    return
+  }
+  
+  // ⚠️ 检查版本号，如果LOD已更新，更新本地版本号
+  if (currentLODVersion.value !== waveformLOD.version) {
+    currentLODVersion.value = waveformLOD.version || 0
+  }
+
+  // 选择最优LOD层级
+  const pixelsPerFrame = calculatePixelsPerFrame(
+    clipWidthPixels,
+    viewportTLEndFrame - viewportTLStartFrame,
+    unifiedStore.zoomLevel
+  )
+  
+  const selectedLevel = lodSelector.selectLODLevel(
+    unifiedStore.zoomLevel,
+    pixelsPerFrame,
+    waveformLOD.metadata.sampleRate
+  )
+  
+  const lodData = waveformLOD.levels.get(selectedLevel)
+  if (!lodData) {
+    console.warn(`LOD层级 ${selectedLevel} 数据不存在`)
+    return
+  }
+
+  // ⚠️ 关键：计算视口可见范围的宽度和偏移
+  const tlDurationFrames = props.data.timeRange.timelineEndTime - props.data.timeRange.timelineStartTime
+  const sampleStartX = ((viewportTLStartFrame - props.data.timeRange.timelineStartTime) / tlDurationFrames) * clipWidthPixels
+  const sampleEndX = ((viewportTLEndFrame - props.data.timeRange.timelineStartTime) / tlDurationFrames) * clipWidthPixels
+  const sampleWidth = sampleEndX - sampleStartX
+
+  // 更新canvas位置和宽度（只渲染可见部分）
+  canvasLeft.value = Math.floor(sampleStartX)
+  waveformCanvas.value.width = Math.floor(sampleWidth)
+
+  // 计算时间范围（对应到clip内的时间）
+  const clipDurationFrames = props.data.timeRange.clipEndTime - props.data.timeRange.clipStartTime
+  const startFrameInClip = props.data.timeRange.clipStartTime +
+    Math.round(((viewportTLStartFrame - props.data.timeRange.timelineStartTime) / tlDurationFrames) * clipDurationFrames)
+  const endFrameInClip = props.data.timeRange.clipStartTime +
+    Math.round(((viewportTLEndFrame - props.data.timeRange.timelineStartTime) / tlDurationFrames) * clipDurationFrames)
+  
+  const startTime = framesToSeconds(startFrameInClip)
+  const endTime = framesToSeconds(endFrameInClip)
+
+  // 创建渐变色
+  const ctx = waveformCanvas.value.getContext('2d')
+  if (!ctx) return
+  const gradient = waveformRenderer.createGradient(
+    ctx,
+    DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING
+  )
+
+  // 渲染波形（只渲染可见范围）
+  const canvasHeight = DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING
+  waveformRenderer.renderRange(
+    waveformCanvas.value,
+    lodData,
+    startTime,
+    endTime,
+    {
+      width: Math.floor(sampleWidth),
+      height: canvasHeight,
+      amplitude: 1.0,
+      baselineY: canvasHeight, // baseline在Canvas底部
+      gradient,
+    }
+  )
 }
 
 // 节流渲染函数（333ms，与视频缩略图一致）
@@ -105,6 +214,21 @@ onMounted(() => {
   }
 })
 
+// ⚠️ 关键：监听LOD版本号变化，自动重新渲染（多实例同步）
+watch(
+  () => {
+    const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
+    return mediaItem?.runtime.bunny?.waveformLOD?.version
+  },
+  (newVersion) => {
+    if (newVersion !== undefined && newVersion !== currentLODVersion.value) {
+      currentLODVersion.value = newVersion
+      // ⚡ 版本号变化，触发重新渲染
+      throttledRenderWaveform()
+    }
+  }
+)
+
 // 组件卸载时清理
 onUnmounted(() => {
   throttledRenderWaveform.cancel()
@@ -121,214 +245,65 @@ function handleInnerDrag(event: DragEvent) {
   return false
 }
 
-// ==================== 音频波形渲染工具函数 ====================
-// 基于直接PCM数据获取的简化音频波形渲染方案
-
-function preparePCMData(
-  fullPcmData: Float32Array,
-  timelineItem: UnifiedTimelineItemData,
-  clipWholeDurationFrames: number, // 音频总时长(帧数)
-  startFrame: number, // 帧数
-  endFrame: number, // 帧数
-): Float32Array {
-  if (!fullPcmData || fullPcmData.length === 0) {
-    return new Float32Array()
-  }
-  // 时间轴长度
-  const tlDurationFrames =
-    timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
-  // clip对应长度
-  const clipDurationFrames =
-    timelineItem.timeRange.clipEndTime - timelineItem.timeRange.clipStartTime
-
-  // clip开始帧
-  const startFrameInClip =
-    timelineItem.timeRange.clipStartTime +
-    Math.round(
-      ((startFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) *
-        clipDurationFrames,
-    )
-  // clip结束帧
-  const endFrameInClip =
-    timelineItem.timeRange.clipStartTime +
-    Math.round(
-      ((endFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) *
-        clipDurationFrames,
-    )
-
-  const startPercent = startFrameInClip / clipWholeDurationFrames
-  const endPercent = endFrameInClip / clipWholeDurationFrames
-
-  const startIndex = Math.floor(startPercent * fullPcmData.length)
-  const endIndex = Math.floor(endPercent * fullPcmData.length)
-
-  return fullPcmData.subarray(startIndex, endIndex)
-}
+// ==================== LOD辅助函数 ====================
 
 /**
- * 渲染波形到Canvas
- * @param ctx Canvas渲染上下文
- * @param data PCM采样数据
- * @param clipWidth clip宽度
- * @param height 画布高度
+ * 计算每帧像素数
  */
-function renderWaveformToCanvas(
-  canvas: HTMLCanvasElement,
-  timelineItem: UnifiedTimelineItemData,
-  pcmData: Float32Array,
-  startFrame: number,
-  endFrame: number,
-  clipWidth: number,
-  height: number,
-): void {
-  const ctx = canvas.getContext('2d')
-  if (!ctx) {
-    return
-  }
-
-  // 保存当前Canvas状态
-  ctx.save()
-
-  const amplitude = 1.0
-
-  // 设置基线位置，留出底部空间
-  const baselineY = height - DEFAULT_TRACK_PADDING
-
-  // 计算宽度
-  const tlDurationFrames =
-    timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime
-
-  const sampleStartX =
-    ((startFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) * clipWidth
-  const sampleEndX =
-    ((endFrame - timelineItem.timeRange.timelineStartTime) / tlDurationFrames) * clipWidth
-  const sampleWidth = sampleEndX - sampleStartX
-  const samplesPerPixel = pcmData.length / sampleWidth
-
-  // 确保canvasLeft是数字类型，而不是字符串
-  canvasLeft.value = Math.floor(sampleStartX)
-  canvas.width = Math.floor(sampleWidth)
-
-  // 清空画布
-  ctx.clearRect(0, 0, sampleWidth, height)
-  // 创建渐变色 - 从底部到顶部
-  const gradient = ctx.createLinearGradient(0, baselineY, 0, 0)
-  gradient.addColorStop(0, '#96ceb4')
-  gradient.addColorStop(0.3, '#4ecdc4')
-  gradient.addColorStop(0.6, '#45b7d1')
-  gradient.addColorStop(1, '#ff6b6b')
-
-  for (let x = 0; x < sampleWidth; x++) {
-    let maxAmplitude = 0
-
-    // 找到这个像素范围内的最大振幅（绝对值）
-    const startSampleIndex = Math.floor(x * samplesPerPixel)
-    const endSampleIndex = Math.floor((x + 1) * samplesPerPixel)
-
-    for (let j = startSampleIndex; j < endSampleIndex && j < pcmData.length; j++) {
-      const sample = Math.abs(pcmData[j])
-      if (sample > maxAmplitude) {
-        maxAmplitude = sample
-      }
-    }
-
-    // 计算波形高度（从基线向上）
-    const waveHeight = maxAmplitude * (baselineY - DEFAULT_TRACK_PADDING) * amplitude // 留出顶部空间
-    const topY = baselineY - waveHeight
-
-    // 绘制垂直线条（从基线向上），应用渐变色
-    if (waveHeight > 1) {
-      ctx.fillStyle = gradient
-      ctx.fillRect(x + 0, topY, 1, waveHeight)
-    }
-  }
-
-  // 绘制基线
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, baselineY)
-  ctx.lineTo(clipWidth, baselineY)
-  ctx.stroke()
-
-  // 恢复Canvas状态
-  ctx.restore()
-}
-
-/**
- * 实时波形渲染函数
- * @param canvas Canvas元素
- * @param audioClip AudioClip实例
- * @param viewportTLStartFrame 视口开始帧
- * @param viewportTLEndFrame 视口结束帧
- * @param clipWidthPixels Clip像素宽度
- * @param options 渲染选项
- */
-async function renderWaveformDirectly(
-  canvas: HTMLCanvasElement,
-  timelineItem: UnifiedTimelineItemData,
-  viewportTLStartFrame: number,
-  viewportTLEndFrame: number,
+function calculatePixelsPerFrame(
   clipWidthPixels: number,
-  height: number,
-): Promise<void> {
-  const unifiedStore = useUnifiedStore()
+  durationFrames: number,
+  zoomLevel: number
+): number {
+  return (clipWidthPixels * zoomLevel) / durationFrames
+}
 
-  if (canvas.height !== height) {
-    canvas.height = height
-  }
+/**
+ * 将帧数转换为秒
+ */
+function framesToSeconds(frames: number): number {
+  return frames / 30 // 假设30fps
+}
 
+/**
+ * 异步生成LOD数据（按需触发）
+ * 这个函数在AudioContent.vue首次渲染时被调用
+ */
+async function generateWaveformLODAsync(
+  mediaItem: UnifiedMediaItemData,
+  bunnyMedia: BunnyMedia
+) {
   try {
-    const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
-    if (!mediaItem?.runtime.webav?.audioClip) return
-
-    const audioClip = mediaItem.runtime.webav.audioClip
-    const meta = await audioClip.ready
-
-    // 获取完整的PCM数据
-    let fullPcmData: Float32Array
-    try {
-      // 获取完整的PCM数据
-      const pcmData = audioClip.getPCMData()
-
-      if (!pcmData || pcmData.length === 0) {
-        // 没有数据，直接返回
-        return
+    const waveformLOD = mediaItem.runtime.bunny!.waveformLOD!
+    waveformLOD.status = 'generating'
+    
+    const generator = new AudioWaveformLODGenerator()
+    const result = await generator.generateFromBunnyMedia(
+      bunnyMedia,
+      (progress) => {
+        waveformLOD.progress = progress
       }
-
-      // 返回第一个声道的数据
-      fullPcmData = pcmData[0]
-    } catch (error) {
-      console.error('获取PCM数据失败:', error)
-      return
-    }
-
-    if (fullPcmData.length === 0) {
-      return
-    }
-
-    // 裁剪PCM数据到当前视口范围
-    const pcmData = preparePCMData(
-      fullPcmData,
-      timelineItem,
-      microsecondsToFrames(meta.duration),
-      viewportTLStartFrame,
-      viewportTLEndFrame,
     )
-
-    // 渲染波形
-    renderWaveformToCanvas(
-      canvas,
-      timelineItem,
-      pcmData,
-      viewportTLStartFrame,
-      viewportTLEndFrame,
-      clipWidthPixels,
-      height,
-    )
+    
+    // 更新LOD数据
+    waveformLOD.levels = result.levels
+    waveformLOD.metadata = result.metadata
+    waveformLOD.status = 'ready'
+    waveformLOD.progress = 100
+    waveformLOD.generatedAt = Date.now()
+    waveformLOD.isGenerating = false
+    
+    // ⚠️ 关键：更新版本号，通知所有实例重新渲染
+    waveformLOD.version = (waveformLOD.version || 0) + 1
+    
+    // 触发当前实例重新渲染
+    throttledRenderWaveform()
   } catch (error) {
-    console.error('波形渲染失败:', error)
-    return
+    console.error('❌ LOD生成失败:', error)
+    const waveformLOD = mediaItem.runtime.bunny!.waveformLOD!
+    waveformLOD.status = 'error'
+    waveformLOD.error = error instanceof Error ? error.message : String(error)
+    waveformLOD.isGenerating = false
   }
 }
 </script>

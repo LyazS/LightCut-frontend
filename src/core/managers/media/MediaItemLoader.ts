@@ -46,7 +46,9 @@ export class MediaItemLoader {
               console.warn(`⚠️ [MediaItemLoader] 媒体文件缺失: ${metaData.name}`)
             }
           } else {
-            console.log(`📋 [MediaItemLoader] 媒体项目加载（状态: ${mediaItem.mediaStatus}）: ${metaData.name}`)
+            console.log(
+              `📋 [MediaItemLoader] 媒体项目加载（状态: ${mediaItem.mediaStatus}）: ${metaData.name}`,
+            )
           }
           mediaItems.push(mediaItem)
         } catch (error) {

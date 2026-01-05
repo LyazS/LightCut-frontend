@@ -1,18 +1,16 @@
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
-import { generateId } from '@/core/utils/idGenerator'
+import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { MediaType } from '@/core/mediaitem/types'
-import type {
-  UnifiedTimelineItemData,
-  GetTimelineItemConfig,
-  TimelineItemStatus,
-} from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/type'
 import type {
   VideoMediaConfig,
   ImageMediaConfig,
   AudioMediaConfig,
   TextMediaConfig,
-} from '@/core/timelineitem/TimelineItemData'
+} from '@/core/timelineitem/type'
+import type { GetConfigs } from '@/core/timelineitem/bunnytype'
+import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
 
 /**
  * 时间轴项目操作模块
@@ -27,28 +25,14 @@ export function useTimelineItemOperations() {
    * @param startTimeFrames 开始时间（帧数）
    * @param trackId 轨道ID
    */
-  async function createMediaClipFromMediaItem(
+  async function createTimelineItemFromMediaItem(
     mediaItemId: string,
     startTimeFrames: number, // 帧数
-    trackId?: string,
+    trackId: string,
   ): Promise<void> {
     console.log('🔧 [UnifiedTimeline] 创建时间轴项目从素材库:', mediaItemId)
 
-    // 如果没有指定轨道ID，使用第一个轨道
-    if (!trackId) {
-      const firstTrack = unifiedStore.tracks[0]
-      if (firstTrack) {
-        trackId = firstTrack.id
-      } else {
-        throw new Error('没有可用的轨道')
-      }
-    }
-
     try {
-      // 等待WebAV初始化完成
-      console.log('等待WebAV初始化完成...')
-      await unifiedStore.waitForWebAVReady() // 阻塞直到WebAV初始化完成
-
       // 获取对应的MediaItem
       const storeMediaItem = unifiedStore.getMediaItem(mediaItemId)
       if (!storeMediaItem) {
@@ -56,7 +40,6 @@ export function useTimelineItemOperations() {
       }
 
       // 检查素材状态和拖拽条件
-      const isReady = UnifiedMediaItemQueries.isReady(storeMediaItem)
       const hasError = UnifiedMediaItemQueries.hasError(storeMediaItem)
 
       // 只阻止错误状态的素材
@@ -68,9 +51,9 @@ export function useTimelineItemOperations() {
       if (storeMediaItem.mediaType === 'unknown') {
         throw new Error('素材类型未确定，请等待检测完成')
       }
-
-      // 现在 mediaType 已经确定不是 'unknown'，可以安全地转换为 MediaType
-      const knownMediaType = storeMediaItem.mediaType as MediaType
+      if (storeMediaItem.mediaType === 'text') {
+        throw new Error('不支持文本类型')
+      }
 
       // 检查是否有可用的时长信息
       const availableDuration = storeMediaItem.duration
@@ -79,14 +62,7 @@ export function useTimelineItemOperations() {
       }
 
       // 根据素材状态确定时间轴项目状态
-      const timelineStatus: TimelineItemStatus = isReady ? 'ready' : 'loading'
-
-      console.log(
-        '🎬 [UnifiedTimeline] 创建时间轴项目 for mediaItem:',
-        storeMediaItem.id,
-        'type:',
-        knownMediaType,
-      )
+      const timelineStatus: TimelineItemStatus = 'loading'
 
       // 获取媒体的原始分辨率（仅对视觉媒体有效）
       let originalResolution: { width: number; height: number } | null = null
@@ -98,17 +74,20 @@ export function useTimelineItemOperations() {
         console.log('📐 [UnifiedTimeline] 图片原始分辨率:', originalResolution)
       } else if (UnifiedMediaItemQueries.isAudio(storeMediaItem)) {
         console.log('🎵 [UnifiedTimeline] 音频类型，无需设置分辨率')
+      } else if (UnifiedMediaItemQueries.isText(storeMediaItem)) {
+        console.log('🎵 [UnifiedTimeline] 文本类型，不应该出现在这里')
+        throw new Error('文本类型不应该出现在这里')
       }
 
       // 创建增强的默认配置
-      const config = createEnhancedDefaultConfig(knownMediaType, originalResolution)
+      const config = createDefaultTimelineItemConfig(storeMediaItem.mediaType, originalResolution)
 
       // 创建时间轴项目数据
       const timelineItemData: UnifiedTimelineItemData = {
-        id: generateId(),
+        id: generateTimelineItemId(),
         mediaItemId: storeMediaItem.id,
         trackId: trackId,
-        mediaType: knownMediaType,
+        mediaType: storeMediaItem.mediaType,
         timeRange: {
           timelineStartTime: startTimeFrames,
           timelineEndTime: startTimeFrames + availableDuration,
@@ -121,17 +100,6 @@ export function useTimelineItemOperations() {
         runtime: {}, // 添加必需的 runtime 字段
       }
 
-      console.log('🔄 [UnifiedTimeline] 时间轴项目数据:', {
-        id: timelineItemData.id,
-        mediaType: timelineItemData.mediaType,
-        timeRange: timelineItemData.timeRange,
-        config: Object.keys(config),
-      })
-
-      // 添加到store（使用带历史记录的方法）
-      console.log(
-        `📝 [UnifiedTimeline] 添加时间轴项目: ${storeMediaItem.name} -> 轨道${trackId}, 位置${Math.max(0, startTimeFrames)}帧`,
-      )
       await unifiedStore.addTimelineItemWithHistory(timelineItemData)
 
       console.log(`✅ [UnifiedTimeline] 时间轴项目创建完成: ${timelineItemData.id}`)
@@ -147,10 +115,10 @@ export function useTimelineItemOperations() {
    * @param originalResolution 原始分辨率
    * @returns 增强的默认配置
    */
-  function createEnhancedDefaultConfig(
-    mediaType: MediaType,
+  function createDefaultTimelineItemConfig(
+    mediaType: Exclude<MediaType, 'text'>,
     originalResolution: { width: number; height: number } | null,
-  ): GetTimelineItemConfig<MediaType> {
+  ): GetConfigs<Exclude<MediaType, 'text'>> {
     // 根据媒体类型创建对应的默认配置
     switch (mediaType) {
       case 'video': {
@@ -165,16 +133,11 @@ export function useTimelineItemOperations() {
           height: defaultHeight,
           rotation: 0,
           opacity: 1,
-          // 原始尺寸
-          originalWidth: defaultWidth,
-          originalHeight: defaultHeight,
           // 等比缩放状态（默认开启）
           proportionalScale: true,
           // 音频属性
           volume: 1,
           isMuted: false,
-          // 基础属性
-          zIndex: 0,
         } as VideoMediaConfig
       }
 
@@ -190,13 +153,8 @@ export function useTimelineItemOperations() {
           height: defaultHeight,
           rotation: 0,
           opacity: 1,
-          // 原始尺寸
-          originalWidth: defaultWidth,
-          originalHeight: defaultHeight,
           // 等比缩放状态（默认开启）
           proportionalScale: true,
-          // 基础属性
-          zIndex: 0,
         } as ImageMediaConfig
       }
 
@@ -206,36 +164,7 @@ export function useTimelineItemOperations() {
           volume: 1,
           isMuted: false,
           gain: 0, // 默认增益为0dB
-          // 基础属性
-          zIndex: 0,
         } as AudioMediaConfig
-
-      case 'text':
-        return {
-          // 文本属性
-          text: '新文本',
-          style: {
-            fontSize: 48,
-            fontFamily: 'Arial, sans-serif',
-            fontWeight: 'normal',
-            fontStyle: 'normal',
-            color: '#ffffff',
-            textAlign: 'center',
-            lineHeight: 1.2,
-          },
-          // 视觉属性
-          x: 0, // 居中位置
-          y: 0, // 居中位置
-          width: 400,
-          height: 100,
-          rotation: 0,
-          opacity: 1,
-          originalWidth: 400,
-          originalHeight: 100,
-          proportionalScale: true,
-          // 基础属性
-          zIndex: 0,
-        } as TextMediaConfig
 
       default:
         // 由于类型系统已经约束为 MediaType，不应该到达这里
@@ -336,9 +265,6 @@ export function useTimelineItemOperations() {
     try {
       console.log('🔄 [UnifiedTimeline] 开始创建文本项目:', { trackId })
 
-      // 导入统一架构的文本时间轴工具函数
-      const { createTextTimelineItem } = await import('../utils/textTimelineUtils')
-
       // 创建文本时间轴项目（使用工具函数，对齐旧架构）
       const textItem = await createTextTimelineItem(
         '默认文本', // 默认文本内容
@@ -346,7 +272,6 @@ export function useTimelineItemOperations() {
         timePosition, // 开始时间（帧数）
         trackId, // 轨道ID
         150, // 默认时长（5秒@30fps）
-        unifiedStore.videoResolution, // 视频分辨率
       )
 
       // 添加到时间轴（带历史记录）
@@ -368,8 +293,8 @@ export function useTimelineItemOperations() {
 
   return {
     // 方法
-    createMediaClipFromMediaItem,
-    createEnhancedDefaultConfig,
+    createTimelineItemFromMediaItem,
+    createDefaultTimelineItemConfig,
     moveSingleItem,
     moveMultipleItems,
     handleTimelineItemPositionUpdate,

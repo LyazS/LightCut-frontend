@@ -57,6 +57,7 @@
                   :style="{ color: isUserLogin ? undefined : '#ff4444' }"
                 />
               </template>
+              <span v-if="!isUserLogin" class="login-text">{{ t('user.loginText') }}</span>
             </HoverButton>
           </div>
 
@@ -107,6 +108,14 @@
     :user="currentUser"
     @close="showUserInfoDialog = false"
   />
+
+  <!-- 导出设置对话框 -->
+  <ExportSettingsModal
+    :show="showExportDialog"
+    :default-title="unifiedStore.projectName"
+    @close="showExportDialog = false"
+    @export="handleExportWithSettings"
+  />
 </template>
 
 <script setup lang="ts">
@@ -120,7 +129,9 @@ import LoadingOverlay from '@/components/base/LoadingOverlay.vue'
 import EditProjectModal from '@/components/modals/EditProjectModal.vue'
 import LoginModal from '@/components/modals/LoginModal.vue'
 import UserInfoModal from '@/components/modals/UserInfoModal.vue'
+import ExportSettingsModal from '@/components/modals/ExportSettingsModal.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
+import type { Quality } from 'mediabunny'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -136,6 +147,7 @@ const isChatPanelVisible = ref(false)
 const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
+const showExportDialog = ref(false)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
 
@@ -162,7 +174,6 @@ const currentProject = computed(() => {
     duration: 0, // 未使用
     settings: {
       videoResolution: unifiedStore.videoResolution,
-      frameRate: unifiedStore.frameRate,
       timelineDurationFrames: unifiedStore.timelineDurationFrames,
     },
   }
@@ -194,25 +205,43 @@ async function saveProject() {
   }
 }
 
-async function exportProject() {
+function exportProject() {
+  // 显示导出设置对话框
+  showExportDialog.value = true
+}
+
+async function handleExportWithSettings(settings: {
+  title: string
+  videoQuality: Quality
+  audioQuality: Quality
+  frameRate: number
+}) {
   try {
+    // 关闭对话框
+    showExportDialog.value = false
+
+    await unifiedStore.pause()
+
     // 开始导出
     isExporting.value = true
     exportProgress.value = 0
     exportDetails.value = ''
 
-    // 执行导出，传入进度回调
+    // 执行导出，传入进度回调和 getMediaItem
     await exportProjectUtil({
       videoWidth: unifiedStore.videoResolution.width,
       videoHeight: unifiedStore.videoResolution.height,
-      projectName: unifiedStore.projectName,
+      projectName: settings.title,
       timelineItems: unifiedStore.timelineItems,
       tracks: unifiedStore.tracks,
+      getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
+      videoQuality: settings.videoQuality,
+      audioQuality: settings.audioQuality,
+      frameRate: settings.frameRate,
       onProgress: (stage: string, progress: number, details?: string) => {
         // 更新本地导出进度
         exportProgress.value = Math.max(0, Math.min(100, progress))
         exportDetails.value = details || ''
-        console.log(`📤 [导出进度] ${progress}%${details ? ` - ${details}` : ''}`)
       },
     })
 
@@ -388,5 +417,11 @@ defineExpose({
 .status-bar-container.loading-hidden {
   opacity: 0;
   pointer-events: none;
+}
+
+.login-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-left: var(--spacing-xs);
 }
 </style>

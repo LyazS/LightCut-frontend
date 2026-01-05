@@ -6,7 +6,7 @@
  */
 
 import type { VNode, Component } from 'vue'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { MediaType } from '@/core/mediaitem/types'
 
 // ==================== 渲染器类型定义 ====================
@@ -64,9 +64,6 @@ interface TimelineItemProps<T extends MediaType = MediaType> {
 
   /** 是否多选状态 - 必选 */
   isMultiSelected: boolean
-
-  /** 当前播放时间（帧数） - 必选 */
-  currentFrame: number
 
   /** 轨道高度 - 必选 */
   trackHeight: number

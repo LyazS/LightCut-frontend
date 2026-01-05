@@ -99,7 +99,7 @@ export function useTimelineDragHandlers(
     }
 
     // 4. 先用原始位置创建目标信息，检查轨道兼容性
-    const originalFrame = unifiedStore.pixelToFrame(mouseX, unifiedStore.timelineWidth)
+    const originalFrame = unifiedStore.pixelToFrame(mouseX, unifiedStore.TimelineContentWidth)
     const targetInfo: DropTargetInfo = {
       targetType: DropTargetType.TIMELINE_TRACK,
       targetId: targetTrack.trackId,
@@ -161,7 +161,7 @@ export function useTimelineDragHandlers(
 
       const snapResult = calculateSnapPosition({
         mouseX: adjustedMouseX, // 使用调整后的鼠标位置
-        timelineWidth: unifiedStore.timelineWidth,
+        timelineWidth: unifiedStore.TimelineContentWidth,
         excludeClipIds,
         clipDuration, // 传入时长以支持尾部吸附
       })
@@ -262,7 +262,7 @@ export function useTimelineDragHandlers(
     // 5. 计算吸附位置（支持头部和尾部吸附）
     const snapResult = calculateSnapPosition({
       mouseX: adjustedMouseX, // 使用调整后的鼠标位置
-      timelineWidth: unifiedStore.timelineWidth,
+      timelineWidth: unifiedStore.TimelineContentWidth,
       excludeClipIds,
       clipDuration, // 传入时长以支持尾部吸附
     })

@@ -25,6 +25,15 @@
       "playbackRate": "播放速率",
       "normalizedSpeed": "归一化速度"
     },
+    "audio": {
+      "audioProperties": "音频属性"
+    },
+    "visual": {
+      "visualProperties": "视觉属性"
+    },
+    "text": {
+      "textProperties": "文本属性"
+    },
     "effects": {
       "textStyle": "文本样式",
       "textEffects": "文本效果",

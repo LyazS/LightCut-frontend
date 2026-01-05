@@ -8,9 +8,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import type {
   KeyframeUIState,
   KeyframeButtonState,
-  KeyframeProperties,
-} from '@/core/timelineitem/AnimationTypes'
-// WebAV功能现在通过unifiedStore提供
+} from '@/core/timelineitem/animationtypes'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import {
   hasAnimation,
@@ -20,12 +18,11 @@ import {
   getPreviousKeyframeFrame,
   getNextKeyframeFrame,
 } from '@/core/utils/unifiedKeyframeUtils'
-// 关键帧命令已经迁移到 unifiedStore
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
+import { UpdatePropertyCommand } from '@/core/modules/commands/keyframes'
+import { BatchUpdatePropertiesCommand } from '@/core/modules/commands/batchCommands'
 
 /**
- * 统一关键帧UI管理 Composable（新架构版本）
  * @param timelineItem 当前选中的时间轴项目
  * @param currentFrame 当前播放帧数
  */
@@ -33,7 +30,6 @@ export function useUnifiedKeyframeUI(
   timelineItem: Ref<UnifiedTimelineItemData | null>,
   currentFrame: Ref<number>,
 ) {
-  // 统一存储，用于显示通知和WebAV控制
   const unifiedStore = useUnifiedStore()
 
   // ==================== 计算属性 ====================
@@ -227,20 +223,6 @@ export function useUnifiedKeyframeUI(
   }
 
   /**
-   * 更新WebAV动画
-   */
-  const updateWebAVAnimationWrapper = async () => {
-    if (!timelineItem.value) return
-
-    try {
-      // 使用WebAV动画管理器
-      await updateWebAVAnimation(timelineItem.value)
-    } catch (error) {
-      console.error('🎬 [Unified Keyframe UI] Failed to update WebAV animation:', error)
-    }
-  }
-
-  /**
    * 跳转到指定帧
    */
   const jumpToFrame = async (frame: number) => {
@@ -262,12 +244,6 @@ export function useUnifiedKeyframeUI(
     if (!timelineItem.value || currentFrame.value == null) return
 
     try {
-      // 动态导入命令系统
-      const { UpdatePropertyCommand } = await import('@/core/modules/commands/keyframes')
-      const { BatchUpdatePropertiesCommand } = await import(
-        '@/core/modules/commands/batchCommands'
-      )
-
       // 创建多个属性更新命令
       const updateCommands = Object.entries(properties).map(([property, value]) => {
         return new UpdatePropertyCommand(
@@ -277,11 +253,6 @@ export function useUnifiedKeyframeUI(
           value,
           {
             getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id),
-          },
-          {
-            updateWebAVAnimation: async (item) => {
-              await updateWebAVAnimation(item)
-            },
           },
           { seekTo: unifiedStore.seekToFrame }, // 播放头控制器
         )
@@ -330,8 +301,5 @@ export function useUnifiedKeyframeUI(
     clearAllKeyframes: clearAllKeyframesWrapper,
     jumpToFrame,
     seekToFrame,
-
-    // 工具方法
-    updateWebAVAnimation: updateWebAVAnimationWrapper,
   }
 }

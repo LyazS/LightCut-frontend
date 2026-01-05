@@ -1,5 +1,4 @@
 import { ref, watch, type Raw } from 'vue'
-import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import {
   type UnifiedMediaItemData,
   type MediaStatus,
@@ -8,12 +7,14 @@ import {
   UnifiedMediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/core'
-import { UnifiedMediaSyncManager } from '@/core/managers/media/UnifiedMediaSyncManager'
-import { useUnifiedStore } from '@/core/unifiedStore'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
+import { cleanupMediaItemSync } from '@/core/managers/media'
 import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedProjectModule } from '@/core/modules/UnifiedProjectModule'
+import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import { getDataSourceRegistry } from '@/core/datasource/registry'
+import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 
 // ==================== 统一媒体项目调试工具 ====================
 
@@ -45,7 +46,6 @@ function printUnifiedDebugInfo(
       mediaStatus: item.mediaStatus,
       sourceType: item.source.type,
       sourceProgress: `${item.source.progress}%`,
-      hasWebAV: !!item.runtime.webav,
       createdAt: new Date(item.createdAt).toLocaleTimeString(),
     })),
   )
@@ -111,22 +111,19 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       const mediaItem = mediaItems.value[index]
 
       // 1. 清理缩略图URL
-      if (mediaItem.runtime.webav?.thumbnailUrl) {
-        URL.revokeObjectURL(mediaItem.runtime.webav.thumbnailUrl)
-        console.log(`🧹 [UnifiedMediaModule] 缩略图URL已清理: ${mediaItem.name}`)
+      if (mediaItem.runtime.bunny?.thumbnailUrl) {
+        URL.revokeObjectURL(mediaItem.runtime.bunny.thumbnailUrl)
+        console.log(`🧹 [UnifiedMediaModule] bunny缩略图URL已清理: ${mediaItem.name}`)
       }
 
       // 2. 清理相关的时间轴项目
-      cleanupRelatedTimelineItems(mediaItemId)
+      await cleanupRelatedTimelineItems(mediaItemId)
 
       // 3. 清理命令同步
       cleanupCommandMediaSyncForMediaItem(mediaItemId)
 
       // 🆕 4. 删除硬盘文件（媒体文件 + Meta文件）
       try {
-        const { globalMetaFileManager } = await import(
-          '@/core/managers/media/globalMetaFileManager'
-        )
         const deleteResult = await globalMetaFileManager.deleteMediaFiles(mediaItemId)
 
         if (deleteResult.success) {
@@ -220,7 +217,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    */
   function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
-    if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.webav) {
+    if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.bunny) {
       const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size
@@ -237,7 +234,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    */
   function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
-    if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.webav) {
+    if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.bunny) {
       const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size
@@ -297,34 +294,25 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
   function startMediaProcessing(mediaItem: UnifiedMediaItemData) {
     console.log(`🚀 [UnifiedMediaModule] 开始处理媒体项目: ${mediaItem.name}`)
 
-    // 导入并使用数据源处理器注册中心
-    import('@/core/datasource/registry')
-      .then(({ getDataSourceRegistry }) => {
-        // 获取数据源注册中心实例
-        const registry = getDataSourceRegistry()
-        // 获取对应的数据源处理器
-        const processor = registry.getProcessor(mediaItem.source.type)
+    // 直接使用数据源处理器注册中心（已在顶部静态导入）
+    const dsRegistry = getDataSourceRegistry()
+    const processor = dsRegistry.getProcessor(mediaItem.source.type)
 
-        if (processor) {
-          // ✅ 正确：通过任务队列处理，有并发控制和重试
-          processor.addTask(mediaItem)
+    if (processor) {
+      // ✅ 正确：通过任务队列处理，有并发控制和重试
+      processor.addTask(mediaItem)
 
-          console.log(`📋 [UnifiedMediaModule] 任务已加入队列`)
+      console.log(`📋 [UnifiedMediaModule] 任务已加入队列`)
 
-          // 注意：任务队列会自动处理，不需要手动 then/catch
-          // 状态更新会通过 mediaItem 的响应式属性自动反映
-          // 如果需要监听任务完成，可以通过 watch mediaItem.mediaStatus
-        } else {
-          console.error(
-            `❌ [UnifiedMediaModule] 找不到对应的数据源处理器: ${mediaItem.source.type}`,
-          )
-          UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-        }
-      })
-      .catch((error: any) => {
-        console.error(`❌ [UnifiedMediaModule] 导入数据源处理器失败: ${mediaItem.name}`, error)
-        UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
-      })
+      // 注意：任务队列会自动处理，不需要手动 then/catch
+      // 状态更新会通过 mediaItem 的响应式属性自动反映
+      // 如果需要监听任务完成，可以通过 watch mediaItem.mediaStatus
+    } else {
+      console.error(
+        `❌ [UnifiedMediaModule] 找不到对应的数据源处理器: ${mediaItem.source.type}`,
+      )
+      UnifiedMediaItemActions.transitionTo(mediaItem, 'error')
+    }
   }
 
   /**
@@ -436,24 +424,29 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    * 清理与媒体项目相关的时间轴项目
    * @param mediaItemId 媒体项目ID
    */
-  function cleanupRelatedTimelineItems(mediaItemId: string): void {
+  async function cleanupRelatedTimelineItems(mediaItemId: string): Promise<void> {
     try {
-      // 获取统一存储实例
-      const unifiedStore = useUnifiedStore()
+      // 通过 registry 获取时间轴模块
+      const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
+
+      if (!timelineModule) {
+        console.warn('⚠️ 时间轴模块未初始化，跳过时间轴项目清理')
+        return
+      }
 
       // 获取所有时间轴项目
-      const timelineItems = unifiedStore.timelineItems
+      const timelineItems = timelineModule.timelineItems.value
 
       // 找出使用该素材的所有时间轴项目
       const relatedTimelineItems = timelineItems.filter(
-        (item: any) => item.mediaItemId === mediaItemId,
+        (item: UnifiedTimelineItemData) => item.mediaItemId === mediaItemId,
       )
 
       // 清理每个相关的时间轴项目
-      relatedTimelineItems.forEach((timelineItem: any) => {
+      for (const timelineItem of relatedTimelineItems) {
         console.log(`🧹 清理时间轴项目: ${timelineItem.id}`)
-        unifiedStore.removeTimelineItem(timelineItem.id)
-      })
+        await timelineModule.removeTimelineItem(timelineItem.id)
+      }
 
       console.log(`✅ 已清理 ${relatedTimelineItems.length} 个相关时间轴项目`)
     } catch (error) {
@@ -466,29 +459,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    * @param mediaItemId 媒体项目ID
    */
   function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
-    try {
-      const syncManager = UnifiedMediaSyncManager.getInstance()
-
-      // 清理所有与该媒体项目相关的同步
-      const syncInfoList = syncManager.getSyncInfo()
-      const relatedSyncs = syncInfoList.filter((sync) => sync.mediaItemId === mediaItemId)
-
-      relatedSyncs.forEach((sync) => {
-        if (sync.commandId) {
-          syncManager.cleanupByCommandId(sync.commandId)
-        } else if (sync.timelineItemId) {
-          syncManager.cleanupByTimelineItemId(sync.timelineItemId)
-        } else {
-          syncManager.cleanup(sync.id)
-        }
-      })
-
-      console.log(
-        `✅ 已清理媒体项目相关的命令同步: ${mediaItemId} (清理了 ${relatedSyncs.length} 个同步)`,
-      )
-    } catch (error) {
-      console.error(`❌ 清理媒体项目命令同步失败: ${mediaItemId}`, error)
-    }
+    cleanupMediaItemSync(mediaItemId)
   }
 
   return {

@@ -12,7 +12,7 @@
     "status": {
       "pending": "等待处理中",
       "asyncProcessing": "异步处理中",
-      "webavDecoding": "解码中",
+      "decoding": "解码中",
       "error": "媒体加载错误",
       "cancelled": "处理已取消",
       "missing": "媒体文件缺失"
@@ -40,7 +40,10 @@
         "duplicateClip": "复制片段",
         "regenerateThumbnail": "重新生成缩略图",
         "deleteClip": "删除片段",
-        "exportClip": "导出片段"
+        "exportClip": "导出片段",
+        "exportStarted": "开始导出片段 {id}...",
+        "exportSuccess": "片段 {id} 导出成功",
+        "exportFailed": "片段 {id} 导出失败: {error}"
       },
       "track": {
         "addText": "添加文本",
@@ -58,8 +61,5 @@
         "deleteTrack": "删除轨道"
       }
     }
-  },
-"exportStarted": "开始导出片段 {id}...",
-"exportSuccess": "片段 {id} 导出成功",
-"exportFailed": "片段 {id} 导出失败: {error}"
+  }
 }

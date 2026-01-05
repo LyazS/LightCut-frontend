@@ -56,7 +56,6 @@ export function createUnifiedAutoSaveModule(
     mediaItems: mediaModule.mediaItems,
     projectConfig: computed(() => ({
       videoResolution: configModule.videoResolution.value,
-      frameRate: configModule.frameRate.value,
       timelineDurationFrames: configModule.timelineDurationFrames.value,
     })),
     // 🆕 添加目录配置监听
@@ -321,15 +320,26 @@ export function createUnifiedAutoSaveModule(
     clearWatchers()
 
     // 监听时间轴项目变化 - 内容变化
+    // ✅ 使用精确字段监听，只监听需要持久化的字段
     const unwatchTimelineItems = watch(
-      () => dataWatchers.timelineItems.value,
+      () => dataWatchers.timelineItems.value?.map(item => ({
+        id: item.id,
+        mediaItemId: item.mediaItemId,
+        trackId: item.trackId,
+        timelineStatus: item.timelineStatus,
+        mediaType: item.mediaType,
+        timeRange: item.timeRange,
+        config: item.config,        // ✅ 监听
+        animation: item.animation,  // ✅ 监听
+        // ❌ 不监听 runtime（包括 runtime.renderConfig）
+      })),
       () => {
         if (autoSaveState.value.isEnabled) {
-          // console.log('🔄 [AutoSave] 检测到时间轴项目变化')
-          triggerAutoSave({ configChanged: true, contentChanged: true })
+          console.log('🔍 [AutoSave] timelineItems changed')
+          triggerAutoSave({ contentChanged: true })
         }
       },
-      { deep: true },
+      { deep: true }
     )
     unwatchFunctions.push(unwatchTimelineItems)
 
@@ -347,8 +357,18 @@ export function createUnifiedAutoSaveModule(
     unwatchFunctions.push(unwatchTracks)
 
     // 监听媒体项目变化 - 内容变化
+    // ✅ 使用精确字段监听，只监听需要持久化的字段
     const unwatchMediaItems = watch(
-      () => dataWatchers.mediaItems.value,
+      () => dataWatchers.mediaItems.value?.map(item => ({
+        id: item.id,
+        name: item.name,
+        createdAt: item.createdAt,
+        mediaStatus: item.mediaStatus,
+        mediaType: item.mediaType,
+        source: item.source,
+        duration: item.duration,
+        // ❌ 不监听 runtime（包括 runtime.bunny.waveformLOD）
+      })),
       () => {
         if (autoSaveState.value.isEnabled) {
           // console.log('🔄 [AutoSave] 检测到媒体项目变化')

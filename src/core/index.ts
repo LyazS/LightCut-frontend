@@ -67,8 +67,7 @@ export {
   type MediaStatus,
   type MediaType,
   type MediaTypeOrUnknown,
-  type WebAVObjects,
-
+  
   // 状态专门类型定义
   type ReadyMediaItem,
   type ProcessingMediaItem,
@@ -128,7 +127,6 @@ export {
   isVideoTrack,
   isAudioTrack,
   isTextTrack,
-  generateTrackId,
 } from './track'
 
 // ==================== 统一时间轴项目系统 ====================
@@ -137,7 +135,6 @@ export {
   type UnifiedTimelineItemData,
   type TimelineItemStatus,
   type TransformData,
-  type CreateTimelineItemOptions,
 
   // 工厂函数集合
   TimelineItemFactory,
@@ -187,7 +184,6 @@ export {
 // ==================== 统一工具函数 ====================
 export {
   // 时间范围工具
-  syncTimeRange,
   calculateDuration,
 } from './utils'
 
@@ -195,9 +191,6 @@ export {
 export {
   // 拖拽预览管理器
   getDragPreviewManager,
-
-  // 播放控制
-  usePlaybackControls,
 
   // 历史记录操作
   useHistoryOperations,

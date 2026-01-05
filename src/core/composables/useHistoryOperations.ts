@@ -1,21 +1,14 @@
 import type { MediaType } from '@/core'
-import type { Ref } from 'vue'
-import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type {
   UnifiedTimelineItemData,
   VideoMediaConfig,
   AudioMediaConfig,
 } from '@/core/timelineitem'
-import type { AudioVisibleSprite, VideoVisibleSprite } from '@/core/visiblesprite'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import type { VideoResolution } from '@/core/types'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
-  UnifiedWebavModule,
   UnifiedMediaModule,
   UnifiedConfigModule,
   UnifiedTrackModule,
@@ -37,9 +30,9 @@ import {
 } from '@/core/modules/commands/timelineCommands'
 import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchCommands'
 import { TimelineItemQueries } from '@/core/timelineitem/'
-import { duplicateTimelineItem } from '@/core/timelineitem/TimelineItemFactory'
+import { duplicateTimelineItem } from '@/core/timelineitem/factory'
 import { UpdateTextCommand } from '@/core/modules/commands/UpdateTextCommand'
-import type { TextStyleConfig } from '@/core/timelineitem'
+import type { TextStyleConfig } from '@/core/timelineitem/texttype'
 import {
   CreateKeyframeCommand,
   DeleteKeyframeCommand,
@@ -47,10 +40,8 @@ import {
   ClearAllKeyframesCommand,
   ToggleKeyframeCommand,
   type TimelineModule as KeyframeTimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
 } from '@/core/modules/commands/keyframeCommands'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
 
 // 变换属性类型定义
 interface TransformProperties {
@@ -60,26 +51,10 @@ interface TransformProperties {
   height?: number
   rotation?: number
   opacity?: number
-  zIndex?: number
   duration?: number // 时长（帧数）
   playbackRate?: number // 倍速
   volume?: number // 音量（0-1之间）
   isMuted?: boolean // 静音状态
-  gain?: number // 音频增益（dB）
-}
-
-// 关键帧命令执行器接口
-interface UnifiedKeyframeCommandExecutor {
-  /** 时间轴模块 */
-  timelineModule: KeyframeTimelineModule
-  /** WebAV动画管理器 */
-  webavAnimationManager: WebAVAnimationManager
-  /** 历史记录模块 */
-  historyModule: {
-    executeCommand: (command: any) => Promise<void>
-  }
-  /** 播放控制模块 */
-  playbackControls: PlaybackControls
 }
 
 /**
@@ -89,7 +64,6 @@ interface UnifiedKeyframeCommandExecutor {
 export function useHistoryOperations(
   unifiedHistoryModule: UnifiedHistoryModule,
   unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedWebavModule: UnifiedWebavModule,
   unifiedMediaModule: UnifiedMediaModule,
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
@@ -148,11 +122,6 @@ export function useHistoryOperations(
       if (opacityChanged) return true
     }
 
-    // 检查层级变化
-    if (newTransform.zIndex !== undefined && oldTransform.zIndex !== undefined) {
-      const zIndexChanged = oldTransform.zIndex !== newTransform.zIndex
-      if (zIndexChanged) return true
-    }
 
     // 检查时长变化
     if (newTransform.duration !== undefined && oldTransform.duration !== undefined) {
@@ -179,12 +148,6 @@ export function useHistoryOperations(
       if (muteChanged) return true
     }
 
-    // 检查增益变化
-    if (newTransform.gain !== undefined && oldTransform.gain !== undefined) {
-      const gainChanged = Math.abs(oldTransform.gain - newTransform.gain) >= 0.1 // 0.1dB误差容忍
-      if (gainChanged) return true
-    }
-
     return false
   }
 
@@ -192,13 +155,13 @@ export function useHistoryOperations(
 
   /**
    * 带历史记录的添加时间轴项目方法
+   * 会在拖动素材到时间轴和右键添加文本的时候使用
    * @param timelineItem 要添加的时间轴项目
    */
   async function addTimelineItemWithHistory(timelineItem: UnifiedTimelineItemData<MediaType>) {
     const command = new AddTimelineItemCommand(
       timelineItem,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -213,7 +176,6 @@ export function useHistoryOperations(
     const command = new RemoveTimelineItemCommand(
       timelineItemId,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -306,10 +268,6 @@ export function useHistoryOperations(
       }
     }
 
-    if (newTransform.zIndex !== undefined) {
-      const config = timelineItem.config as VideoMediaConfig
-      oldTransform.zIndex = config.zIndex
-    }
 
     if (newTransform.duration !== undefined) {
       // 计算当前时长（帧数）
@@ -325,12 +283,13 @@ export function useHistoryOperations(
         TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
         TimelineItemQueries.isAudioTimelineItem(timelineItem)
       ) {
-        const sprite = timelineItem.runtime.sprite as
-          | VideoVisibleSprite
-          | AudioVisibleSprite
-          | undefined
-        if (sprite) {
-          oldTransform.playbackRate = sprite.getPlaybackRate()
+        // 使用 timeRange 计算 playbackRate
+        // playbackRate = (clipEndTime - clipStartTime) / (timelineEndTime - timelineStartTime)
+        const timeRange = timelineItem.timeRange
+        const clipDuration = timeRange.clipEndTime - timeRange.clipStartTime
+        const timelineDuration = timeRange.timelineEndTime - timeRange.timelineStartTime
+        if (timelineDuration > 0) {
+          oldTransform.playbackRate = clipDuration / timelineDuration
         }
       }
     }
@@ -344,12 +303,6 @@ export function useHistoryOperations(
       if (newTransform.isMuted !== undefined) {
         oldTransform.isMuted = config.isMuted ?? false
       }
-    }
-
-    if (timelineItem.mediaType === 'audio' && newTransform.gain !== undefined) {
-      // 获取当前增益（仅对音频有效）
-      const config = timelineItem.config as AudioMediaConfig
-      oldTransform.gain = config.gain ?? 0
     }
 
     // 检查是否有实际变化
@@ -390,7 +343,6 @@ export function useHistoryOperations(
       timelineItem,
       splitTimeFrames,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
     )
     await unifiedHistoryModule.executeCommand(command)
@@ -430,7 +382,6 @@ export function useHistoryOperations(
     const command = new AddTimelineItemCommand(
       duplicatedItem,
       unifiedTimelineModule,
-      unifiedWebavModule,
       unifiedMediaModule,
       unifiedConfigModule,
     )
@@ -625,9 +576,7 @@ export function useHistoryOperations(
             unifiedTimelineModule.getTimelineItem(id) as
               | UnifiedTimelineItemData<'text'>
               | undefined,
-          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        unifiedWebavModule,
         unifiedConfigModule,
       )
 
@@ -694,9 +643,7 @@ export function useHistoryOperations(
             unifiedTimelineModule.getTimelineItem(id) as
               | UnifiedTimelineItemData<'text'>
               | undefined,
-          setupBidirectionalSync: unifiedTimelineModule.setupTimelineItemSprite,
         },
-        unifiedWebavModule,
         unifiedConfigModule,
       )
 
@@ -804,20 +751,12 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 创建关键帧:', { timelineItemId, frame })
 
       // 创建关键帧命令
-      const command = new CreateKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
+      const command = new CreateKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          // 播放头控制应该由调用方提供，这里简化为不控制播放头
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-        {
-          seekTo: (frame: number) => {
-            // 播放头控制应该由调用方提供，这里简化为不控制播放头
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
-        },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -839,19 +778,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 删除关键帧:', { timelineItemId, frame })
 
       // 创建删除关键帧命令
-      const command = new DeleteKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
+      const command = new DeleteKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
-        },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -892,9 +823,6 @@ export function useHistoryOperations(
         value,
         unifiedTimelineModule,
         {
-          updateWebAVAnimation: updateWebAVAnimation,
-        },
-        {
           seekTo: (frame: number) => {
             console.log('🔍 关键帧操作播放头控制:', frame)
           },
@@ -920,18 +848,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 清除所有关键帧:', { timelineItemId })
 
       // 创建清除所有关键帧命令
-      const command = new ClearAllKeyframesCommand(
-        timelineItemId,
-        unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
+      const command = new ClearAllKeyframesCommand(timelineItemId, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
-        },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -953,19 +874,11 @@ export function useHistoryOperations(
       console.log('🎬 [useHistoryOperations] 切换关键帧:', { timelineItemId, frame })
 
       // 创建切换关键帧命令
-      const command = new ToggleKeyframeCommand(
-        timelineItemId,
-        frame,
-        unifiedTimelineModule,
-        {
-          updateWebAVAnimation: updateWebAVAnimation,
+      const command = new ToggleKeyframeCommand(timelineItemId, frame, unifiedTimelineModule, {
+        seekTo: (frame: number) => {
+          console.log('🔍 关键帧操作播放头控制:', frame)
         },
-        {
-          seekTo: (frame: number) => {
-            console.log('🔍 关键帧操作播放头控制:', frame)
-          },
-        },
-      )
+      })
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)
@@ -1000,16 +913,4 @@ export function useHistoryOperations(
     clearAllKeyframesWithHistory,
     toggleKeyframeWithHistory,
   }
-}
-
-// 导出类型定义供其他模块使用
-export type {
-  UnifiedHistoryModule,
-  UnifiedTimelineModule,
-  UnifiedWebavModule,
-  UnifiedMediaModule,
-  UnifiedConfigModule,
-  UnifiedTrackModule,
-  TransformProperties,
-  UnifiedKeyframeCommandExecutor,
 }

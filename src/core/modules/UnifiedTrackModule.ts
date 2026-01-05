@@ -1,8 +1,7 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
-import { isReady } from '@/core/timelineitem/TimelineItemQueries'
-import { hasAudioCapabilities } from '@/core/utils/spriteTypeGuards'
+import { isReady } from '@/core/timelineitem/queries'
 
 /**
  * 统一轨道管理模块
@@ -18,6 +17,17 @@ export function createUnifiedTrackModule() {
 
   // 轨道列表 - 使用统一轨道类型
   const tracks = ref<UnifiedTrackData[]>([])
+
+  // 🔑 计算属性：轨道ID到索引的映射
+  // 用于快速查找轨道在数组中的位置，优化渲染排序性能
+  // 时间复杂度从 O(n) 优化到 O(1)
+  const trackIndexMap = computed(() => {
+    const map = new Map<string, number>()
+    tracks.value.forEach((track, index) => {
+      map.set(track.id, index)
+    })
+    return map
+  })
 
   // ==================== 轨道管理方法 ====================
 
@@ -77,8 +87,8 @@ export function createUnifiedTrackModule() {
     const affectedItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
 
     // 删除该轨道上的所有时间轴项目
-    affectedItems.forEach((item: any) => {
-      store.removeTimelineItem(item.id)
+    affectedItems.forEach(async (item: any) => {
+      await store.removeTimelineItem(item.id)
     })
 
     // 删除轨道
@@ -101,10 +111,6 @@ export function createUnifiedTrackModule() {
    * @param targetVisibleState 目标可见性状态（可选），如果提供则将轨道设置为指定状态
    */
   async function toggleTrackVisibility(trackId: string, targetVisibleState?: boolean) {
-    // 动态导入 store 以避免循环依赖
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -123,25 +129,6 @@ export function createUnifiedTrackModule() {
     } else {
       track.isVisible = !track.isVisible
     }
-
-    // 同步该轨道上所有TimelineItem的sprite可见性（仅限视觉轨道）
-    const trackItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
-    trackItems.forEach((item: any) => {
-      // 使用 isReady 函数检查时间轴项目是否就绪且有 sprite
-      if (isReady(item)) {
-        // 所有UnifiedSprite都继承自WebAV的VisibleSprite，都有visible属性
-        item.runtime.sprite!.visible = track.isVisible
-      }
-    })
-
-    console.log('👁️ 切换轨道可见性:', {
-      trackId,
-      trackName: track.name,
-      trackType: track.type,
-      isVisible: track.isVisible,
-      affectedClips: trackItems.length,
-      targetState: targetVisibleState,
-    })
   }
 
   /**
@@ -150,10 +137,6 @@ export function createUnifiedTrackModule() {
    * @param targetMuteState 目标静音状态（可选），如果提供则将轨道设置为指定状态
    */
   async function toggleTrackMute(trackId: string, targetMuteState?: boolean) {
-    // 动态导入 store 以避免循环依赖
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-
     const track = tracks.value.find((t) => t.id === trackId)
     if (!track) {
       console.warn('⚠️ 找不到轨道:', trackId)
@@ -172,31 +155,6 @@ export function createUnifiedTrackModule() {
     } else {
       track.isMuted = !track.isMuted
     }
-
-    // 同步该轨道上所有TimelineItem的sprite静音状态
-    const trackItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
-    let affectedClips = 0
-
-    trackItems.forEach((item: any) => {
-      // 使用 isReady 函数检查时间轴项目是否就绪且有 sprite
-      if (isReady(item)) {
-        const sprite = item.runtime.sprite!
-        // 检查sprite是否具有音频功能（VideoVisibleSprite 或 AudioVisibleSprite）
-        if (hasAudioCapabilities(sprite)) {
-          sprite.setTrackMuted(track.isMuted)
-        }
-      }
-      affectedClips++
-    })
-
-    console.log('🔇 切换轨道静音状态:', {
-      trackId,
-      trackName: track.name,
-      trackType: track.type,
-      isMuted: track.isMuted,
-      affectedClips,
-      targetState: targetMuteState,
-    })
   }
 
   /**
@@ -313,6 +271,7 @@ export function createUnifiedTrackModule() {
   return {
     // 状态
     tracks,
+    trackIndexMap,  // 导出计算属性供其他模块使用
 
     // 基础方法
     addTrack,

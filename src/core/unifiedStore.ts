@@ -1,6 +1,4 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { LayoutConstants } from '@/constants/LayoutConstants'
 import { createUnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import { createUnifiedTrackModule } from '@/core/modules/UnifiedTrackModule'
 import { createUnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
@@ -9,7 +7,6 @@ import { createUnifiedViewportModule } from '@/core/modules/UnifiedViewportModul
 import { createUnifiedSelectionModule } from '@/core/modules/UnifiedSelectionModule'
 import { createUnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
 import { createUnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
-import { createUnifiedWebavModule } from '@/core/modules/UnifiedWebavModule'
 import { createUnifiedUseNaiveUIModule } from '@/core/modules/UnifiedUseNaiveUIModule'
 import { createUnifiedHistoryModule } from '@/core/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/core/modules/UnifiedAutoSaveModule'
@@ -17,43 +14,19 @@ import { createUnifiedVideoThumbnailModule } from '@/core/modules/UnifiedVideoTh
 import { createUnifiedSnapModule } from '@/core/modules/UnifiedSnapModule'
 import { createUnifiedUserModule } from '@/core/modules/UnifiedUserModule'
 import { createUnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
+import { createUnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
-import { calculateTotalDurationFrames } from '@/core/utils/durationUtils'
 import { useEditSDK } from '@/aipanel'
-import type { AgentMediaInfo, AgentTimelineItemInfo } from '@/aipanel/composables/useEditSDK'
-import type { MediaTypeOrUnknown } from '@/core'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import type { UnifiedViewportModule } from '@/core/modules/UnifiedViewportModule'
-import type { UnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
 import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
 import {
-  expandTimelineIfNeededFrames,
-  smartExpandTimelineIfNeeded,
-  batchExpandTimelineIfNeeded,
-  predictiveExpandTimeline,
-  getTimelineExpansionSuggestion,
-} from '@/core/utils/timeUtils'
-import {
-  getTimelineItemAtFrames,
   getTimelineItemsByTrack,
-  findTimelineItemBySprite,
-  getTimelineItemsAtFrames,
-  getTimelineItemAtTrackAndFrames,
   isPlayheadInTimelineItem,
-  getTimelineItemsByMediaType,
-  getTimelineItemsByStatus,
-  getTimelineItemDuration,
-  sortTimelineItemsByTime,
   findOverlappingTimelineItems,
-  findOverlappingTimelineItemsOnTrack,
-  findOrphanedTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
-import {
-  cloneTimelineItem,
-  duplicateTimelineItem,
-} from '@/core/timelineitem/TimelineItemFactory'
+import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/factory'
 
 /**
  * 统一视频编辑器存储
@@ -81,9 +54,6 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedPlaybackModule = createUnifiedPlaybackModule(registry)
   registry.register(MODULE_NAMES.PLAYBACK, unifiedPlaybackModule)
 
-  const unifiedWebavModule = createUnifiedWebavModule(registry)
-  registry.register(MODULE_NAMES.WEBAV, unifiedWebavModule)
-
   const unifiedMediaModule = createUnifiedMediaModule(registry)
   registry.register(MODULE_NAMES.MEDIA, unifiedMediaModule)
 
@@ -102,28 +72,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   const unifiedProjectModule = createUnifiedProjectModule(registry)
   registry.register(MODULE_NAMES.PROJECT, unifiedProjectModule)
-
-  // 计算总时长（需要在timeline模块之后）
-  const totalDurationFrames = computed(() => {
-    return calculateTotalDurationFrames(
-      unifiedTimelineModule.timelineItems.value,
-      unifiedConfigModule.timelineDurationFrames.value,
-    )
-  })
-
-  // 时间轴容器宽度（用于可见范围计算）
-  const containerWidth = ref(800) // 默认容器宽度
-
-  // 设置容器宽度的方法
-  function setContainerWidth(width: number) {
-    containerWidth.value = width
-  }
-
-  // 时间轴内容区域宽度（轨道内容区域的宽度，不包含轨道控制区域）
-  // 计算属性：containerWidth - TRACK_CONTROL_WIDTH
-  const timelineWidth = computed(() => {
-    return containerWidth.value - LayoutConstants.TRACK_CONTROL_WIDTH
-  })
 
   const unifiedViewportModule = createUnifiedViewportModule(registry)
   registry.register(MODULE_NAMES.VIEWPORT, unifiedViewportModule)
@@ -151,11 +99,13 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedUserModule = createUnifiedUserModule(registry)
   registry.register(MODULE_NAMES.USER, unifiedUserModule)
 
+  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, unifiedViewportModule.contentEndTimeFrames)
+  registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
+
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
@@ -166,7 +116,6 @@ export const useUnifiedStore = defineStore('unified', () => {
   const { executeUserScript, list_medias, list_timelineitems } = useEditSDK(
     unifiedHistoryModule,
     unifiedTimelineModule,
-    unifiedWebavModule,
     unifiedMediaModule,
     unifiedConfigModule,
     unifiedTrackModule,
@@ -281,10 +230,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     removeTimelineItem: unifiedTimelineModule.removeTimelineItem,
     getTimelineItem: unifiedTimelineModule.getTimelineItem,
     getReadyTimelineItem: unifiedTimelineModule.getReadyTimelineItem,
-    setupBidirectionalSync: unifiedTimelineModule.setupBidirectionalSync,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
-    setupTimelineItemSprite: unifiedTimelineModule.setupTimelineItemSprite,
 
     // 时间轴项目工厂函数
     cloneTimelineItemData: cloneTimelineItem,
@@ -320,7 +267,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 播放控制状态
     currentFrame: unifiedPlaybackModule.currentFrame,
-    currentWebAVFrame: unifiedPlaybackModule.currentWebAVFrame,
     isPlaying: unifiedPlaybackModule.isPlaying,
     playbackRate: unifiedPlaybackModule.playbackRate,
 
@@ -331,9 +277,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 帧数控制方法
     setCurrentFrame: unifiedPlaybackModule.setCurrentFrame,
     seekToFrame: unifiedPlaybackModule.seekToFrame,
-    seekByFrames: unifiedPlaybackModule.seekByFrames,
-    nextFrame: unifiedPlaybackModule.nextFrame,
-    previousFrame: unifiedPlaybackModule.previousFrame,
 
     // 播放控制方法
     setPlaying: unifiedPlaybackModule.setPlaying,
@@ -343,7 +286,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     stop: unifiedPlaybackModule.stop,
     setPlaybackRate: unifiedPlaybackModule.setPlaybackRate,
     resetPlaybackRate: unifiedPlaybackModule.resetPlaybackRate,
-    getPlaybackSummary: unifiedPlaybackModule.getPlaybackSummary,
     resetPlaybackToDefaults: unifiedPlaybackModule.resetToDefaults,
 
     // ==================== 配置模块状态和方法 ====================
@@ -359,82 +301,54 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 配置状态
     videoResolution: unifiedConfigModule.videoResolution,
-    frameRate: unifiedConfigModule.frameRate,
     timelineDurationFrames: unifiedConfigModule.timelineDurationFrames,
 
     // 配置管理方法
     setVideoResolution: unifiedConfigModule.setVideoResolution,
-    setFrameRate: unifiedConfigModule.setFrameRate,
-    getConfigSummary: unifiedConfigModule.getConfigSummary,
     resetConfigToDefaults: unifiedConfigModule.resetToDefaults,
     restoreFromProjectSettings: unifiedConfigModule.restoreFromProjectSettings,
 
-    // ==================== WebAV模块状态和方法 ====================
+    // ==================== MediaBunny模块状态和方法 ====================
 
-    // WebAV状态
-    avCanvas: unifiedWebavModule.avCanvas,
-    isWebAVReady: unifiedWebavModule.isWebAVReady,
-    webAVError: unifiedWebavModule.webAVError,
+    // MediaBunny状态
+    isMediaBunnyReady: unifiedMediaBunnyModule.isMediaBunnyReady,
+    mediaBunnyError: unifiedMediaBunnyModule.mediaBunnyError,
 
-    // WebAV管理方法
-    setAVCanvas: unifiedWebavModule.setAVCanvas,
-    setWebAVReady: unifiedWebavModule.setWebAVReady,
-    setWebAVError: unifiedWebavModule.setWebAVError,
-    clearWebAVState: unifiedWebavModule.clearWebAVState,
-    getWebAVSummary: unifiedWebavModule.getWebAVSummary,
-    resetWebAVToDefaults: unifiedWebavModule.resetToDefaults,
-    addSpriteToCanvas: unifiedWebavModule.addSprite,
-    removeSpriteFromCanvas: unifiedWebavModule.removeSprite,
+    // MediaBunny画布管理
+    setMediaBunnyCanvas: unifiedMediaBunnyModule.setCanvas,
+    destroyMediaBunny: unifiedMediaBunnyModule.destroy,
 
-    // WebAV画布容器管理
-    createCanvasContainer: unifiedWebavModule.createCanvasContainer,
-    initializeCanvas: unifiedWebavModule.initializeCanvas,
-    getAVCanvas: unifiedWebavModule.getAVCanvas,
-    getCanvasContainer: unifiedWebavModule.getCanvasContainer,
+    // MediaBunny播放控制
+    mediaBunnyStartPlayback: unifiedMediaBunnyModule.startPlayback,
+    mediaBunnyStopPlayback: unifiedMediaBunnyModule.stopPlayback,
+    mediaBunnySeekToFrame: unifiedMediaBunnyModule.seekToFrame,
+    updateMediaBunnyTimelineDuration: unifiedMediaBunnyModule.updateTimelineDuration,
 
-    // WebAV播放控制
-    webAVPlay: unifiedWebavModule.play,
-    webAVPause: unifiedWebavModule.pause,
-    webAVSeekTo: unifiedWebavModule.seekTo,
-
-    // WebAV Clip创建和管理
-    createMP4Clip: unifiedWebavModule.createMP4Clip,
-    createImgClip: unifiedWebavModule.createImgClip,
-    createAudioClip: unifiedWebavModule.createAudioClip,
-    cloneMP4Clip: unifiedWebavModule.cloneMP4Clip,
-    cloneImgClip: unifiedWebavModule.cloneImgClip,
-    cloneAudioClip: unifiedWebavModule.cloneAudioClip,
-
-    // WebAV实例管理
-    destroyWebAV: unifiedWebavModule.destroy,
-    isWebAVReadyGlobal: unifiedWebavModule.isWebAVReadyGlobal,
-    waitForWebAVReady: unifiedWebavModule.waitForWebAVReady,
-
-    // WebAV画布销毁和重建
-    destroyCanvas: unifiedWebavModule.destroyCanvas,
-    recreateCanvas: unifiedWebavModule.recreateCanvas,
-
-    // ==================== 计算属性 ====================
-
-    totalDurationFrames,
+    // MediaBunny工具方法
+    isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
+    resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,
 
     // ==================== 统一视口模块状态和方法 ====================
 
     // 视口状态
+    TimelineContainerWidth: unifiedViewportModule.TimelineContainerWidth,
     zoomLevel: unifiedViewportModule.zoomLevel,
     scrollOffset: unifiedViewportModule.scrollOffset,
 
     // 视口计算属性
+    totalDurationFrames: unifiedViewportModule.totalDurationFrames,
     minZoomLevel: unifiedViewportModule.minZoomLevel,
     visibleDurationFrames: unifiedViewportModule.visibleDurationFrames,
     maxVisibleDurationFrames: unifiedViewportModule.maxVisibleDurationFrames,
     contentEndTimeFrames: unifiedViewportModule.contentEndTimeFrames,
+    TimelineContentWidth: unifiedViewportModule.TimelineContentWidth,
 
     // 视口管理方法
     getMaxZoomLevelForTimeline: unifiedViewportModule.getMaxZoomLevelForTimeline,
     getMaxScrollOffsetForTimeline: unifiedViewportModule.getMaxScrollOffsetForTimeline,
     setZoomLevel: unifiedViewportModule.setZoomLevel,
     setScrollOffset: unifiedViewportModule.setScrollOffset,
+    setContainerWidth: unifiedViewportModule.setContainerWidth,
     zoomIn: unifiedViewportModule.zoomIn,
     zoomOut: unifiedViewportModule.zoomOut,
     scrollLeft: unifiedViewportModule.scrollLeft,
@@ -456,6 +370,10 @@ export const useUnifiedStore = defineStore('unified', () => {
     dialogError: unifiedUseNaiveUIModule.dialogError,
     dialogWarning: unifiedUseNaiveUIModule.dialogWarning,
     dialogInfo: unifiedUseNaiveUIModule.dialogInfo,
+
+    // 便捷模态框方法
+    createModal: unifiedUseNaiveUIModule.createModal,
+    destroyAllModals: unifiedUseNaiveUIModule.destroyAllModals,
 
     initApi: unifiedUseNaiveUIModule.initApi,
 
@@ -507,14 +425,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     clearMultiSelection: unifiedSelectionModule.clearMultiSelection,
     isInMultiSelection: unifiedSelectionModule.isInMultiSelection,
 
-    // ==================== 系统状态方法 ====================
-
     // ==================== 坐标转换方法 ====================
     frameToPixel: (frames: number, timelineWidth: number) =>
       frameToPixel(
         frames,
         timelineWidth,
-        totalDurationFrames.value,
+        unifiedViewportModule.totalDurationFrames.value,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,
       ),
@@ -522,85 +438,22 @@ export const useUnifiedStore = defineStore('unified', () => {
       pixelToFrame(
         pixel,
         timelineWidth,
-        totalDurationFrames.value,
+        unifiedViewportModule.totalDurationFrames.value,
         unifiedViewportModule.zoomLevel.value,
         unifiedViewportModule.scrollOffset.value,
       ),
 
-    // ==================== 时间轴扩展功能 ====================
-    expandTimelineIfNeededFrames: (targetFrames: number) =>
-      expandTimelineIfNeededFrames(targetFrames, unifiedConfigModule.timelineDurationFrames),
-    smartExpandTimelineIfNeeded: (targetFrames: number, minRatio?: number, maxRatio?: number) =>
-      smartExpandTimelineIfNeeded(
-        targetFrames,
-        unifiedConfigModule.timelineDurationFrames,
-        minRatio,
-        maxRatio,
-      ),
-    batchExpandTimelineIfNeeded: (targetFramesList: number[], expansionRatio?: number) =>
-      batchExpandTimelineIfNeeded(
-        targetFramesList,
-        unifiedConfigModule.timelineDurationFrames,
-        expansionRatio,
-      ),
-    predictiveExpandTimeline: (
-      currentUsedFrames: number,
-      usageThreshold?: number,
-      expansionRatio?: number,
-    ) =>
-      predictiveExpandTimeline(
-        currentUsedFrames,
-        unifiedConfigModule.timelineDurationFrames,
-        usageThreshold,
-        expansionRatio,
-      ),
-    getTimelineExpansionSuggestion: (
-      currentDuration: number,
-      targetFrames: number,
-      currentUsedFrames: number,
-    ) => getTimelineExpansionSuggestion(currentDuration, targetFrames, currentUsedFrames),
-
     // ==================== 时间轴搜索工具函数 ====================
-    getTimelineItemAtFrames: (frames: number) =>
-      getTimelineItemAtFrames(frames, unifiedTimelineModule.timelineItems.value),
     getTimelineItemsByTrack: (trackId: string) =>
       getTimelineItemsByTrack(trackId, unifiedTimelineModule.timelineItems.value),
-    findTimelineItemBySprite: (sprite: any) =>
-      findTimelineItemBySprite(sprite, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemsAtFrames: (frames: number) =>
-      getTimelineItemsAtFrames(frames, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemAtTrackAndFrames: (trackId: string, frames: number) =>
-      getTimelineItemAtTrackAndFrames(trackId, frames, unifiedTimelineModule.timelineItems.value),
     isPlayheadInTimelineItem: (item: UnifiedTimelineItemData, currentFrame: number) =>
       isPlayheadInTimelineItem(item, currentFrame),
-    getTimelineItemsByMediaType: (mediaType: MediaTypeOrUnknown) =>
-      getTimelineItemsByMediaType(mediaType, unifiedTimelineModule.timelineItems.value),
-    getTimelineItemsByStatus: (status: 'ready' | 'loading' | 'error') =>
-      getTimelineItemsByStatus(status, unifiedTimelineModule.timelineItems.value),
     findOverlappingTimelineItems: (startTime: number, endTime: number, excludeItemId?: string) =>
       findOverlappingTimelineItems(
         startTime,
         endTime,
         unifiedTimelineModule.timelineItems.value,
         excludeItemId,
-      ),
-    findOverlappingTimelineItemsOnTrack: (
-      trackId: string,
-      startTime: number,
-      endTime: number,
-      excludeItemId?: string,
-    ) =>
-      findOverlappingTimelineItemsOnTrack(
-        trackId,
-        startTime,
-        endTime,
-        unifiedTimelineModule.timelineItems.value,
-        excludeItemId,
-      ),
-    findOrphanedTimelineItems: () =>
-      findOrphanedTimelineItems(
-        unifiedTimelineModule.timelineItems.value,
-        unifiedMediaModule.mediaItems.value,
       ),
 
     // ==================== 统一自动保存模块状态和方法 ====================
@@ -740,12 +593,5 @@ export const useUnifiedStore = defineStore('unified', () => {
     executeUserScript,
     list_medias,
     list_timelineitems,
-
-    // 时间轴容器宽度（用于可见范围计算）
-    containerWidth,
-    setContainerWidth,
-
-    // 时间轴内容区域宽度（计算属性）
-    timelineWidth,
   }
 })

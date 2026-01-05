@@ -1,16 +1,17 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import { updateWebAVAnimation } from '@/core/utils/webavAnimationManager'
+import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 
 // 类型导入
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import { TimelineItemFactory } from '@/core/timelineitem'
 
 /**
  * 调整时间轴项目大小命令
@@ -25,6 +26,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   private oldDurationFrames: number
   private newDurationFrames: number
   private hasAnimation: boolean = false
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
@@ -87,50 +89,11 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
     }
 
-    const sprite = timelineItem.runtime.sprite
-    if (!sprite) {
-      throw new Error(`时间轴项目没有sprite: ${this.timelineItemId}`)
-    }
-
-    // 根据媒体类型设置时间范围
-    if (
-      TimelineItemQueries.isVideoTimelineItem(timelineItem) ||
-      TimelineItemQueries.isAudioTimelineItem(timelineItem)
-    ) {
-      // 视频和音频类型：保持clipStartTime和clipEndTime，更新timeline时间
-      const clipStartTime = timeRange.clipStartTime
-      const clipEndTime = timeRange.clipEndTime
-
-      sprite.setTimeRange({
-        clipStartTime,
-        clipEndTime,
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-      })
-    } else if (
-      TimelineItemQueries.isImageTimelineItem(timelineItem) ||
-      TimelineItemQueries.isTextTimelineItem(timelineItem)
-    ) {
-      // 图片和文本类型：只设置时间轴时间，clipStartTime和clipEndTime保持为-1
-      sprite.setTimeRange({
-        timelineStartTime: timeRange.timelineStartTime,
-        timelineEndTime: timeRange.timelineEndTime,
-        clipStartTime: -1,
-        clipEndTime: -1,
-      })
-    } else {
-      throw new Error('不支持的媒体类型')
-    }
-
     // 同步timeRange到TimelineItem
-    timelineItem.timeRange = sprite.getTimeRange()
+    TimelineItemFactory.setTimeRange(timelineItem, timeRange)
 
     // 如果时长有变化且有关键帧，调整关键帧位置
     if (this.hasAnimation && this.oldDurationFrames !== this.newDurationFrames) {
-      const { adjustKeyframesForDurationChange } = await import(
-        '@/core/utils/unifiedKeyframeUtils'
-      )
-
       // 根据是执行还是撤销操作，确定参数顺序
       if (isUndo) {
         // 撤销操作：从新时长恢复到原时长
@@ -154,7 +117,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     // 如果有动画，更新WebAV动画时长
     if (this.hasAnimation) {
-      await updateWebAVAnimation(timelineItem)
+      // 动画时长更新已迁移到 Bunny 组件，无需手动更新
       console.log(
         `🎬 [ResizeTimelineItemCommand] Animation duration updated after clip resize (${isUndo ? 'undo' : 'execute'})`,
       )
@@ -213,5 +176,24 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       console.error(`❌ 撤销调整时间范围失败: ${mediaItem?.name || '未知素材'}`, error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [ResizeTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

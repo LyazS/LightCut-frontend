@@ -8,26 +8,26 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import {
   type KeyframeSnapshot,
   type TimelineModule,
-  type WebAVAnimationManager,
   type PlaybackControls,
-  generateCommandId,
   createSnapshot,
   applyKeyframeSnapshot,
   isPlayheadInTimelineItem,
   showUserWarning,
 } from './shared'
+import { generateCommandId } from '@/core/utils/idGenerator'
+import { createKeyframe, enableAnimation, initializeAnimation, sortKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 
 export class CreateKeyframeCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private beforeSnapshot: KeyframeSnapshot
   private afterSnapshot: KeyframeSnapshot | null = null
+  private _isDisposed = false
 
   constructor(
     private timelineItemId: string,
     private frame: number,
     private timelineModule: TimelineModule,
-    private webavAnimationManager: WebAVAnimationManager,
     private playbackControls?: PlaybackControls,
   ) {
     this.id = generateCommandId()
@@ -69,11 +69,6 @@ export class CreateKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      // 动态导入关键帧工具函数
-      const { createKeyframe, enableAnimation, initializeAnimation } = await import(
-        '@/core/utils/unifiedKeyframeUtils'
-      )
-
       // 1. 确保动画已启用
       if (!item.animation) {
         initializeAnimation(item)
@@ -85,11 +80,9 @@ export class CreateKeyframeCommand implements SimpleCommand {
       ;(item.animation!.keyframes as any[]).push(keyframe)
 
       // 3. 排序关键帧
-      const { sortKeyframes } = await import('@/core/utils/unifiedKeyframeUtils')
       sortKeyframes(item)
 
-      // 4. 更新WebAV动画
-      await this.webavAnimationManager.updateWebAVAnimation(item)
+      // 4. 动画更新已迁移到 Bunny 组件，无需手动更新
 
       // 5. 保存执行后的状态快照
       this.afterSnapshot = createSnapshot(item)
@@ -120,7 +113,7 @@ export class CreateKeyframeCommand implements SimpleCommand {
     }
 
     try {
-      await applyKeyframeSnapshot(item, this.beforeSnapshot, this.webavAnimationManager)
+      await applyKeyframeSnapshot(item, this.beforeSnapshot)
 
       // 撤销关键帧操作时，跳转到相关帧位置（seekTo会自动触发渲染更新）
       if (this.playbackControls) {
@@ -135,5 +128,24 @@ export class CreateKeyframeCommand implements SimpleCommand {
       console.error('❌ 创建关键帧命令撤销失败:', error)
       throw error
     }
+  }
+
+  /**
+   * 检查命令是否已被清理
+   */
+  get isDisposed(): boolean {
+    return this._isDisposed
+  }
+
+  /**
+   * 清理命令持有的资源
+   */
+  dispose(): void {
+    if (this._isDisposed) {
+      return
+    }
+
+    this._isDisposed = true
+    console.log(`🗑️ [CreateKeyframeCommand] 命令资源已清理: ${this.id}`)
   }
 }

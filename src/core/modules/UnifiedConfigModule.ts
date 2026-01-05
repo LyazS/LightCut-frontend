@@ -26,9 +26,6 @@ export function createUnifiedConfigModule() {
     aspectRatio: '16:9',
   }) as Ref<VideoResolution>
 
-  // 帧率设置
-  const frameRate = ref(30) // 假设视频帧率为30fps
-
   // 时间轴基础时长（帧数）
   const timelineDurationFrames = ref(1800) // 默认1800帧（60秒@30fps），确保有足够的刻度线空间
 
@@ -58,42 +55,7 @@ export function createUnifiedConfigModule() {
 
     // 视频分辨率设置
     setVideoResolution(pconfig.settings.videoResolution)
-    // 帧率设置
-    setFrameRate(pconfig.settings.frameRate)
     console.log('✅ [Config] 项目设置恢复完成')
-  }
-
-  /**
-   * 设置帧率
-   * @param rate 新的帧率值
-   */
-  function setFrameRate(rate: number) {
-    if (rate > 0 && rate <= 120) {
-      // 合理的帧率范围
-      frameRate.value = rate
-      console.log('🎬 帧率已设置为:', rate)
-    } else {
-      console.warn('⚠️ 无效的帧率值:', rate)
-    }
-  }
-
-  /**
-   * 获取当前配置的摘要信息
-   * @returns 配置摘要对象
-   */
-  function getConfigSummary() {
-    return {
-      projectId: projectId.value,
-      projectName: projectName.value,
-      projectDescription: projectDescription.value,
-      projectCreatedAt: projectCreatedAt.value,
-      projectUpdatedAt: projectUpdatedAt.value,
-      projectVersion: projectVersion.value,
-      projectThumbnail: projectThumbnail.value,
-      videoResolution: videoResolution.value,
-      frameRate: frameRate.value,
-      timelineDurationFrames: timelineDurationFrames.value,
-    }
   }
 
   /**
@@ -106,7 +68,6 @@ export function createUnifiedConfigModule() {
       height: 1080,
       aspectRatio: '16:9',
     }
-    frameRate.value = 30
     timelineDurationFrames.value = 1800 // 60秒@30fps
 
     console.log('🔄 配置已重置为默认值')
@@ -126,13 +87,10 @@ export function createUnifiedConfigModule() {
 
     // 状态
     videoResolution,
-    frameRate,
     timelineDurationFrames,
 
     // 方法
     setVideoResolution,
-    setFrameRate,
-    getConfigSummary,
     resetToDefaults,
     restoreFromProjectSettings,
   }

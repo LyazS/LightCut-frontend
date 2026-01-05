@@ -74,7 +74,11 @@ export function useTimelineSnap() {
       includeKeyframes: unifiedStore.snapConfig.keyframes,
     })
 
-    const threshold = unifiedStore.snapConfig.threshold
+    // 获取像素阈值并转换为帧数阈值
+    const pixelThreshold = unifiedStore.snapConfig.threshold
+    const pixelsPerFrame =
+      (input.timelineWidth * unifiedStore.zoomLevel) / unifiedStore.totalDurationFrames
+    const frameThreshold = pixelThreshold / pixelsPerFrame
 
     // 4. 计算头部吸附
     let startSnapPoint: any = null
@@ -82,7 +86,7 @@ export function useTimelineSnap() {
 
     for (const target of snapTargets) {
       const distance = Math.abs(originalStartFrame - (target as any).frame)
-      if (distance < startDistance && distance <= threshold) {
+      if (distance < startDistance && distance <= frameThreshold) {
         startDistance = distance
         startSnapPoint = target
       }
@@ -97,7 +101,7 @@ export function useTimelineSnap() {
 
       for (const target of snapTargets) {
         const distance = Math.abs(originalEndFrame - (target as any).frame)
-        if (distance < endDistance && distance <= threshold) {
+        if (distance < endDistance && distance <= frameThreshold) {
           endDistance = distance
           endSnapPoint = target
         }

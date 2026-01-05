@@ -3,7 +3,6 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
-import type { UnifiedWebavModule } from './UnifiedWebavModule'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedViewportModule } from './UnifiedViewportModule'
 import type { UnifiedProjectModule } from './UnifiedProjectModule'
@@ -15,6 +14,7 @@ import type { UnifiedVideoThumbnailModule } from './UnifiedVideoThumbnailModule'
 import type { UnifiedSnapModule } from './UnifiedSnapModule'
 import type { UnifiedUserModule } from './UnifiedUserModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
+import type { UnifiedMediaBunnyModule } from './UnifiedMediaBunnyModule'
 // 模块名称常量
 export const MODULE_NAMES = {
   CONFIG: 'config',
@@ -33,6 +33,7 @@ export const MODULE_NAMES = {
   SNAP: 'snap',
   USER: 'user',
   DIRECTORY: 'directory',
+  MEDIABUNNY: 'mediabunny',
 } as const
 
 // 模块类型映射
@@ -41,7 +42,6 @@ export type ModuleMap = {
   [MODULE_NAMES.MEDIA]: UnifiedMediaModule
   [MODULE_NAMES.TRACK]: UnifiedTrackModule
   [MODULE_NAMES.PLAYBACK]: UnifiedPlaybackModule
-  [MODULE_NAMES.WEBAV]: UnifiedWebavModule
   [MODULE_NAMES.TIMELINE]: UnifiedTimelineModule
   [MODULE_NAMES.VIEWPORT]: UnifiedViewportModule
   [MODULE_NAMES.PROJECT]: UnifiedProjectModule
@@ -53,6 +53,7 @@ export type ModuleMap = {
   [MODULE_NAMES.SNAP]: UnifiedSnapModule
   [MODULE_NAMES.USER]: UnifiedUserModule
   [MODULE_NAMES.DIRECTORY]: UnifiedDirectoryModule
+  [MODULE_NAMES.MEDIABUNNY]: UnifiedMediaBunnyModule
 }
 
 /**

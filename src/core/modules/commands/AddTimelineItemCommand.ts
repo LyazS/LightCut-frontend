@@ -4,22 +4,18 @@
  * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（已知项目）或重建占位符（未知项目）
  */
 
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { Ref } from 'vue'
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/TimelineItemData'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { VideoResolution } from '@/core/types'
 
 // ==================== 新架构工具导入 ====================
-import {
-  setupMediaSync,
-  cleanupCommandMediaSync,
-} from '@/core/managers/media/UnifiedMediaSyncManager'
+import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
 
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/TimelineItemQueries'
+import { TimelineItemQueries } from '@/core/timelineitem/queries'
 // ==================== 旧架构类型工具导入 ====================
 import { generateCommandId } from '@/core/utils/idGenerator'
 
@@ -38,13 +34,8 @@ export class AddTimelineItemCommand implements SimpleCommand {
     timelineItem: UnifiedTimelineItemData<MediaType>,
     private timelineModule: {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-      removeTimelineItem: (id: string) => void
+      removeTimelineItem: (id: string) => Promise<void>
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setupTimelineItemSprite: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
-    },
-    private webavModule: {
-      addSprite: (sprite: VisibleSprite) => Promise<boolean>
-      removeSprite: (sprite: VisibleSprite) => boolean
     },
     private mediaModule: {
       getMediaItem: (id: string) => UnifiedMediaItemData | undefined
@@ -77,7 +68,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
       const rebuildResult = await TimelineItemFactory.rebuildForCmd({
         originalTimelineItemData: this.originalTimelineItemData,
         getMediaItem: this.mediaModule.getMediaItem,
-        setupTimelineItemSprite: this.timelineModule.setupTimelineItemSprite,
         logIdentifier: 'AddTimelineItemCommand execute',
       })
 
@@ -92,13 +82,11 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
       if (TimelineItemQueries.isLoading(newTimelineItem)) {
-        setupMediaSync({
-          commandId: this.id,
-          mediaItemId: newTimelineItem.mediaItemId,
-          timelineItemId: newTimelineItem.id,
-          description: `execute ${this.description}`,
-          scenario: 'command',
-        })
+        MediaSyncFactory.forCommand(
+          this.id,
+          newTimelineItem.mediaItemId,
+          newTimelineItem.id,
+        ).setup()
       }
       console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
@@ -123,7 +111,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       }
 
       // 移除时间轴项目（这会自动处理sprite的清理）
-      this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
+      await this.timelineModule.removeTimelineItem(this.originalTimelineItemData.id)
       console.log(`↩️ 已撤销添加时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
       console.error(`❌ 撤销添加时间轴项目失败: ${this.originalTimelineItemData.id}`, error)
@@ -141,11 +129,11 @@ export class AddTimelineItemCommand implements SimpleCommand {
 
       // 从 webav 对象中获取原始尺寸信息
       if (
-        mediaData.runtime.webav?.originalWidth !== undefined &&
-        mediaData.runtime.webav?.originalHeight !== undefined
+        mediaData.runtime.bunny?.originalWidth !== undefined &&
+        mediaData.runtime.bunny?.originalHeight !== undefined
       ) {
-        config.width = mediaData.runtime.webav.originalWidth
-        config.height = mediaData.runtime.webav.originalHeight
+        config.width = mediaData.runtime.bunny.originalWidth
+        config.height = mediaData.runtime.bunny.originalHeight
       }
 
       if (mediaData.duration !== undefined) {
