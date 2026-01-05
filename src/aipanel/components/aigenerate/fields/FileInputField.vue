@@ -85,7 +85,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { NTooltip } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-import type { FileInputConfig } from '@/core/datasource/providers/ai-generation/types'
+import type { FileInputConfig, FileData } from '@/core/datasource/providers/ai-generation/types'
 import { IconComponents } from '@/constants/iconComponents'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { DropTargetType, type AIGenerationPanelDropTargetInfo } from '@/core/types/drag'
@@ -94,25 +94,6 @@ import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thu
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'
 
 const { t } = useI18n()
-
-interface FileData {
-  name: string
-  mediaType: 'video' | 'image' | 'audio'
-  mediaItemId?: string
-  timelineItemId?: string
-  duration?: number
-  resolution?: {
-    width: number
-    height: number
-  }
-  timeRange?: {
-    clipStartTime: number
-    clipEndTime: number
-    timelineStartTime: number
-    timelineEndTime: number
-  }
-  source: 'media-item' | 'timeline-item'
-}
 
 interface Props {
   config: FileInputConfig
@@ -396,7 +377,8 @@ onUnmounted(() => {
 }
 
 .drop-zone {
-  min-height: 120px;
+  width: 120px;
+  height: 120px;
   border: 2px dashed var(--color-border-secondary);
   border-radius: var(--border-radius-small);
   background: var(--color-bg-quaternary);
@@ -420,8 +402,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  min-height: 120px;
-  padding: var(--spacing-lg);
+  padding: var(--spacing-sm);
   color: var(--color-text-hint);
 }
 
@@ -443,14 +424,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-md);
-  min-height: 120px;
+  height: 100%;
+  padding: 0;
 }
 
 /* 缩略图容器 - 相对定位以容纳移除按钮 */
 .file-preview {
-  width: 80px;
-  height: 80px;
+  width: 100%;
+  height: 100%;
   border-radius: var(--border-radius-small);
   overflow: hidden;
   background: var(--color-bg-secondary);

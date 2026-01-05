@@ -205,6 +205,28 @@ export interface FileInputConfig extends BaseUIConfig {
 }
 
 /**
+ * 文件数据接口
+ */
+export interface FileData {
+  name: string
+  mediaType: 'video' | 'image' | 'audio'
+  mediaItemId?: string
+  timelineItemId?: string
+  duration?: number
+  resolution?: {
+    width: number
+    height: number
+  }
+  timeRange?: {
+    clipStartTime: number
+    clipEndTime: number
+    timelineStartTime: number
+    timelineEndTime: number
+  }
+  source: 'media-item' | 'timeline-item'
+}
+
+/**
  * UI 配置项联合类型
  */
 export type UIConfig =
