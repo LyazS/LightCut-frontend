@@ -17,8 +17,6 @@ import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import { getMediaPath } from '@/core/utils/mediaPathUtils'
-import { DataSourceQueries } from '@/core/datasource/core/DataSourceTypes'
 
 export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   readonly targetType: DropTargetType = TargetType.AI_GENERATION_PANEL
@@ -114,7 +112,6 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       mediaType: mediaItem.mediaType,
       mediaItemId: mediaItem.id,
       duration: mediaItem.duration,
-      path: this.extractMediaPath(mediaItem),
       
       // 新增：分辨率信息
       resolution: mediaItem.runtime.bunny?.originalWidth ? {
@@ -169,7 +166,6 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       timelineItemId: timelineItem.id,
       mediaItemId: mediaItem.id,
       duration: timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime,
-      path: this.extractMediaPath(mediaItem),
       
       // 新增：分辨率信息
       resolution: mediaItem.runtime.bunny?.originalWidth ? {
@@ -204,32 +200,5 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   private isMediaTypeAccepted(mediaType: string, acceptTypes: string[]): boolean {
     if (acceptTypes.length === 0) return true // 未指定则接受所有类型
     return acceptTypes.includes(mediaType)
-  }
-
-  /**
-   * 从媒体项目提取文件路径
-   */
-  private extractMediaPath(mediaItem: UnifiedMediaItemData): string | undefined {
-    try {
-      const source = mediaItem.source
-      
-      // 用户选择的文件
-      if (DataSourceQueries.isUserSelectedSource(source)) {
-        // 使用 media/id 格式的路径
-        return getMediaPath(mediaItem.id)
-      }
-      
-      // AI生成的文件
-      if (DataSourceQueries.isAIGenerationSource(source)) {
-        // 如果有 resultPath，使用它；否则使用 media/id 格式
-        return source.resultPath || getMediaPath(mediaItem.id)
-      }
-      
-      console.warn(`未知的数据源类型`)
-      return undefined
-    } catch (error) {
-      console.error('提取文件路径失败:', error)
-      return undefined
-    }
   }
 }

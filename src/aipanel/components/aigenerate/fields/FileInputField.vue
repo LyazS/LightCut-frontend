@@ -59,21 +59,21 @@
           
           <div class="tooltip-detail">
             <div class="tooltip-detail-line">
-              类型：{{ getMediaTypeLabel() }}
+              {{ t('aiPanel.fileInput.type') }}：{{ getMediaTypeLabel() }}
             </div>
             <div v-if="fileData.duration" class="tooltip-detail-line">
-              时长：{{ formatDuration(fileData.duration) }}
+              {{ t('aiPanel.fileInput.duration') }}：{{ formatDuration(fileData.duration) }}
             </div>
             <div v-if="fileData.resolution" class="tooltip-detail-line">
-              分辨率：{{ fileData.resolution.width }}x{{ fileData.resolution.height }}
+              {{ t('aiPanel.fileInput.resolution') }}：{{ fileData.resolution.width }}x{{ fileData.resolution.height }}
             </div>
             <div v-if="fileData.timeRange" class="tooltip-detail-line">
-              片段范围：{{ formatTimeRange() }}
+              {{ t('aiPanel.fileInput.clipRange') }}：{{ formatTimeRange() }}
             </div>
           </div>
           
           <div class="tooltip-hint">
-            💡 来源：{{ fileData.source === 'media-item' ? '素材区' : '时间轴' }}
+            💡 {{ t('aiPanel.fileInput.source') }}：{{ fileData.source === 'media-item' ? t('aiPanel.fileInput.mediaLibrary') : t('aiPanel.fileInput.timeline') }}
           </div>
         </div>
       </n-tooltip>
@@ -84,18 +84,22 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import { NTooltip } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
 import type { FileInputConfig } from '@/core/datasource/providers/ai-generation/types'
 import { IconComponents } from '@/constants/iconComponents'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { DropTargetType, type AIGenerationPanelDropTargetInfo } from '@/core/types/drag'
 import { framesToTimecode } from '@/core/utils/timeUtils'
+import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thumbGenerator'
+import { ThumbnailMode } from '@/constants/ThumbnailConstants'
+
+const { t } = useI18n()
 
 interface FileData {
   name: string
   mediaType: 'video' | 'image' | 'audio'
   mediaItemId?: string
   timelineItemId?: string
-  path?: string
   duration?: number
   resolution?: {
     width: number
@@ -182,10 +186,6 @@ const generateUnifiedThumbnail = async (data: FileData): Promise<string | null> 
     } else if (data.source === 'timeline-item') {
       if (data.mediaType === 'video') {
         // 时间轴视频：生成新缩略图（保持现有逻辑）
-        const { generateThumbnailForUnifiedMediaItemBunny } = await import(
-          '@/core/bunnyUtils/thumbGenerator'
-        )
-        
         const timelineItem = unifiedStore.getTimelineItem(data.timelineItemId!)
         if (!timelineItem) {
           console.error('找不到 timelineItem:', data.timelineItemId)
@@ -201,6 +201,7 @@ const generateUnifiedThumbnail = async (data: FileData): Promise<string | null> 
           timePositionUs,
           80,
           80,
+          ThumbnailMode.FILL
         )
         return result || null
       } else if (data.mediaType === 'image') {
@@ -280,10 +281,10 @@ const handleDrop = async (event: DragEvent) => {
     // 根据 fileData 加载缩略图
     await loadThumbnail(result.data)
     
-    unifiedStore.messageSuccess(`已添加文件: ${result.data.name}`)
+    unifiedStore.messageSuccess(t('aiPanel.fileInput.fileAdded', { name: result.data.name }))
   } else {
-    errorMessage.value = '文件拖拽失败，请重试'
-    unifiedStore.messageError('文件拖拽失败，请重试')
+    errorMessage.value = t('aiPanel.fileInput.dragFailed')
+    unifiedStore.messageError(t('aiPanel.fileInput.dragFailed'))
   }
 }
 
@@ -302,7 +303,7 @@ const handleRemove = () => {
 
 // 处理缩略图加载错误
 const handleThumbnailError = () => {
-  console.error('缩略图加载失败，将显示文件类型图标')
+  console.error(t('aiPanel.fileInput.thumbnailLoadFailed'))
   thumbnailUrl.value = null
 }
 
@@ -311,7 +312,7 @@ const getPlaceholder = () => {
   if (props.config.placeholder) {
     return props.config.placeholder[props.locale]
   }
-  return '拖拽素材或时间轴片段到此处'
+  return t('aiPanel.fileInput.dragPlaceholder')
 }
 
 // 格式化时长
@@ -330,11 +331,11 @@ const formatTimeRange = (): string => {
 const getMediaTypeLabel = (): string => {
   if (!fileData.value) return ''
   const typeMap = {
-    video: '视频',
-    image: '图片',
-    audio: '音频',
+    video: t('aiPanel.fileInput.video'),
+    image: t('aiPanel.fileInput.image'),
+    audio: t('aiPanel.fileInput.audio'),
   }
-  return typeMap[fileData.value.mediaType] || '未知'
+  return typeMap[fileData.value.mediaType] || t('aiPanel.fileInput.unknown')
 }
 
 // 获取来源图标
