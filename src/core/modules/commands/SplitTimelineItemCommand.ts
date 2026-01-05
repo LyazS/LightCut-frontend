@@ -6,25 +6,14 @@
 
 import { generateCommandId, generateTimelineItemId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
-import { reactive, markRaw } from 'vue'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
+import { cleanupCommandMediaSync } from '@/core/managers/media'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 新架构类型导入 ====================
-import type {
-  UnifiedTimelineItemData,
-  TimelineItemStatus,
-} from '@/core/timelineitem/type'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
-
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  TextMediaConfig,
-} from '@/core/timelineitem/type'
 
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
@@ -34,9 +23,6 @@ import { splitKeyframesAtPosition } from '@/core/utils/keyframePositionUtils'
 // ==================== 新架构工具导入 ====================
 
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
-
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 
 /**
  * 分割时间轴项目命令
@@ -135,7 +121,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     let firstAnimation: GetAnimation<MediaType> | undefined
     let secondAnimation: GetAnimation<MediaType> | undefined
 
-    if (this.originalTimelineItemData.animation && this.originalTimelineItemData.animation.keyframes.length > 0) {
+    if (
+      this.originalTimelineItemData.animation &&
+      this.originalTimelineItemData.animation.keyframes.length > 0
+    ) {
       console.log('🎬 [Split] 检测到关键帧动画，开始处理...')
 
       // 计算切割位置的百分比（相对于原始 clip）
@@ -159,7 +148,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         splitPositionPercentage,
         clipDurationFrames,
         firstDurationFrames,
-        secondDurationFrames
+        secondDurationFrames,
       )
 
       console.log('🎬 [Split] 关键帧切割结果:', {

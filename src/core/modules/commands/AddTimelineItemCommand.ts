@@ -4,7 +4,6 @@
  * 采用统一重建逻辑：每次执行都从原始素材重新创建sprite（已知项目）或重建占位符（未知项目）
  */
 
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { Ref } from 'vue'
 // ==================== 新架构类型导入 ====================
 import type { SimpleCommand } from '@/core/modules/commands/types'

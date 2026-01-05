@@ -3,7 +3,6 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
-import type { UnifiedWebavModule } from './UnifiedWebavModule'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedViewportModule } from './UnifiedViewportModule'
 import type { UnifiedProjectModule } from './UnifiedProjectModule'
@@ -43,7 +42,6 @@ export type ModuleMap = {
   [MODULE_NAMES.MEDIA]: UnifiedMediaModule
   [MODULE_NAMES.TRACK]: UnifiedTrackModule
   [MODULE_NAMES.PLAYBACK]: UnifiedPlaybackModule
-  [MODULE_NAMES.WEBAV]: UnifiedWebavModule
   [MODULE_NAMES.TIMELINE]: UnifiedTimelineModule
   [MODULE_NAMES.VIEWPORT]: UnifiedViewportModule
   [MODULE_NAMES.PROJECT]: UnifiedProjectModule

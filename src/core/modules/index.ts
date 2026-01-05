@@ -42,9 +42,6 @@ export {
 // ==================== 统一播放控制模块 ====================
 export { createUnifiedPlaybackModule, type UnifiedPlaybackModule } from './UnifiedPlaybackModule'
 
-// ==================== 统一WebAV模块 ====================
-export { createUnifiedWebavModule, type UnifiedWebavModule } from './UnifiedWebavModule'
-
 // ==================== 统一视频缩略图模块 ====================
 export {
   createUnifiedVideoThumbnailModule,

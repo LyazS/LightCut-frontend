@@ -17,8 +17,6 @@
     "@mediabunny/mp3-encoder": "^1.27.0",
     "@remixicon/vue": "^4.7.0",
     "@types/markdown-it": "^14.1.2",
-    "@webav/av-canvas": "^1.1.17",
-    "@webav/av-cliper": "^1.1.17",
     "axios": "^1.12.2",
     "dexie": "^4.2.0",
     "github-markdown-css": "^5.8.1",

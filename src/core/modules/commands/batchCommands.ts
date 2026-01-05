@@ -9,7 +9,6 @@
  * 4. 使用统一的状态管理系统（3状态：ready|loading|error）
  * 5. 保持与原有命令相同的API接口，便于迁移
  */
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { Ref } from 'vue'
 import type { VideoResolution } from '@/core/types'
 import { BaseBatchCommand } from '@/core/modules/UnifiedHistoryModule'
@@ -21,9 +20,7 @@ import {
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
-
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 
 /**

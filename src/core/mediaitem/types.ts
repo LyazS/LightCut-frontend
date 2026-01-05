@@ -5,7 +5,6 @@
 
 import { reactive } from 'vue'
 import type { Raw } from 'vue'
-import type { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
 import { BunnyMedia } from '../mediabunny/bunny-media'
 import type { AudioWaveformLOD } from '../audiowaveform/types'
@@ -32,19 +31,6 @@ export type MediaType = 'video' | 'image' | 'audio' | 'text'
  * 异步处理素材在处理前使用 'unknown' 类型，处理后使用实际检测到的类型
  */
 export type MediaTypeOrUnknown = MediaType | 'unknown'
-
-/**
- * WebAV对象接口
- */
-export interface WebAVObjects {
-  mp4Clip?: Raw<MP4Clip>
-  imgClip?: Raw<ImgClip>
-  audioClip?: Raw<AudioClip>
-  // thumbnailUrl?: string
-  // WebAV解析得到的原始尺寸信息
-  // originalWidth?: number // 原始宽度（视频和图片）
-  // originalHeight?: number // 原始高度（视频和图片）
-}
 
 export interface BunnyObjects {
   bunnyMedia?: Raw<BunnyMedia>
@@ -75,7 +61,6 @@ export interface UnifiedMediaItemData {
 
   // ==================== 运行时对象（状态相关） ====================
   runtime: {
-    webav?: WebAVObjects
     bunny?: BunnyObjects
     refCount?: number // 引用计数：有多少个文件夹引用了这个素材
   }

@@ -8,7 +8,6 @@ import type {
   MediaStatus,
   MediaType,
   MediaTypeOrUnknown,
-  WebAVObjects,
 } from './types'
 import { UnifiedMediaItemQueries } from './queries'
 

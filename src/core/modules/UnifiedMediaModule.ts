@@ -1,5 +1,4 @@
 import { ref, watch, type Raw } from 'vue'
-import { MP4Clip, ImgClip, AudioClip } from '@webav/av-cliper'
 import {
   type UnifiedMediaItemData,
   type MediaStatus,

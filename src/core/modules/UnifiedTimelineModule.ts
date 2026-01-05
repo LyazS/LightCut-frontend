@@ -3,17 +3,7 @@ import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import type { UnifiedTimelineItemData, TransformData } from '@/core/timelineitem/type'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { MediaType } from '@/core/mediaitem/types'
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  TextMediaConfig,
-  AudioMediaConfig,
-} from '@/core/timelineitem/type'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
-import type { UnifiedConfigModule } from './UnifiedConfigModule'
-import type { UnifiedWebavModule } from './UnifiedWebavModule'
-import type { UnifiedTrackModule } from './UnifiedTrackModule'
-import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedSelectionModule } from './UnifiedSelectionModule'
 
 import { isReady, isVideoTimelineItem, isAudioTimelineItem } from '@/core/timelineitem/queries'

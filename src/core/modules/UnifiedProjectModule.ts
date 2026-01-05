@@ -9,11 +9,7 @@ import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
-import {
-  MediaSyncFactory,
-  cleanupCommandMediaSync,
-  cleanupProjectLoadMediaSync,
-} from '@/core/managers/media'
+import { MediaSyncFactory, cleanupProjectLoadMediaSync } from '@/core/managers/media'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { i18n } from '@/locales'
@@ -22,7 +18,6 @@ import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedTrackModule } from './UnifiedTrackModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
-import type { UnifiedWebavModule } from './UnifiedWebavModule'
 import type { UnifiedMediaBunnyModule } from './UnifiedMediaBunnyModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 

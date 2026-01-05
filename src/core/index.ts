@@ -67,8 +67,7 @@ export {
   type MediaStatus,
   type MediaType,
   type MediaTypeOrUnknown,
-  type WebAVObjects,
-
+  
   // 状态专门类型定义
   type ReadyMediaItem,
   type ProcessingMediaItem,

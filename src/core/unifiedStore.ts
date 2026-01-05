@@ -1,6 +1,4 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { LayoutConstants } from '@/constants/LayoutConstants'
 import { createUnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import { createUnifiedTrackModule } from '@/core/modules/UnifiedTrackModule'
 import { createUnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
@@ -9,7 +7,6 @@ import { createUnifiedViewportModule } from '@/core/modules/UnifiedViewportModul
 import { createUnifiedSelectionModule } from '@/core/modules/UnifiedSelectionModule'
 import { createUnifiedConfigModule } from '@/core/modules/UnifiedConfigModule'
 import { createUnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
-import { createUnifiedWebavModule } from '@/core/modules/UnifiedWebavModule'
 import { createUnifiedUseNaiveUIModule } from '@/core/modules/UnifiedUseNaiveUIModule'
 import { createUnifiedHistoryModule } from '@/core/modules/UnifiedHistoryModule'
 import { createUnifiedAutoSaveModule } from '@/core/modules/UnifiedAutoSaveModule'
@@ -22,11 +19,7 @@ import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
 import { useEditSDK } from '@/aipanel'
-import type { AgentMediaInfo, AgentTimelineItemInfo } from '@/aipanel/composables/useEditSDK'
-import type { MediaTypeOrUnknown } from '@/core'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import type { UnifiedViewportModule } from '@/core/modules/UnifiedViewportModule'
-import type { UnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
 import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
 import {
   getTimelineItemsByTrack,
@@ -60,9 +53,6 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   const unifiedPlaybackModule = createUnifiedPlaybackModule(registry)
   registry.register(MODULE_NAMES.PLAYBACK, unifiedPlaybackModule)
-
-  const unifiedWebavModule = createUnifiedWebavModule(registry)
-  registry.register(MODULE_NAMES.WEBAV, unifiedWebavModule)
 
   const unifiedMediaModule = createUnifiedMediaModule(registry)
   registry.register(MODULE_NAMES.MEDIA, unifiedMediaModule)

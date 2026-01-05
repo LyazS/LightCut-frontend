@@ -1,7 +1,5 @@
 import type { Ref } from 'vue'
-import type { VideoResolution } from '@/core/types'
 import { generateCommandId } from '@/core/utils/idGenerator'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // 类型导入

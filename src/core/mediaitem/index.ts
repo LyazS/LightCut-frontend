@@ -8,7 +8,6 @@ export type {
   MediaStatus,
   MediaType,
   MediaTypeOrUnknown,
-  WebAVObjects,
   UnifiedMediaItemData,
   ReadyMediaItem,
   ProcessingMediaItem,

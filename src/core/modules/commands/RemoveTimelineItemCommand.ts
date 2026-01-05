@@ -5,7 +5,6 @@
  */
 import type { Ref } from 'vue'
 import { generateCommandId } from '@/core/utils/idGenerator'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================

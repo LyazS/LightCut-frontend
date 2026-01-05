@@ -6,13 +6,12 @@
 
 import { generateCommandId } from '@/core/utils/idGenerator'
 import { markRaw, type Ref } from 'vue'
-import type { VisibleSprite } from '@webav/av-cliper'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 
 // ==================== 新架构类型导入 ====================
 import type { VideoResolution } from '@/core/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-import type { MediaType } from '@/core/mediaitem'
+
 // ==================== 新架构工具导入 ====================
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemFactory } from '@/core/timelineitem/factory'
