@@ -201,7 +201,7 @@ export async function tryGetMediaCover(
 /**
  * 统一的缩略图生成函数 - 根据媒体类型自动选择合适的生成方法
  * @param mediaItem 统一媒体项目
- * @param timePosition 视频时间位置（微秒），仅对视频有效
+ * @param timePosition 视频时间位置（秒），仅对视频有效
  * @param containerWidth 容器宽度（默认100px）
  * @param containerHeight 容器高度（默认60px）
  * @param mode 缩略图显示模式，默认为适应模式
@@ -227,11 +227,17 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
       )
       if (cover) return cover
 
-      // 将微秒转换为帧位置
-      const timeNPosition =
-        timePosition !== undefined
-          ? BigInt(Math.floor((timePosition / 1000000) * RENDERER_FPS))
-          : undefined
+      // 将秒转换为帧位置，并确保不超过视频总时长
+      let timeNPosition: bigint | undefined
+      if (timePosition !== undefined) {
+        // 获取视频总时长（秒）
+        const videoDuration = mediaItem.runtime.bunny.bunnyMedia.duration
+        // 限制 timePosition 不超过视频时长
+        const clampedTimePosition = Math.min(timePosition, videoDuration)
+        // 转换为帧位置
+        timeNPosition = BigInt(Math.floor(clampedTimePosition * RENDERER_FPS))
+        console.log(`⏰ [ThumbnailGenerator] 请求时间: ${timePosition}s, 视频时长: ${videoDuration}s, 实际使用: ${clampedTimePosition}s`)
+      }
       canvas = await generateVideoThumbnail(
         mediaItem.runtime.bunny.bunnyMedia,
         timeNPosition,

@@ -156,7 +156,7 @@ export function useProjectThumbnailService() {
 
       // 3. 使用统一的缩略图生成函数获取缩略图URL（直接生成640x360的高分辨率缩略图）
       console.log('🔄 使用统一缩略图生成器生成高分辨率缩略图...')
-      const thumbnailUrl = await generateThumbnailForUnifiedMediaItemBunny(mediaItem, 100000, 640, 360)
+      const thumbnailUrl = await generateThumbnailForUnifiedMediaItemBunny(mediaItem, 0.1, 640, 360)
 
       if (!thumbnailUrl) {
         throw new ThumbnailError('无法生成缩略图', 'EXTRACTION_FAILED')
