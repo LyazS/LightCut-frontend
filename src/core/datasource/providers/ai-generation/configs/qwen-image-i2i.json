@@ -25,7 +25,7 @@
         "zh": "参考图片"
       },
       "path": "aiConfig.reference_image",
-      "accept": ["image"],
+      "accept": ["image", "video"],
       "placeholder": {
         "en": "Drag an image here or from timeline",
         "zh": "拖拽图片素材或时间轴片段到此处"
