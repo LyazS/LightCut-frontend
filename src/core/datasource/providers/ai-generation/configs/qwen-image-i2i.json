@@ -5,14 +5,14 @@
     "zh": "Qwen 图生图"
   },
   "description": {
-    "en": "Generate images based on reference image",
-    "zh": "基于参考图生成图片"
+    "en": "Generate images based on reference images (supports up to 3 images)",
+    "zh": "基于参考图生成图片（支持最多3张图片）"
   },
   "contentType": "image",
   "aiTaskType": "bizyair_generate_media",
   "aiConfig": {
     "prompt": "",
-    "reference_image": null,
+    "reference_images": [],
     "strength": 0.8,
     "width": 1024,
     "height": 960
@@ -21,13 +21,14 @@
     {
       "type": "file-input",
       "label": {
-        "en": "Reference Image",
+        "en": "Reference Images",
         "zh": "参考图片"
       },
-      "path": "aiConfig.reference_image",
+      "path": "aiConfig.reference_images",
       "accept": ["image", "video"],
+      "maxFiles": 3,
       "placeholder": {
-        "en": "Drag an image here or from timeline",
+        "en": "Drag images here or from timeline",
         "zh": "拖拽图片素材或时间轴片段到此处"
       }
     },

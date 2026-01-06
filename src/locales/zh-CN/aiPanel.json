@@ -12,6 +12,7 @@
     "submitFailed": "任务提交失败：{error}",
     "fileInput": {
       "dragPlaceholder": "拖拽素材或时间轴片段到此处",
+      "replace": "替换",
       "type": "类型",
       "duration": "时长",
       "resolution": "分辨率",

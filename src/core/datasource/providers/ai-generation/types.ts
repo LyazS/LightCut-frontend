@@ -202,6 +202,7 @@ export interface FileInputConfig extends BaseUIConfig {
   type: 'file-input'
   accept?: string[] // 接受的文件类型，如 ['image', 'video']
   placeholder?: I18nText // 占位符文本
+  maxFiles?: number // 最大文件数量，默认为 1
 }
 
 /**
@@ -224,6 +225,30 @@ export interface FileData {
     timelineEndTime: number
   }
   source: 'media-item' | 'timeline-item'
+}
+
+/**
+ * 多文件数据类型（数组形式）
+ */
+export type MultiFileData = FileData[]
+
+/**
+ * 文件项状态枚举
+ */
+export enum FileItemStatus {
+  EMPTY = 'empty',   // 空槽位（显示上传框）
+  FILLED = 'filled'  // 已填充文件
+}
+
+/**
+ * 文件槽位接口
+ */
+export interface FileSlot {
+  index: number
+  status: FileItemStatus
+  fileData: FileData | null
+  isDragOver: boolean
+  canAcceptDrop: boolean
 }
 
 /**

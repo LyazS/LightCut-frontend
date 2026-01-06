@@ -12,6 +12,7 @@
     "submitFailed": "Task submission failed: {error}",
     "fileInput": {
       "dragPlaceholder": "Drag media or timeline clip here",
+      "replace": "Replace",
       "type": "Type",
       "duration": "Duration",
       "resolution": "Resolution",

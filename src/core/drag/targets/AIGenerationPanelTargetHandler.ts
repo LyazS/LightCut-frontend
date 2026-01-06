@@ -46,6 +46,12 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const panelTargetInfo = targetInfo as AIGenerationPanelDropTargetInfo
     const acceptTypes = panelTargetInfo.fieldConfig.accept || []
 
+    // 注意：不需要在这里检查文件数量限制
+    // 因为组件的渐进式UI设计已经天然地限制了文件数量：
+    // - 当达到 maxFiles 时，不会显示新的空槽位
+    // - 用户只能拖拽到已填充的槽位进行替换操作
+    // - 这是一个更优雅的用户体验设计
+
     // 检查文件类型兼容性
     if (dragData.sourceType === DragSourceType.MEDIA_ITEM) {
       const mediaData = dragData as MediaItemDragData
@@ -67,10 +73,16 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   ): Promise<DropResult> {
     if (targetInfo.targetType !== TargetType.AI_GENERATION_PANEL) {
       console.error('目标类型不匹配，期望 AI_GENERATION_PANEL')
-      return { success: false }
+      return { success: false, error: '目标类型不匹配' }
     }
 
     const panelTargetInfo = targetInfo as AIGenerationPanelDropTargetInfo
+
+    // 注意：不需要在这里检查文件数量限制
+    // 因为组件的渐进式UI设计已经天然地限制了文件数量：
+    // - 当达到 maxFiles 时，不会显示新的空槽位
+    // - 用户只能拖拽到已填充的槽位进行替换操作
+    // - 这是一个更优雅的用户体验设计
 
     try {
       if (dragData.sourceType === DragSourceType.MEDIA_ITEM) {
@@ -80,10 +92,10 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       }
     } catch (error) {
       console.error('处理拖拽放置失败:', error)
-      return { success: false }
+      return { success: false, error: '处理拖拽放置失败' }
     }
 
-    return { success: false }
+    return { success: false, error: '不支持的拖拽源类型' }
   }
 
   /**
@@ -96,14 +108,14 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const mediaItem = this.mediaModule.getMediaItem(mediaData.mediaItemId)
     if (!mediaItem) {
       console.error('找不到素材项目:', mediaData.mediaItemId)
-      return { success: false }
+      return { success: false, error: '找不到素材项目' }
     }
 
     // 检查类型兼容性
     const acceptTypes = targetInfo.fieldConfig.accept || []
     if (!this.isMediaTypeAccepted(mediaItem.mediaType, acceptTypes)) {
       console.error(`素材类型 ${mediaItem.mediaType} 不被接受`)
-      return { success: false }
+      return { success: false, error: `不支持的素材类型: ${mediaItem.mediaType}` }
     }
 
     // 提取文件信息
@@ -142,21 +154,21 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const timelineItem = this.timelineModule.getTimelineItem(timelineData.itemId)
     if (!timelineItem) {
       console.error('找不到时间轴项目:', timelineData.itemId)
-      return { success: false }
+      return { success: false, error: '找不到时间轴项目' }
     }
 
     // 检查类型兼容性
     const acceptTypes = targetInfo.fieldConfig.accept || []
     if (!this.isMediaTypeAccepted(timelineItem.mediaType, acceptTypes)) {
       console.error(`时间轴项目类型 ${timelineItem.mediaType} 不被接受`)
-      return { success: false }
+      return { success: false, error: `不支持的时间轴项目类型: ${timelineItem.mediaType}` }
     }
 
     // 获取关联的素材项目
     const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
     if (!mediaItem) {
       console.error('找不到关联的素材项目:', timelineItem.mediaItemId)
-      return { success: false }
+      return { success: false, error: '找不到关联的素材项目' }
     }
 
     // 提取文件信息（包含时间范围）
