@@ -24,9 +24,10 @@
         <n-tooltip
           v-else-if="slot.status === FileItemStatus.FILLED && slot.fileData"
           :show-arrow="true"
-          placement="right"
-          :delay="300"
+          placement="bottom"
+          :delay="500"
           trigger="hover"
+          :max-width="280"
         >
           <template #trigger>
             <div class="filled-slot">
@@ -670,6 +671,9 @@ onUnmounted(() => {
   margin-bottom: 6px;
   color: var(--n-text-color);
   font-size: 14px;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .tooltip-detail {
