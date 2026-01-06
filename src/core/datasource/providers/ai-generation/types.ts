@@ -209,6 +209,9 @@ export interface FileInputConfig extends BaseUIConfig {
  * 文件数据接口
  */
 export interface FileData {
+  // 类型标识符，用于运行时类型检查
+  readonly __type__: 'FileData'
+  
   name: string
   mediaType: 'video' | 'image' | 'audio'
   mediaItemId?: string

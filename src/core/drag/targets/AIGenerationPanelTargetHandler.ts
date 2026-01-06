@@ -120,6 +120,7 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
 
     // 提取文件信息
     const fileData = {
+      __type__: 'FileData' as const,
       name: mediaItem.name,
       mediaType: mediaItem.mediaType,
       mediaItemId: mediaItem.id,
@@ -173,6 +174,7 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
 
     // 提取文件信息（包含时间范围）
     const fileData = {
+      __type__: 'FileData' as const,
       name: mediaItem.name,
       mediaType: timelineItem.mediaType,
       timelineItemId: timelineItem.id,
