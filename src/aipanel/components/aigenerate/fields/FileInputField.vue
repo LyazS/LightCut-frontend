@@ -144,9 +144,6 @@ const thumbnailUrls = ref<Map<number, string | null>>(new Map())
 // 最大文件数量
 const maxFiles = computed(() => props.config.maxFiles || 1)
 
-// 是否可以接受更多文件
-const canAcceptMoreFiles = computed(() => fileList.value.length < maxFiles.value)
-
 // 计算应该显示的槽位数量（渐进式UI）
 const visibleSlots = computed(() => {
   const currentFileCount = fileList.value.length

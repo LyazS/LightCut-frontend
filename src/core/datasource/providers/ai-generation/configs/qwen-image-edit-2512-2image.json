@@ -1,0 +1,105 @@
+{
+  "id": "qwen-image-edit-2512-2image",
+  "name": {
+    "en": "Qwen Image Edit (2 Images)",
+    "zh": "Qwen 图片合成（双图）"
+  },
+  "description": {
+    "en": "Composite two images based on prompt instructions",
+    "zh": "根据提示词将两张图片进行合成"
+  },
+  "contentType": "image",
+  "aiTaskType": "bizyair_generate_media",
+  "aiConfig": {
+    "id": "qwen-image-edit-2512",
+    "variant": "2image",
+    "image": [],
+    "prompt": "",
+    "negative_prompt": "",
+    "width": 1024,
+    "height": 1024,
+    "seed": -1
+  },
+  "uiConfig": [
+    {
+      "type": "file-input",
+      "label": {
+        "en": "Images",
+        "zh": "图片"
+      },
+      "path": "aiConfig.image",
+      "accept": ["image"],
+      "maxFiles": 2,
+      "minFiles": 2,
+      "placeholder": {
+        "en": "Drag 2 images here or from timeline (first as background, second as overlay)",
+        "zh": "拖拽2张图片素材或时间轴片段到此处（第一张为背景图，第二张为合成图）"
+      }
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Describe how to composite the second image onto the first...",
+        "zh": "描述如何将第二张图片合成到第一张图片上..."
+      }
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Negative Prompt",
+        "zh": "负面提示词"
+      },
+      "path": "aiConfig.negative_prompt",
+      "placeholder": {
+        "en": "Enter negative prompt (optional)...",
+        "zh": "输入负面提示词（可选）..."
+      },
+      "required": false
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Width",
+        "zh": "宽度"
+      },
+      "path": "aiConfig.width",
+      "min": 256,
+      "max": 2048,
+      "step": 8,
+      "precision": 0
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Height",
+        "zh": "高度"
+      },
+      "path": "aiConfig.height",
+      "min": 256,
+      "max": 2048,
+      "step": 8,
+      "precision": 0
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Seed",
+        "zh": "随机种子"
+      },
+      "path": "aiConfig.seed",
+      "min": -1,
+      "max": 999999999999999,
+      "step": 1,
+      "precision": 0,
+      "placeholder": {
+        "en": "-1 for random seed",
+        "zh": "-1 表示随机生成"
+      }
+    }
+  ]
+}
