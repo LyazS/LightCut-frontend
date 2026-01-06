@@ -11,7 +11,6 @@ import {
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { LayoutConstants } from '@/constants/LayoutConstants'
-import { exportTimelineItem } from '@/core/utils/projectExporter'
 
 /**
  * 菜单项类型定义
@@ -114,18 +113,6 @@ export function useTimelineContextMenu(
     if (!timelineItem) return []
 
     const menuItems: MenuItem[] = []
-
-    // 导出片段 - 仅支持视频和图片
-    if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
-      menuItems.push({
-        label: t('timeline.contextMenu.clip.exportClip'),
-        icon: IconComponents.DOWNLOAD,
-        onClick: () => exportClip(),
-      })
-
-      // 分隔符
-      menuItems.push({ type: 'separator' } as MenuItem)
-    }
 
     // 复制片段 - 所有类型都支持
     menuItems.push({
@@ -419,74 +406,6 @@ export function useTimelineContextMenu(
     return Math.max(0, Math.round(timeFrames))
   }
 
-  /**
-   * 导出时间轴片段
-   */
-  async function exportClip() {
-    const clipId = contextMenuTarget.value.clipId
-    if (!clipId) return
-
-    const timelineItem = unifiedStore.getTimelineItem(clipId)
-    if (!timelineItem) return
-
-    showContextMenu.value = false
-
-    try {
-      console.log('🚀 开始导出时间轴片段:', timelineItem.id)
-
-      // 显示进度提示
-      unifiedStore.messageInfo(t('timeline.contextMenu.clip.exportStarted', { id: timelineItem.id }))
-
-      // 调用导出方法
-      const blob = await exportTimelineItem({
-        timelineItem,
-        getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
-        onProgress: (progress: number) => {
-          console.log(`📊 导出进度: ${progress.toFixed(2)}%`)
-        },
-      })
-
-      // 获取媒体项目名称用于文件命名
-      const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
-      const baseName = mediaItem?.name || 'timeline-clip'
-
-      // 创建下载链接
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${baseName}_clip.${getFileExtension(timelineItem.mediaType)}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      unifiedStore.messageSuccess(t('timeline.contextMenu.clip.exportSuccess', { id: timelineItem.id }))
-      console.log('✅ 时间轴片段导出成功')
-    } catch (error) {
-      console.error('❌ 导出时间轴片段失败:', error)
-      unifiedStore.messageError(
-        t('timeline.contextMenu.clip.exportFailed', {
-          id: timelineItem.id,
-          error: error instanceof Error ? error.message : '未知错误',
-        }),
-      )
-    }
-  }
-
-  /**
-   * 获取文件扩展名
-   */
-  function getFileExtension(mediaType: string): string {
-    switch (mediaType) {
-      case 'video':
-        return 'mp4'
-      case 'image':
-        return 'png'
-      default:
-        return 'bin'
-    }
-  }
-
   return {
     // 状态
     showContextMenu,
@@ -502,6 +421,5 @@ export function useTimelineContextMenu(
     duplicateClip,
     renameTrack,
     showAddTrackMenu,
-    exportClip,
   }
 }

@@ -39,11 +39,7 @@
       "clip": {
         "duplicateClip": "复制片段",
         "regenerateThumbnail": "重新生成缩略图",
-        "deleteClip": "删除片段",
-        "exportClip": "导出片段",
-        "exportStarted": "开始导出片段 {id}...",
-        "exportSuccess": "片段 {id} 导出成功",
-        "exportFailed": "片段 {id} 导出失败: {error}"
+        "deleteClip": "删除片段"
       },
       "track": {
         "addText": "添加文本",

@@ -39,11 +39,7 @@
       "clip": {
         "duplicateClip": "Duplicate Clip",
         "regenerateThumbnail": "Regenerate Thumbnail",
-        "deleteClip": "Delete Clip",
-        "exportClip": "Export Clip",
-        "exportStarted": "Starting export of clip {id}...",
-        "exportSuccess": "Clip {id} exported successfully",
-        "exportFailed": "Clip {id} export failed: {error}"
+        "deleteClip": "Delete Clip"
       },
       "track": {
         "addText": "Add Text",
