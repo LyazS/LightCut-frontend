@@ -58,6 +58,16 @@
           <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
           <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }}</span>
         </button>
+
+        <!-- 调试输出按钮 -->
+        <button
+          v-if="aiConfig"
+          class="generate-button"
+          @click="handleDebugOutput"
+        >
+          <component :is="IconComponents.DEBUG" size="16px" class="button-icon" />
+          <span>调试输出</span>
+        </button>
       </div>
     </n-scrollbar>
   </div>
@@ -358,6 +368,18 @@ async function handleGenerate() {
     isGenerating.value = false
   }
 }
+
+/**
+ * 处理调试输出按钮点击
+ */
+function handleDebugOutput() {
+  if (aiConfig.value) {
+    console.log('🔍 [GeneratePanel] 调试输出 aiConfig 内容:')
+    console.log('aiConfig:', JSON.stringify(aiConfig.value, null, 2))
+  } else {
+    console.warn('⚠️ [GeneratePanel] aiConfig 为空')
+  }
+}
 </script>
 
 <style scoped>
@@ -408,7 +430,6 @@ async function handleGenerate() {
 }
 
 .generate-button {
-  width: 100%;
   padding: var(--spacing-md);
   background: var(--color-accent-primary);
   color: white;
@@ -420,6 +441,7 @@ async function handleGenerate() {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-xs);
   transition: all 0.2s ease;
 }
 
