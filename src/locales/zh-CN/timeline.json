@@ -37,6 +37,7 @@
         "addTextTrack": "添加文本轨道"
       },
       "clip": {
+        "smartSceneDetection": "智能分镜头",
         "duplicateClip": "复制片段",
         "regenerateThumbnail": "重新生成缩略图",
         "deleteClip": "删除片段"

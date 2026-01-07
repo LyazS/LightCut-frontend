@@ -11,6 +11,7 @@ import {
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { LayoutConstants } from '@/constants/LayoutConstants'
+import { detectScene } from '@/utils/scene-detector'
 
 /**
  * 菜单项类型定义
@@ -113,6 +114,18 @@ export function useTimelineContextMenu(
     if (!timelineItem) return []
 
     const menuItems: MenuItem[] = []
+
+    // 智能分镜头 - 仅视频类型支持
+    if (timelineItem.mediaType === 'video') {
+      menuItems.push({
+        label: t('timeline.contextMenu.clip.smartSceneDetection'),
+        icon: IconComponents.LAYOUT,
+        onClick: () => detectSceneBoundaries(),
+      })
+
+      // 分隔符
+      menuItems.push({ type: 'separator' } as MenuItem)
+    }
 
     // 复制片段 - 所有类型都支持
     menuItems.push({
@@ -346,6 +359,40 @@ export function useTimelineContextMenu(
   }
 
   /**
+   * 智能分镜头检测
+   */
+  async function detectSceneBoundaries() {
+    const clipId = contextMenuTarget.value.clipId
+    if (!clipId) return
+
+    const timelineItem = unifiedStore.getTimelineItem(clipId)
+    if (!timelineItem) return
+
+    console.log('🎬 开始智能分镜头检测...')
+    console.log('📹 时间轴项目ID:', clipId)
+    console.log('📊 时间范围:', timelineItem.timeRange)
+
+    try {
+      const boundaries = await detectScene(timelineItem, {
+        threshold: 0.3,
+        maxSize: 600,
+        onProgress: (current, total, message) => {
+          console.log(`[${current}/${total}] ${message}`)
+        },
+      })
+
+      console.log('✅ 智能分镜头检测完成！')
+      console.log('🎯 分割点数量:', boundaries.length)
+      console.log('📍 分割点帧索引:', boundaries)
+      console.log('📍 分割点帧索引（数组）:', Array.from(boundaries))
+    } catch (error) {
+      console.error('❌ 智能分镜头检测失败:', error)
+    }
+
+    showContextMenu.value = false
+  }
+
+  /**
    * 重命名轨道
    */
   function renameTrack() {
@@ -421,5 +468,6 @@ export function useTimelineContextMenu(
     duplicateClip,
     renameTrack,
     showAddTrackMenu,
+    detectSceneBoundaries,
   }
 }
