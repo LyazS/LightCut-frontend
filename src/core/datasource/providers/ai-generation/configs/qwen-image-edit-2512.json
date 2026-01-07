@@ -1,18 +1,17 @@
 {
-  "id": "qwen-image-edit-2512-2image",
+  "id": "qwen-image-edit-2512",
   "name": {
-    "en": "Qwen Image Edit (2 Images)",
-    "zh": "Qwen 图片合成（双图）"
+    "en": "Qwen Image Edit (Max 3 Images)",
+    "zh": "Qwen 图片编辑（最多3图）"
   },
   "description": {
-    "en": "Composite two images based on prompt instructions",
-    "zh": "根据提示词将两张图片进行合成"
+    "en": "Edit 1/2/3 images based on prompt words",
+    "zh": "根据提示词编辑1/2/3张图片"
   },
   "contentType": "image",
-  "aiTaskType": "bizyair_generate_media",
+  "aiTaskType": "qwen_image_edit",
   "aiConfig": {
     "id": "qwen-image-edit-2512",
-    "variant": "2image",
     "ref_images": [],
     "prompt": "",
     "negative_prompt": "",
@@ -29,11 +28,11 @@
       },
       "path": "aiConfig.ref_images",
       "accept": ["image"],
-      "maxFiles": 2,
-      "minFiles": 2,
+      "maxFiles": 3,
+      "minFiles": 1,
       "placeholder": {
-        "en": "Drag 2 images here or from timeline (first as background, second as overlay)",
-        "zh": "拖拽2张图片素材或时间轴片段到此处（第一张为背景图，第二张为合成图）"
+        "en": "Drag image here or from timeline",
+        "zh": "拖拽图片素材或时间轴片段到此处"
       }
     },
     {
@@ -44,8 +43,8 @@
       },
       "path": "aiConfig.prompt",
       "placeholder": {
-        "en": "Describe how to composite the second image onto the first...",
-        "zh": "描述如何将第二张图片合成到第一张图片上..."
+        "en": "Describe how to edit the images.",
+        "zh": "描述如何编辑图片"
       }
     },
     {
