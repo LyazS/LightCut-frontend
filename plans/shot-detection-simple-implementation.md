@@ -30,7 +30,7 @@ flowchart TD
 ### 2.2 核心组件
 
 1. **useShotDetection** - 镜头检测组合式函数
-2. **SimpleShotDetector** - 简化的两阶段检测器
+2. **ShotDetector** - 镜头边界检测器
 3. **MultiSplitTimelineItemCommand** - 多分割点命令
 4. **UI集成** - 右键菜单和工具栏按钮
 
@@ -38,9 +38,10 @@ flowchart TD
 
 ### 3.1 镜头边界检测器（简化版）
 
+**文件位置**: `src/core/utils/ShotDetector.ts`
+
 ```typescript
-// src/core/shotdetection/SimpleShotDetector.ts
-export class SimpleShotDetector {
+export class ShotDetector {
   private readonly DEFAULT_STEP = 10 // 抽帧步长
   private readonly DEFAULT_THRESHOLD = 0.3 // 检测阈值
   
@@ -432,7 +433,7 @@ import type {
   UnifiedHistoryModule,
   UnifiedConfigModule,
 } from '@/core/modules'
-import { SimpleShotDetector } from '@/core/shotdetection/SimpleShotDetector'
+import { ShotDetector } from '@/core/utils/ShotDetector'
 import { MultiSplitTimelineItemCommand } from '@/core/modules/commands/MultiSplitTimelineItemCommand'
 
 /**
@@ -511,7 +512,7 @@ export function useShotDetection(
       progressCallback?.(0.1, '检测镜头边界')
       
       // 检测镜头边界
-      const detector = new SimpleShotDetector()
+      const detector = new ShotDetector()
       const boundaries = await detector.detectShotBoundaries(
         mediaItem.runtime.bunny.bunnyMedia.clip,
         (progress) => {
@@ -596,7 +597,7 @@ export function useShotDetection(
       }
       
       // 检测镜头边界
-      const detector = new SimpleShotDetector()
+      const detector = new ShotDetector()
       const boundaries = await detector.detectShotBoundaries(
         mediaItem.runtime.bunny.bunnyMedia.clip,
         (progress) => {
@@ -784,7 +785,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 ## 五、实施步骤
 
 ### 第1步：创建核心检测器（1天）
-- 创建 `SimpleShotDetector` 类
+- 在 `src/core/utils/` 目录下创建 `ShotDetector.ts` 文件
 - 实现基础的两阶段检测算法
 - 添加简单的进度回调
 
