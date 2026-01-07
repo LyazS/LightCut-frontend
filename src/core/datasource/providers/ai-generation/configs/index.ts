@@ -4,7 +4,6 @@
  */
 
 import QwenImage4StepConfig from './qwen-image-4step.json'
-import QwenImageI2IConfig from './qwen-image-i2i.json'
 import QwenImageEdit2512Config from './qwen-image-edit-2512.json'
 import type { AIGenerateConfig } from '../types'
 
@@ -14,7 +13,6 @@ import type { AIGenerateConfig } from '../types'
  */
 export const collection = {
   'qwen-image-4step': QwenImage4StepConfig as AIGenerateConfig,
-  'qwen-image-i2i': QwenImageI2IConfig as AIGenerateConfig,
   'qwen-image-edit-2512': QwenImageEdit2512Config as AIGenerateConfig,
 } as const
 
