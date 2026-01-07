@@ -13,7 +13,7 @@
   "aiConfig": {
     "id": "qwen-image-edit-2512",
     "variant": "2image",
-    "image": [],
+    "ref_images": [],
     "prompt": "",
     "negative_prompt": "",
     "width": 1024,
@@ -27,7 +27,7 @@
         "en": "Images",
         "zh": "图片"
       },
-      "path": "aiConfig.image",
+      "path": "aiConfig.ref_images",
       "accept": ["image"],
       "maxFiles": 2,
       "minFiles": 2,
