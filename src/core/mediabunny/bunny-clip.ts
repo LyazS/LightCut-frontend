@@ -1,8 +1,4 @@
-import {
-  VideoSample,
-  type AnyIterable,
-  type WrappedAudioBuffer,
-} from 'mediabunny'
+import { VideoSample, type AnyIterable, type WrappedAudioBuffer } from 'mediabunny'
 import {
   RENDERER_FPS,
   VIDEO_SEEK_THRESHOLD,
@@ -50,11 +46,13 @@ export class BunnyClip implements IClip {
   public previewRate: number = 1.0 // 预览倍速
   public duration: number = 0
   public durationN: bigint = 0n
+  public clockwiseRotation: number = 0
 
   constructor(bunnyMedia: BunnyMedia) {
     this.bunnyMedia = bunnyMedia
     this.duration = bunnyMedia.duration
     this.durationN = bunnyMedia.durationN
+    this.clockwiseRotation = bunnyMedia.clockwiseRotation
     this.videoSampleAtTSFunc = bunnyMedia.videoSamplesAtTimestamps()
     this.videoGetSampleFunc = bunnyMedia.videoGetSample()
     this.audioBufferFunc = bunnyMedia.audioBuffersFunc()
@@ -218,11 +216,11 @@ export class BunnyClip implements IClip {
       const newTimestamp =
         (wrapped.timestamp - clipStart / RENDERER_FPS) / rate +
         Number(this.timeRange.timelineStart) / RENDERER_FPS
-      
+
       processedBuffers.push({
         buffer: wrapped.buffer,
         timestamp: newTimestamp,
-        duration: wrapped.duration
+        duration: wrapped.duration,
       })
     }
 
@@ -338,7 +336,11 @@ export class BunnyClip implements IClip {
         this.audioBufferFunc && needAudio ? this.findAudioBuffersN(timeN, audioHeadFrame) : [],
         this.videoSampleAtTSFunc && needVideo ? this.findVideoFrameN(timeN) : null,
       ])
-      return await this.tickInterceptor(timeN, { audio, video, state: 'success' })
+      return await this.tickInterceptor(timeN, {
+        audio,
+        video,
+        state: 'success',
+      })
     } finally {
       this.isTicking = false
     }
@@ -349,9 +351,11 @@ export class BunnyClip implements IClip {
    * @param clipTimeN Clip上的帧位置
    * @returns 包含视频帧和状态，音频数组始终为空
    */
-  async getSampleN(
-    clipTimeN: bigint,
-  ): Promise<{ audio: WrappedAudioBuffer[]; video: VideoSample | null; state: 'success' | 'outofrange' }> {
+  async getSampleN(clipTimeN: bigint): Promise<{
+    audio: WrappedAudioBuffer[]
+    video: VideoSample | null
+    state: 'success' | 'outofrange'
+  }> {
     if (clipTimeN < 0n || this.durationN < clipTimeN) {
       return this.tickInterceptor(clipTimeN, {
         audio: [],
@@ -360,7 +364,11 @@ export class BunnyClip implements IClip {
       })
     }
     const video = (await this.videoGetSampleFunc?.(Number(clipTimeN) / RENDERER_FPS)) ?? null
-    return await this.tickInterceptor(clipTimeN, { audio: [], video, state: 'success' })
+    return await this.tickInterceptor(clipTimeN, {
+      audio: [],
+      video,
+      state: 'success',
+    })
   }
 
   /**

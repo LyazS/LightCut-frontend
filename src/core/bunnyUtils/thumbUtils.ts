@@ -95,6 +95,7 @@ export function createCanvasWithSize(
  * @param source 图像源（VideoFrame 或 ImageBitmap）
  * @param drawInfo 绘制信息（尺寸和位置）
  * @param backgroundColor 背景色（默认 #000000）
+ * @param clockwiseRotation 顺时针旋转角度（0, 90, 180, 270），默认为0
  */
 export function drawImageOnCanvas(
   ctx: CanvasRenderingContext2D,
@@ -107,20 +108,47 @@ export function drawImageOnCanvas(
     offsetX: number
     offsetY: number
   },
-  backgroundColor: string = '#000000'
+  backgroundColor: string = '#000000',
+  clockwiseRotation: number = 0
 ): void {
   // 填充背景色（清除之前的内容）
   ctx.fillStyle = backgroundColor
   ctx.fillRect(0, 0, drawInfo.containerWidth, drawInfo.containerHeight)
 
-  // 绘制图像
-  ctx.drawImage(
-    source as CanvasImageSource,
-    drawInfo.offsetX,
-    drawInfo.offsetY,
-    drawInfo.drawWidth,
-    drawInfo.drawHeight
-  )
+  // 如果有旋转，需要特殊处理
+  if (clockwiseRotation !== 0) {
+    // 保存当前状态
+    ctx.save()
+
+    // 移动到绘制中心点
+    const centerX = drawInfo.offsetX + drawInfo.drawWidth / 2
+    const centerY = drawInfo.offsetY + drawInfo.drawHeight / 2
+    ctx.translate(centerX, centerY)
+
+    // 应用旋转
+    ctx.rotate((clockwiseRotation * Math.PI) / 180)
+
+    // 绘制图像（注意：旋转后需要调整绘制位置）
+    ctx.drawImage(
+      source as CanvasImageSource,
+      -drawInfo.drawHeight / 2,
+      -drawInfo.drawWidth / 2,
+      drawInfo.drawHeight,
+      drawInfo.drawWidth,
+    )
+
+    // 恢复状态
+    ctx.restore()
+  } else {
+    // 绘制图像（无旋转）
+    ctx.drawImage(
+      source as CanvasImageSource,
+      drawInfo.offsetX,
+      drawInfo.offsetY,
+      drawInfo.drawWidth,
+      drawInfo.drawHeight
+    )
+  }
 }
 
 /**
@@ -128,6 +156,7 @@ export function drawImageOnCanvas(
  * 组合函数：使用 createCanvasWithSize 和 drawImageOnCanvas 实现
  * @param source VideoFrame或ImageBitmap
  * @param sizeInfo 尺寸和位置信息
+ * @param clockwiseRotation 顺时针旋转角度（0, 90, 180, 270），默认为0
  * @returns Canvas元素
  */
 export function createThumbnailCanvas(
@@ -140,13 +169,15 @@ export function createThumbnailCanvas(
     offsetX: number
     offsetY: number
   },
+  clockwiseRotation: number = 0,
 ): HTMLCanvasElement {
   const { canvas, ctx } = createCanvasWithSize(
     sizeInfo.containerWidth,
     sizeInfo.containerHeight
   )
 
-  drawImageOnCanvas(ctx, source, sizeInfo)
+  // 使用统一的 drawImageOnCanvas 函数，传入旋转参数
+  drawImageOnCanvas(ctx, source, sizeInfo, '#000000', clockwiseRotation)
 
   return canvas
 }

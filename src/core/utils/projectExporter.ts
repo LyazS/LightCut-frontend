@@ -251,6 +251,7 @@ export class ExportManager {
               oldFrame?.videoSample.close()
               this.bunnyCurFrameMap.set(item.id, {
                 frameNumber: frameIn30fps,
+                clockwiseRotation: bunnyClip.clockwiseRotation,
                 videoSample: video,
               })
             }

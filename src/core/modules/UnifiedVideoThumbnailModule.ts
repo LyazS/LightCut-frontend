@@ -189,8 +189,8 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
           }
 
           try {
-            // ✅ 在共享 Canvas 上绘制
-            drawImageOnCanvas(sharedCtx, frame, sizeInfo)
+            // ✅ 在共享 Canvas 上绘制（包含旋转处理）
+            drawImageOnCanvas(sharedCtx, frame, sizeInfo, '#000000', bunnyClip.clockwiseRotation)
 
             // ✅ 异步转换并缓存（渐进式显示）
             canvasToBlob(sharedCanvas)

@@ -53,6 +53,10 @@ export async function generateVideoThumbnail(
     // 立即关闭VideoSample以释放资源
     tickResult.video.close()
 
+    // 获取视频的顺时针旋转角度
+    const clockwiseRotation = workingClip.clockwiseRotation
+    console.log('🔄 [ThumbnailGenerator] 视频旋转角度:', clockwiseRotation, '度')
+
     // 计算缩略图尺寸
     const sizeInfo = calculateThumbnailSize(
       bunnyMedia.width,
@@ -70,7 +74,7 @@ export async function generateVideoThumbnail(
 
     // 创建缩略图canvas
     console.log('🎨 [ThumbnailGenerator] 创建缩略图canvas...')
-    const canvas = createThumbnailCanvas(videoFrame, sizeInfo)
+    const canvas = createThumbnailCanvas(videoFrame, sizeInfo, clockwiseRotation)
     console.log('✅ [ThumbnailGenerator] 缩略图canvas创建完成')
 
     // 清理VideoFrame资源

@@ -324,6 +324,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     mediaBunnySeekToFrame: unifiedMediaBunnyModule.seekToFrame,
     updateMediaBunnyTimelineDuration: unifiedMediaBunnyModule.updateTimelineDuration,
 
+    // MediaBunny截帧功能
+    captureCanvasFrame: unifiedMediaBunnyModule.captureCanvasFrame,
+
     // MediaBunny工具方法
     isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
     resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,

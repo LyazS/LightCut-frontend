@@ -18,6 +18,7 @@ import type { VideoSample } from 'mediabunny'
 export interface FrameData {
   frameNumber: number
   videoSample: VideoSample
+  clockwiseRotation: number
 }
 
 /**
@@ -88,39 +89,7 @@ export function renderItem(
   // ✅ 使用辅助函数获取渲染配置
   const visualConfig = TimelineItemQueries.getRenderConfig(item)
 
-  // 性能优化：如果没有旋转和不透明度变化，直接绘制
-  const needsTransform = visualConfig.rotation !== 0 || visualConfig.opacity !== 1
-
-  if (!needsTransform) {
-    // 直接绘制，不需要 save/restore
-    const width = visualConfig.width
-    const height = visualConfig.height
-    // config.x, config.y 已经是相对于画布中心的坐标
-    // 绘制时需要偏移 -width/2, -height/2，使元素中心在 (config.x, config.y)
-    const x = visualConfig.x - width / 2
-    const y = visualConfig.y - height / 2
-
-    if (TimelineItemQueries.isVideoTimelineItem(item)) {
-      const frameData = bunnyCurFrameMap.get(item.id)
-      if (frameData) {
-        const videoFrame = frameData.videoSample.toVideoFrame()
-        ctx.drawImage(videoFrame, x, y, width, height)
-        videoFrame.close()
-      }
-    } else if (TimelineItemQueries.isTextTimelineItem(item) && item.runtime.textBitmap) {
-      ctx.drawImage(item.runtime.textBitmap, x, y, width, height)
-    } else if (TimelineItemQueries.isImageTimelineItem(item)) {
-      const mediaItem = getMediaItem(item.mediaItemId)
-      const imageClip = mediaItem?.runtime.bunny?.imageClip
-      if (imageClip) {
-        ctx.drawImage(imageClip, x, y, width, height)
-      }
-    }
-
-    return
-  }
-
-  // 需要变换时使用 save/restore
+  // 统一使用 save/restore 模式
   ctx.save()
 
   try {
@@ -131,8 +100,18 @@ export function renderItem(
     ctx.translate(visualConfig.x, visualConfig.y)
 
     // 2. 应用旋转（围绕中心点旋转）
+    // 先应用视频本身的顺时针旋转，再应用用户设置的旋转
+    let clockwiseRotation = 0
+    if (TimelineItemQueries.isVideoTimelineItem(item)) {
+      const frameData = bunnyCurFrameMap.get(item.id)
+      if (frameData) {
+        clockwiseRotation = frameData.clockwiseRotation
+        if (clockwiseRotation !== 0) {
+          ctx.rotate((clockwiseRotation * Math.PI) / 180)
+        }
+      }
+    }
     if (visualConfig.rotation !== 0) {
-      // 已经是弧度了
       ctx.rotate(visualConfig.rotation)
     }
 
@@ -142,8 +121,14 @@ export function renderItem(
     }
 
     // 4. 获取尺寸
-    const width = visualConfig.width
-    const height = visualConfig.height
+    // 如果视频旋转了 90° 或 270°，需要交换宽度和高度
+    let width = visualConfig.width
+    let height = visualConfig.height
+    if (TimelineItemQueries.isVideoTimelineItem(item) && (clockwiseRotation === 90 || clockwiseRotation === 270)) {
+      const temp = width
+      width = height
+      height = temp
+    }
 
     // === 绘制内容 ===
     // 注意：因为已经 translate 到中心点，所以绘制时要偏移 -width/2, -height/2
