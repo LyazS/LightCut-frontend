@@ -9,9 +9,8 @@
     "zh": "根据提示词编辑1/2/3张图片"
   },
   "contentType": "image",
-  "aiTaskType": "qwen_image_edit",
+  "aiTaskType": "bizyair_generate_media",
   "aiConfig": {
-    "id": "qwen-image-edit-2512",
     "ref_images": [],
     "prompt": "",
     "negative_prompt": "",
