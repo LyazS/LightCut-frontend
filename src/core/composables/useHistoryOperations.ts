@@ -325,11 +325,11 @@ export function useHistoryOperations(
   /**
    * 带历史记录的分割时间轴项目方法
    * @param timelineItemId 要分割的时间轴项目ID
-   * @param splitTimeFrames 分割时间点（帧数）
+   * @param splitTimeFrames 分割时间点数组（帧数），按时间顺序排列
    */
   async function splitTimelineItemAtTimeWithHistory(
     timelineItemId: string,
-    splitTimeFrames: number,
+    splitTimeFrames: number[],
   ) {
     // 获取要分割的时间轴项目
     const timelineItem = unifiedTimelineModule.getTimelineItem(timelineItemId)

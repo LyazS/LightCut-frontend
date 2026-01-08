@@ -210,10 +210,10 @@ async function splitSelectedClip() {
       `📍 裁剪时间位置: ${unifiedStore.currentFrame}帧 (${unifiedStore.formattedCurrentTime})`,
     )
 
-    // 使用带历史记录的分割方法（传入帧数）
+    // 使用带历史记录的分割方法（传入帧数数组）
     await unifiedStore.splitTimelineItemAtTimeWithHistory(
       unifiedStore.selectedTimelineItemId,
-      unifiedStore.currentFrame,
+      [unifiedStore.currentFrame],
     )
     console.log('✅ 时间轴项目分割成功')
   }

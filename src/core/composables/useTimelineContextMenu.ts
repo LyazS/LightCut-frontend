@@ -11,7 +11,9 @@ import {
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { LayoutConstants } from '@/constants/LayoutConstants'
-import { detectScene } from '@/utils/scene-detector'
+import { detectScene } from '@/core/utils/scene-detector'
+import { detectSceneAdv } from '@/core/utils/scene-detector-adv'
+import { detectSceneContent } from '@/core/utils/scene-detector-content'
 
 /**
  * 菜单项类型定义
@@ -115,29 +117,33 @@ export function useTimelineContextMenu(
 
     const menuItems: MenuItem[] = []
 
-    // 智能分镜头 - 仅视频类型支持
-    if (timelineItem.mediaType === 'video') {
+    // 只有 ready 状态的 timelineItem 才有各种右键选项
+    // 非 ready 状态（loading 或 error）只有删除选项
+    if (timelineItem.timelineStatus === 'ready') {
+      // 智能分镜头 - 仅视频类型支持
+      if (timelineItem.mediaType === 'video') {
+        menuItems.push({
+          label: t('timeline.contextMenu.clip.smartSceneDetection'),
+          icon: IconComponents.LAYOUT,
+          onClick: () => detectSceneBoundaries(),
+        })
+
+        // 分隔符
+        menuItems.push({ type: 'separator' } as MenuItem)
+      }
+
+      // 复制片段 - 所有类型都支持
       menuItems.push({
-        label: t('timeline.contextMenu.clip.smartSceneDetection'),
-        icon: IconComponents.LAYOUT,
-        onClick: () => detectSceneBoundaries(),
+        label: t('timeline.contextMenu.clip.duplicateClip'),
+        icon: IconComponents.COPY,
+        onClick: () => duplicateClip(),
       })
 
       // 分隔符
       menuItems.push({ type: 'separator' } as MenuItem)
     }
 
-    // 复制片段 - 所有类型都支持
-    menuItems.push({
-      label: t('timeline.contextMenu.clip.duplicateClip'),
-      icon: IconComponents.COPY,
-      onClick: () => duplicateClip(),
-    })
-
-    // 分隔符
-    menuItems.push({ type: 'separator' } as MenuItem)
-
-    // 删除片段 - 所有类型都支持
+    // 删除片段 - 所有状态都支持
     menuItems.push({
       label: t('timeline.contextMenu.clip.deleteClip'),
       icon: IconComponents.DELETE,
@@ -359,7 +365,7 @@ export function useTimelineContextMenu(
   }
 
   /**
-   * 智能分镜头检测
+   * 智能分镜头检测（基于 ContentDetector）
    */
   async function detectSceneBoundaries() {
     const clipId = contextMenuTarget.value.clipId
@@ -368,23 +374,64 @@ export function useTimelineContextMenu(
     const timelineItem = unifiedStore.getTimelineItem(clipId)
     if (!timelineItem) return
 
-    console.log('🎬 开始智能分镜头检测...')
+    console.log('🎬 开始智能分镜头检测（ContentDetector）...')
     console.log('📹 时间轴项目ID:', clipId)
     console.log('📊 时间范围:', timelineItem.timeRange)
 
     try {
-      const boundaries = await detectScene(timelineItem, {
-        threshold: 0.3,
+      // 基本检测（基于直方图）
+      // const boundaries2 = await detectScene(timelineItem, {
+      //   threshold: 0.3,
+      //   maxSize: 600,
+      //   onProgress: (current, total, message) => {
+      //     console.log(`[${current}/${total}] ${message}`)
+      //   },
+      // })
+      // console.log('✅ 智能分镜头2检测完成！')
+      // console.log('🎯 分割点数量:', boundaries2.length)
+      // console.log('📍 分割点帧索引:', boundaries2)
+
+      // 场景检测（基于 Prominence）
+      const boundaries1 = await detectSceneAdv(timelineItem, {
+        peakDetection: {
+          minProminence: 0.03,
+          minHeight: 0.08,
+          minDistance: 15,
+        },
         maxSize: 600,
         onProgress: (current, total, message) => {
-          console.log(`[${current}/${total}] ${message}`)
+          // console.log(`[${current}/${total}] ${message}`)
         },
+        enableChart: false,
       })
+      console.log('✅ 智能分镜头1检测完成！')
+      console.log('🎯 分割点数量:', boundaries1.length)
+      console.log('📍 分割点帧索引:', boundaries1)
 
-      console.log('✅ 智能分镜头检测完成！')
-      console.log('🎯 分割点数量:', boundaries.length)
-      console.log('📍 分割点帧索引:', boundaries)
-      console.log('📍 分割点帧索引（数组）:', Array.from(boundaries))
+      // 场景检测（基于 ContentDetector）
+      // const boundaries = await detectSceneContent(timelineItem, {
+      //   threshold: 27.0,
+      //   minSceneLen: 15,
+      //   maxSize: 600,
+      //   onProgress: (current, total, message) => {
+      //     console.log(`[${current}/${total}] ${message}`)
+      //   },
+      // })
+
+      // console.log('✅ 智能分镜头2检测完成！')
+      // console.log('🎯 分割点数量:', boundaries.length)
+      // console.log('📍 分割点帧索引:', boundaries)
+
+      // 使用检测到的分割点进行分割
+      if (boundaries1.length > 0) {
+        console.log('🔪 开始分割时间轴项目...')
+        // 将 bigint[] 转换为 number[]
+        const splitPoints = boundaries1.map((frame) => Number(frame))
+        await unifiedStore.splitTimelineItemAtTimeWithHistory(clipId, splitPoints)
+        console.log('✅ 时间轴项目分割成功')
+      } else {
+        console.log('⚠️ 未检测到场景边界，跳过分割')
+      }
     } catch (error) {
       console.error('❌ 智能分镜头检测失败:', error)
     }

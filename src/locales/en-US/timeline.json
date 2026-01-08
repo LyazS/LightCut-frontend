@@ -37,7 +37,7 @@
         "addTextTrack": "Add Text Track"
       },
       "clip": {
-        "smartSceneDetection": "Smart Scene Detection",
+        "smartSceneDetection": "Scene Detection",
         "duplicateClip": "Duplicate Clip",
         "regenerateThumbnail": "Regenerate Thumbnail",
         "deleteClip": "Delete Clip"
