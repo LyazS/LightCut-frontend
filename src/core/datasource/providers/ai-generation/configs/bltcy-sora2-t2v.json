@@ -1,0 +1,82 @@
+{
+  "id": "bltcy-sora2-t2v",
+  "name": {
+    "en": "BLTCY Sora2 Text to Video",
+    "zh": "BLTCY Sora2 文本生成视频"
+  },
+  "description": {
+    "en": "Generate videos from text using BLTCY Sora2 model",
+    "zh": "使用 BLTCY Sora2 模型从文本生成视频"
+  },
+  "contentType": "video",
+  "aiTaskType": "bltcy_sora2_t2v",
+  "aiConfig": {
+    "prompt": "",
+    "aspect_ratio": "16:9",
+    "duration": "10"
+  },
+  "uiConfig": [
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Enter your video generation prompt...",
+        "zh": "输入视频生成提示词..."
+      },
+      "required": true,
+      "maxLength": 1000
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Aspect Ratio",
+        "zh": "宽高比"
+      },
+      "path": "aiConfig.aspect_ratio",
+      "options": [
+        {
+          "value": "16:9",
+          "label": {
+            "en": "16:9 (Landscape)",
+            "zh": "16:9 (横屏)"
+          }
+        },
+        {
+          "value": "9:16",
+          "label": {
+            "en": "9:16 (Portrait)",
+            "zh": "9:16 (竖屏)"
+          }
+        }
+      ]
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Duration",
+        "zh": "时长"
+      },
+      "path": "aiConfig.duration",
+      "options": [
+        {
+          "value": "10",
+          "label": {
+            "en": "10 seconds",
+            "zh": "10 秒"
+          }
+        },
+        {
+          "value": "15",
+          "label": {
+            "en": "15 seconds",
+            "zh": "15 秒"
+          }
+        }
+      ]
+    }
+  ]
+}

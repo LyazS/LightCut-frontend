@@ -190,7 +190,7 @@ export interface TextareaInputConfig extends BaseUIConfig {
 export interface SelectInputConfig extends BaseUIConfig {
   type: 'select-input'
   options: Array<{
-    label: string
+    label: I18nText
     value: string
   }>
 }
