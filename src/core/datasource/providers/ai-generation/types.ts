@@ -39,6 +39,7 @@ export enum TaskStatus {
  */
 export enum TaskStreamEventType {
   PROGRESS_UPDATE = 'progress_update',
+  NOT_FOUND = 'not_found',
   ERROR = 'error',
   FINAL = 'final',
   HEARTBEAT = 'heartbeat',
@@ -108,6 +109,14 @@ export interface ErrorEvent extends BaseTaskStreamEvent {
 }
 
 /**
+ * 任务不存在，那就是错误
+ */
+export interface NotFoundEvent extends BaseTaskStreamEvent {
+  type: TaskStreamEventType.NOT_FOUND
+  message: string
+}
+
+/**
  * 心跳事件
  */
 export interface HeartbeatEvent extends BaseTaskStreamEvent {
@@ -118,7 +127,12 @@ export interface HeartbeatEvent extends BaseTaskStreamEvent {
 /**
  * 流事件联合类型
  */
-export type TaskStreamEvent = ProgressUpdateEvent | FinalEvent | ErrorEvent | HeartbeatEvent
+export type TaskStreamEvent =
+  | ProgressUpdateEvent
+  | NotFoundEvent
+  | FinalEvent
+  | ErrorEvent
+  | HeartbeatEvent
 
 // ==================== 处理器相关类型 ====================
 
@@ -211,7 +225,7 @@ export interface FileInputConfig extends BaseUIConfig {
 export interface FileData {
   // 类型标识符，用于运行时类型检查
   readonly __type__: 'FileData'
-  
+
   name: string
   mediaType: 'video' | 'image' | 'audio'
   mediaItemId?: string
@@ -239,8 +253,8 @@ export type MultiFileData = FileData[]
  * 文件项状态枚举
  */
 export enum FileItemStatus {
-  EMPTY = 'empty',   // 空槽位（显示上传框）
-  FILLED = 'filled'  // 已填充文件
+  EMPTY = 'empty', // 空槽位（显示上传框）
+  FILLED = 'filled', // 已填充文件
 }
 
 /**
@@ -257,11 +271,7 @@ export interface FileSlot {
 /**
  * UI 配置项联合类型
  */
-export type UIConfig =
-  | NumberInputConfig
-  | TextareaInputConfig
-  | SelectInputConfig
-  | FileInputConfig
+export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConfig | FileInputConfig
 
 /**
  * AI 生成配置结构

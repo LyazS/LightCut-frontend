@@ -217,6 +217,9 @@ export class AIGenerationProcessor extends DataSourceProcessor {
                 .catch(reject)
             } else if (streamEvent.type === TaskStreamEventType.HEARTBEAT) {
               // 心跳事件，保持连接活跃，无需处理
+            } else if (streamEvent.type === TaskStreamEventType.NOT_FOUND) {
+              console.error(`❌ [AIGenerationProcessor] 进度流错误: ${streamEvent.message}`)
+              reject(new Error(streamEvent.message))
             }
             // 处理错误
             else if (streamEvent.type === TaskStreamEventType.ERROR) {
