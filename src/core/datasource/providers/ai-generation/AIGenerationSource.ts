@@ -41,7 +41,6 @@ export interface BaseAIGenerationSourceData extends BaseDataSourceData {
  * AI生成数据源 - 继承基类型和运行时状态
  */
 export interface AIGenerationSourceData extends BaseAIGenerationSourceData, DataSourceRuntimeState {
-  generationProgress: number
   estimatedTime?: number
   streamConnected?: boolean
   currentStage?: string
@@ -66,7 +65,6 @@ export const AIGenerationSourceFactory = {
     return reactive({
       ...param,
       ...RuntimeStateFactory.createRuntimeState(origin),
-      generationProgress: 0,
       estimatedTime: undefined,
       currentStage: undefined,
       streamConnected: false,
@@ -99,12 +97,6 @@ export const AIGenerationQueries = {
     return AIGenerationTypeGuards.isAIGenerationSource(source) ? source.aiTaskId : null
   },
 
-  /**
-   * 获取生成进度
-   */
-  getGenerationProgress(source: AIGenerationSourceData): number {
-    return source.generationProgress
-  },
 
   /**
    * 获取任务状态
@@ -171,7 +163,6 @@ export function extractAIGenerationSourceData(
     taskStatus: source.taskStatus, // 🌟 新增：保存任务状态
 
     // 不需要保存运行时状态
-    // generationProgress: source.generationProgress, // 重新加载时会重置
     // estimatedTime: source.estimatedTime, // 运行时状态
     // streamConnected: source.streamConnected, // 运行时状态
     // currentStage: source.currentStage, // 运行时状态

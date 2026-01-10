@@ -168,80 +168,82 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       try {
         while (needReconnect) {
           // 使用fetchClient的stream方法处理NDJSON流
-          await fetchClient.stream(
-            'GET',
-            `/api/media/tasks/${aiTaskId}/status`,
-            (streamEvent: TaskStreamEvent): boolean | void => {
-              // 处理进度更新
-              if (streamEvent.type === TaskStreamEventType.PROGRESS_UPDATE) {
-                console.log(`🎬 [AIGenerationProcessor] 任务进度更新:`, streamEvent)
-                const shouldTransition = this.handleProgressUpdate(source, streamEvent)
+          await fetchClient
+            .stream(
+              'GET',
+              `/api/media/tasks/${aiTaskId}/status`,
+              (streamEvent: TaskStreamEvent): boolean | void => {
+                // 处理进度更新
+                if (streamEvent.type === TaskStreamEventType.PROGRESS_UPDATE) {
+                  console.log(`🎬 [AIGenerationProcessor] 任务进度更新:`, streamEvent)
+                  const shouldTransition = this.handleProgressUpdate(source, streamEvent)
 
-                // handleProgressUpdate 内部已判断是否需要转换（PENDING -> PROCESSING）
-                if (shouldTransition) {
-                  console.log(
-                    `🔄 [AIGenerationProcessor] 任务状态从 PENDING 转换到 PROCESSING，设置媒体状态为 asyncprocessing`,
-                  )
-                  this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+                  // handleProgressUpdate 内部已判断是否需要转换（PENDING -> PROCESSING）
+                  if (shouldTransition) {
+                    console.log(
+                      `🔄 [AIGenerationProcessor] 任务状态从 PENDING 转换到 PROCESSING，设置媒体状态为 asyncprocessing`,
+                    )
+                    this.transitionMediaStatus(mediaItem, 'asyncprocessing')
+                  }
+                  return false
                 }
-                return false
-              }
-              // 处理生成完成
-              else if (streamEvent.type === TaskStreamEventType.FINAL) {
-                console.log(`📋 [AIGenerationProcessor] FINAL 事件状态: ${streamEvent.status}`)
+                // 处理生成完成
+                else if (streamEvent.type === TaskStreamEventType.FINAL) {
+                  console.log(`📋 [AIGenerationProcessor] FINAL 事件状态: ${streamEvent.status}`)
 
-                // 如果是失败或取消状态，设置状态并拒绝
-                if (streamEvent.status === TaskStatus.FAILED) {
-                  source.taskStatus = TaskStatus.FAILED
-                  console.error(`❌ [AIGenerationProcessor] 任务失败，状态: FAILED`)
+                  // 如果是失败或取消状态，设置状态并拒绝
+                  if (streamEvent.status === TaskStatus.FAILED) {
+                    source.taskStatus = TaskStatus.FAILED
+                    console.error(`❌ [AIGenerationProcessor] 任务失败，状态: FAILED`)
+                    reject(new Error(streamEvent.message))
+                    needReconnect = false
+                    return true
+                  } else if (streamEvent.status === TaskStatus.CANCELLED) {
+                    source.taskStatus = TaskStatus.CANCELLED
+                    console.warn(`⚠️ [AIGenerationProcessor] 任务已取消，状态: CANCELLED`)
+                    reject(new Error(streamEvent.message))
+                    needReconnect = false
+                    return true
+                  }
+
+                  // ✅ 直接从 FINAL 事件中获取 result_path（无需额外 API 调用）
+                  if (!streamEvent.result_path) {
+                    console.error(`❌ [AIGenerationProcessor] FINAL 事件中缺少 result_path`)
+                    reject(new Error('FINAL 事件中缺少 result_path'))
+                    needReconnect = false
+                    return true
+                  }
+
+                  this.handleFinalResult(aiTaskId, streamEvent.result_path, source)
+                    .then(resolve)
+                    .catch(reject)
+                  needReconnect = false
+                  return true
+                } else if (streamEvent.type === TaskStreamEventType.HEARTBEAT) {
+                  // 心跳事件，保持连接活跃，无需处理
+                  return false
+                } else if (streamEvent.type === TaskStreamEventType.NOT_FOUND) {
+                  console.error(`❌ [AIGenerationProcessor] 进度流错误: ${streamEvent.message}`)
                   reject(new Error(streamEvent.message))
                   needReconnect = false
                   return true
-                } else if (streamEvent.status === TaskStatus.CANCELLED) {
-                  source.taskStatus = TaskStatus.CANCELLED
-                  console.warn(`⚠️ [AIGenerationProcessor] 任务已取消，状态: CANCELLED`)
-                  reject(new Error(streamEvent.message))
-                  needReconnect = false
+                }
+                // 处理错误
+                else if (streamEvent.type === TaskStreamEventType.ERROR) {
+                  // 🌟 ERROR 事件表示进度流系统错误（如权限问题、流异常），不是任务失败，不修改 taskStatus
+                  console.error(`❌ [AIGenerationProcessor] 进度流错误: ${streamEvent.message}`)
                   return true
                 }
 
-                // ✅ 直接从 FINAL 事件中获取 result_path（无需额外 API 调用）
-                if (!streamEvent.result_path) {
-                  console.error(`❌ [AIGenerationProcessor] FINAL 事件中缺少 result_path`)
-                  reject(new Error('FINAL 事件中缺少 result_path'))
-                  needReconnect = false
-                  return true
-                }
-
-                this.handleFinalResult(aiTaskId, streamEvent.result_path, source)
-                  .then(resolve)
-                  .catch(reject)
-                needReconnect = false
-                return true
-              } else if (streamEvent.type === TaskStreamEventType.HEARTBEAT) {
-                // 心跳事件，保持连接活跃，无需处理
+                // 默认继续读取流
                 return false
-              } else if (streamEvent.type === TaskStreamEventType.NOT_FOUND) {
-                console.error(`❌ [AIGenerationProcessor] 进度流错误: ${streamEvent.message}`)
-                reject(new Error(streamEvent.message))
-                needReconnect = false
-                return true
-              }
-              // 处理错误
-              else if (streamEvent.type === TaskStreamEventType.ERROR) {
-                // 🌟 ERROR 事件表示进度流系统错误（如权限问题、流异常），不是任务失败，不修改 taskStatus
-                console.error(`❌ [AIGenerationProcessor] 进度流错误: ${streamEvent.message}`)
-                return true
-              }
-
-              // 默认继续读取流
-              return false
-            },
-            undefined,
-            { signal: abortController.signal }, // 🌟 传入 signal
-          ).catch((error) => {
-            console.log(`⚠️ [AIGenerationProcessor] 进度流连接中断: ${error.message}`)
-          })
+              },
+              undefined,
+              { signal: abortController.signal }, // 🌟 传入 signal
+            )
+            .catch((error) => {
+              console.log(`⚠️ [AIGenerationProcessor] 进度流连接中断: ${error.message}`)
+            })
           // 只有需要重连时才延迟
           if (needReconnect) {
             console.log(`🔄 [AIGenerationProcessor]准备重连...`)
@@ -268,18 +270,36 @@ export class AIGenerationProcessor extends DataSourceProcessor {
     streamEvent: ProgressUpdateEvent,
   ): boolean {
     const oldStatus = source.taskStatus
+    let hasChanges = false
 
-    // 更新进度和状态
-    source.generationProgress = streamEvent.progress
-    source.taskStatus = streamEvent.status
-    source.progress = streamEvent.progress // 同步到通用进度字段
+    // 只在进度值真正变化时更新
+    if (source.progress !== streamEvent.progress) {
+      source.progress = streamEvent.progress
+    }
 
-    // 更新进度消息
-    source.currentStage = streamEvent.message
+    // 只在状态真正变化时更新
+    if (source.taskStatus !== streamEvent.status) {
+      source.taskStatus = streamEvent.status
+    }
 
-    // 更新元数据
+    // 只在消息真正变化时更新
+    if (source.currentStage !== streamEvent.message) {
+      source.currentStage = streamEvent.message
+    }
+
+    // 只在元数据真正变化时更新
     if (streamEvent.metadata) {
-      source.metadata = { ...source.metadata, ...streamEvent.metadata }
+      const oldMetadata = source.metadata || {}
+      const newMetadata = { ...oldMetadata, ...streamEvent.metadata }
+
+      // 检查元数据是否有实际变化
+      const metadataChanged = Object.keys(streamEvent.metadata).some(
+        (key) => oldMetadata[key] !== streamEvent.metadata![key],
+      )
+
+      if (metadataChanged) {
+        source.metadata = newMetadata
+      }
     }
 
     // 判断是否需要转换媒体状态：只在从 PENDING 转换到 PROCESSING 时返回 true

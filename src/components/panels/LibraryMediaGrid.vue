@@ -1318,7 +1318,6 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
   // 3. 重置数据源状态
   aiSource.progress = 0
   aiSource.errorMessage = undefined
-  aiSource.generationProgress = 0
   aiSource.streamConnected = false
 
   // 4. 重置媒体状态
