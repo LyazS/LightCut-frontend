@@ -97,6 +97,17 @@ export interface ExportTimelineItemOptions {
 }
 
 /**
+ * 导出取消错误类
+ * 用于区分取消操作和其他错误
+ */
+export class ExportCancelledError extends Error {
+  constructor() {
+    super('导出已取消')
+    this.name = 'ExportCancelledError'
+  }
+}
+
+/**
  * 导出管理器类
  * 封装所有导出逻辑
  */
@@ -409,7 +420,7 @@ export class ExportManager {
         // 检查取消
         if (this.shouldCancel) {
           await this.output.cancel()
-          throw new Error('导出已取消')
+          throw new ExportCancelledError()
         }
 
         // 渲染当前帧并收集音频
@@ -490,7 +501,12 @@ export class ExportManager {
 
       return new Uint8Array(buffer)
     } catch (error) {
-      console.error('❌ 导出失败:', error)
+      // 区分取消操作和其他错误
+      if (error instanceof ExportCancelledError) {
+        console.log('⚠️ 导出已取消')
+      } else {
+        console.error('❌ 导出失败:', error)
+      }
       throw error
     } finally {
       await this.cleanup()
@@ -540,66 +556,86 @@ export class ExportManager {
 }
 
 /**
- * 导出项目为 MP4 文件
+ * 可取消的导出项目为 MP4 文件
+ * 返回取消函数，允许外部调用取消导出
  * @param options 导出项目参数
+ * @param onSuccess 导出成功回调
+ * @param onError 导出失败回调
+ * @param onCancel 导出取消回调
+ * @returns 取消函数
  */
-export async function exportProject(options: ExportProjectOptions): Promise<void> {
-  // 创建导出管理器
+export function exportProjectWithCancel(
+  options: ExportProjectOptions,
+  onSuccess?: () => void,
+  onError?: (error: Error) => void,
+  onCancel?: () => void
+): () => void {
+  // 创建导出管理器实例
   const manager = new ExportManager(options)
+  
+  // 执行导出并保存文件
+  manager.export()
+    .then(async (videoData) => {
+      // 保存文件
+      const blob = new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
 
-  try {
-    // 执行导出
-    const videoData = await manager.export()
-
-    // 保存文件
-    const blob = new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
-
-    // 使用 File System Access API 让用户选择保存位置
-    if ('showSaveFilePicker' in window) {
-      try {
-        // 弹出保存对话框
-        const fileHandle = await window.showSaveFilePicker({
-          suggestedName: `${options.projectName}.mp4`,
-          types: [
-            {
-              description: 'MP4 视频文件',
-              accept: {
-                'video/mp4': ['.mp4'],
+      // 使用 File System Access API 让用户选择保存位置
+      if ('showSaveFilePicker' in window) {
+        try {
+          const fileHandle = await window.showSaveFilePicker({
+            suggestedName: `${options.projectName}.mp4`,
+            types: [
+              {
+                description: 'MP4 视频文件',
+                accept: {
+                  'video/mp4': ['.mp4'],
+                },
               },
-            },
-          ],
-        })
+            ],
+          })
 
-        // 写入文件
-        const writable = await fileHandle.createWritable()
-        await writable.write(blob)
-        await writable.close()
+          const writable = await fileHandle.createWritable()
+          await writable.write(blob)
+          await writable.close()
 
-        console.log('✅ 项目导出成功')
-      } catch (error) {
-        // 用户取消了保存操作
-        if ((error as Error).name === 'AbortError') {
-          console.log('⚠️ 用户取消了保存操作')
-          throw new Error('用户取消了保存操作')
+          console.log('✅ 项目导出成功')
+          onSuccess?.()
+        } catch (error) {
+          // 用户取消了保存操作
+          if ((error as Error).name === 'AbortError') {
+            console.log('⚠️ 用户取消了保存操作')
+            onError?.(new Error('用户取消了保存操作'))
+          } else {
+            throw error
+          }
         }
-        throw error
-      }
-    } else {
-      // 降级方案：使用传统的下载方式（不支持 File System Access API 的浏览器）
-      console.warn('⚠️ 浏览器不支持 File System Access API，使用传统下载方式')
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${options.projectName}.mp4`
-      a.click()
-      URL.revokeObjectURL(url)
+      } else {
+        // 降级方案：使用传统的下载方式（不支持 File System Access API 的浏览器）
+        console.warn('⚠️ 浏览器不支持 File System Access API，使用传统下载方式')
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${options.projectName}.mp4`
+        a.click()
+        URL.revokeObjectURL(url)
 
-      console.log('✅ 项目导出成功（传统方式）')
-    }
-  } catch (error) {
-    console.error('❌ 项目导出失败:', error)
-    throw error
-  }
+        console.log('✅ 项目导出成功（传统方式）')
+        onSuccess?.()
+      }
+    })
+    .catch((error) => {
+      // 区分取消操作和其他错误
+      if (error instanceof ExportCancelledError) {
+        console.log('⚠️ 导出已取消')
+        onCancel?.()
+      } else {
+        console.error('❌ 导出失败:', error)
+        onError?.(error instanceof Error ? error : new Error(String(error)))
+      }
+    })
+  
+  // 返回取消函数
+  return () => manager.cancel()
 }
 
 /**

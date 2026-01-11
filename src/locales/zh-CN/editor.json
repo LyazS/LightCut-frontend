@@ -16,6 +16,7 @@
     "saveFailed": "项目保存失败",
     "exportSuccess": "视频导出成功！",
     "exportFailed": "导出失败",
+    "exportCancelled": "导出已取消",
     "unsavedChanges": "您有未保存的更改",
     "confirmLeave": "确定要离开吗？",
     "savedAt": "{time} 已保存",

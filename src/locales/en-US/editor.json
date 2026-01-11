@@ -16,6 +16,7 @@
     "saveFailed": "Failed to save project",
     "exportSuccess": "Video exported successfully!",
     "exportFailed": "Export failed",
+    "exportCancelled": "Export cancelled",
     "unsavedChanges": "You have unsaved changes",
     "confirmLeave": "Are you sure you want to leave?",
     "savedAt": "Saved at {time}",
