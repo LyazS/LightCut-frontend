@@ -1,7 +1,7 @@
 <template>
   <div class="preview-window">
     <!-- Bunny渲染器 -->
-    <div class="renderer-container">
+    <div class="renderer-container" @contextmenu="handleContextMenu">
       <BunnyRender />
     </div>
 
@@ -50,6 +50,23 @@
       @close="showResolutionModal = false"
       @confirm="handleResolutionConfirm"
     />
+
+    <!-- 右键菜单 -->
+    <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
+      <template v-for="(item, index) in contextMenuItems" :key="index">
+        <ContextMenuSeparator v-if="'type' in item && item.type === 'separator'" />
+        <ContextMenuItem
+          v-else-if="'label' in item && 'onClick' in item"
+          :label="item.label"
+          :disabled="item.disabled"
+          @click="item.onClick"
+        >
+          <template #icon>
+            <component :is="item.icon" size="16px" />
+          </template>
+        </ContextMenuItem>
+      </template>
+    </ContextMenu>
   </div>
 </template>
 
@@ -62,12 +79,34 @@ import { IconComponents, getPlaybackIcon } from '@/constants/iconComponents'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { framesToTimecodeCompact } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 
 // 分辨率弹窗显示状态
 const showResolutionModal = ref(false)
+
+// 右键菜单状态
+const showContextMenu = ref(false)
+const contextMenuOptions = ref({
+  x: 0,
+  y: 0,
+  theme: 'mac dark',
+  zIndex: 1000,
+})
+
+// 菜单项类型定义
+type MenuItem =
+  | {
+      label: string
+      icon: any
+      onClick?: () => void
+      disabled?: boolean
+    }
+  | {
+      type: 'separator'
+    }
 
 // 播放状态
 const isPlaying = computed(() => unifiedStore.isPlaying)
@@ -119,6 +158,49 @@ function handleResolutionConfirm(resolution: {
   // 更新videoStore中的分辨率
   unifiedStore.setVideoResolution(resolution)
   console.log('确认选择分辨率:', resolution)
+}
+
+// ==================== 右键菜单 ====================
+
+// 右键菜单项配置
+const contextMenuItems = computed((): MenuItem[] => {
+  return [
+    {
+      label: t('editor.preview.downloadCurrentFrame'),
+      icon: IconComponents.IMAGE_SMALL,
+      onClick: captureCanvasFrame,
+    },
+  ]
+})
+
+// 右键菜单处理
+function handleContextMenu(event: MouseEvent): void {
+  event.preventDefault()
+
+  contextMenuOptions.value.x = event.clientX
+  contextMenuOptions.value.y = event.clientY
+  showContextMenu.value = true
+}
+
+// ==================== 画布截帧功能 ====================
+
+/**
+ * 截取当前画布画面并下载
+ */
+async function captureCanvasFrame() {
+  try {
+    // 生成文件名（包含当前时间）
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const currentTime = unifiedStore.formattedCurrentTime
+    const filename = `screenshot-${timestamp}-at-${currentTime}.png`
+
+    console.log('📸 开始截取画布画面...')
+    await unifiedStore.captureCanvasFrame(filename)
+    console.log('✅ 画布截帧成功')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('❌ 画布截帧失败:', errorMessage)
+  }
 }
 </script>
 

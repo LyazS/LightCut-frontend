@@ -54,16 +54,6 @@
 
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
-      <!-- 画布截帧按钮 -->
-      <HoverButton
-        @click="captureCanvasFrame"
-        :title="t('toolbar.capture.captureFrameTooltip')"
-      >
-        <template #icon>
-          <component :is="IconComponents.IMAGE_SMALL" size="14px" />
-        </template>
-        {{ t('toolbar.capture.captureFrame') }}
-      </HoverButton>
       <!-- 缩放控制 -->
       <div class="toolbar-section zoom-section">
         <SliderInput
@@ -456,27 +446,6 @@ function debugHistory() {
   console.log('📊 历史记录摘要:', historySummary)
 
   console.groupEnd()
-}
-
-// ==================== 画布截帧功能 ====================
-
-/**
- * 截取当前画布画面并下载
- */
-async function captureCanvasFrame() {
-  try {
-    // 生成文件名（包含当前时间）
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
-    const currentTime = unifiedStore.formattedCurrentTime
-    const filename = `screenshot-${timestamp}-at-${currentTime}.png`
-
-    console.log('📸 开始截取画布画面...')
-    await unifiedStore.captureCanvasFrame(filename)
-    console.log('✅ 画布截帧成功')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error('❌ 画布截帧失败:', errorMessage)
-  }
 }
 </script>
 

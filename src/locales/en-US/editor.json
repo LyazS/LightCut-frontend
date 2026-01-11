@@ -90,6 +90,9 @@
       "720x720": "720×720",
       "ultrawide21x9": "Ultrawide 21:9",
       "ultrawide32x9": "Ultrawide 32:9"
+    },
+    "preview": {
+      "downloadCurrentFrame": "Download Current Frame"
     }
   }
 }

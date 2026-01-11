@@ -90,6 +90,9 @@
       "720x720": "720×720",
       "ultrawide21x9": "超宽屏 21:9",
       "ultrawide32x9": "超宽屏 32:9"
+    },
+    "preview": {
+      "downloadCurrentFrame": "下载当前帧"
     }
   }
 }

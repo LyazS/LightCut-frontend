@@ -36,10 +36,6 @@
       "splitAudioSupported": "在当前时间位置裁剪选中的片段",
       "splitTypeUnsupported": "该类型不支持裁剪功能"
     },
-    "capture": {
-      "captureFrame": "画布截帧",
-      "captureFrameTooltip": "截取当前画布画面为图片"
-    },
     "debug": {
       "undoSuccess": "撤销操作成功",
       "undoFailed": "没有可撤销的操作",
