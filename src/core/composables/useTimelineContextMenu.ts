@@ -376,6 +376,9 @@ export function useTimelineContextMenu(
 
     console.log('🎬 开始智能分镜头检测...')
 
+    // 暂停播放
+    await unifiedStore.pause()
+
     // 创建 AbortController 用于取消操作
     const abortController = new AbortController()
 

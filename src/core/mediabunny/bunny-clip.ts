@@ -246,6 +246,25 @@ export class BunnyClip implements IClip {
     this.audioIterator = null
   }
 
+  /**
+   * 准备方法 - 重置视频和音频到时间轴起始位置
+   */
+  async prepare(): Promise<void> {
+    // 重置视频到 timelineStart
+    await this.resetVideoN(this.timeRange.timelineStart)
+
+    // 重置音频到 timelineStart（使用 findAudioBuffersN 的计算逻辑）
+    const clipDuration = Number(this.timeRange.clipEnd - this.timeRange.clipStart)
+    const tlDuration = Number(this.timeRange.timelineEnd - this.timeRange.timelineStart)
+    const clipStart = Number(this.timeRange.clipStart)
+    const clipTimeN =
+      (Number(this.timeRange.timelineStart - this.timeRange.timelineStart) / tlDuration) *
+        clipDuration +
+      clipStart
+    const currentTime = clipTimeN / RENDERER_FPS
+    await this.resetAudio(currentTime)
+  }
+
   // ==================== 公共接口 ====================
   setTimeRange(timeRange: Partial<TimeRange>): void {
     // 计算新的时间范围值

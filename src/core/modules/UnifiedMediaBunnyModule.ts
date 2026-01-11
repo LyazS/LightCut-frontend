@@ -39,6 +39,7 @@ import {
   type FrameData,
   type RenderContext,
 } from '@/core/bunnyUtils/canvasRenderer'
+import { TimelineItemsBufferManager } from '@/core/mediabunny/TimelineItemsBufferManager'
 
 if (!(await canEncodeAudio('mp3'))) {
   registerMp3Encoder()
@@ -68,6 +69,9 @@ export function createUnifiedMediaBunnyModule(
   let mRenderLoopCleanup: (() => void) | null = null
   const mExpectFrameTime: number = 1000 / RENDERER_FPS
   let mUpdatingClip: boolean = false
+
+  // ✨ 双缓冲管理器
+  let mBufferManager: TimelineItemsBufferManager | null = null
 
   // Web Audio API 相关
   let mAudioContext: AudioContext | null = null
@@ -112,6 +116,9 @@ export function createUnifiedMediaBunnyModule(
         width: mCanvas.width,
         height: mCanvas.height,
       })
+
+      // ✨ 初始化缓冲管理器
+      mBufferManager = new TimelineItemsBufferManager(RENDERER_FPS)
 
       // 初始化音频系统
       initializeAudioSystem()
@@ -161,6 +168,12 @@ export function createUnifiedMediaBunnyModule(
       frameData.videoSample.close()
     }
     mBunnyCurFrameMap.clear()
+
+    // ✨ 清理缓冲管理器
+    if (mBufferManager) {
+      mBufferManager.clearBuffers()
+      mBufferManager = null
+    }
 
     // 清理引用（不删除 canvas 元素，由 Vue 组件管理）
     mCanvas = null
@@ -315,7 +328,18 @@ export function createUnifiedMediaBunnyModule(
     if (mUpdatingClip) return
     mUpdatingClip = true
 
-    for (const item of timelineItems) {
+    // ✨ 使用缓冲管理器获取要处理的 items
+    const itemsToProcess = mBufferManager
+      ? mBufferManager.getItemsForRendering(timelineItems, currentTime)
+      : timelineItems
+
+    // ✨ 检查是否需要更新后台缓冲
+    if (mBufferManager && mBufferManager.shouldUpdateBuffer(currentTime)) {
+      // 异步更新后台缓冲，不阻塞当前渲染
+      void mBufferManager.updateBackBuffer(timelineItems, currentTime)
+    }
+
+    for (const item of itemsToProcess) {
       // 应用动画插值到 config
       applyAnimationToConfig(item, currentTime)
 
@@ -478,6 +502,11 @@ export function createUnifiedMediaBunnyModule(
    */
   function seekToFrame(frames: number): void {
     stopAllAudioNodes()
+
+    // ✨ Seek 时清空所有缓冲
+    if (mBufferManager) {
+      mBufferManager.clearBuffers()
+    }
 
     // seek只需要更新 mPlaybackTimeAtStart 即可
     // 渲染循环会不断以 mPlaybackTimeAtStart 为基准点来渲染
