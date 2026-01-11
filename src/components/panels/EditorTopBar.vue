@@ -75,22 +75,6 @@
     </div>
   </div>
 
-  <!-- 导出进度弹窗 -->
-  <LoadingModal
-    :visible="showExportProgress"
-    :title="t('editor.exporting')"
-    :progress="exportProgress"
-    :details="exportDetails"
-    :tipText="t('editor.exportTip')"
-    :showTitle="true"
-    :showStage="false"
-    :showProgress="true"
-    :showDetails="true"
-    :showTips="true"
-    :showCancel="true"
-    @cancel="handleCancelExport"
-  />
-
   <!-- 编辑项目对话框 -->
   <EditProjectModal
     :show="showEditDialog"
@@ -127,7 +111,6 @@ import HoverButton from '@/components/base/HoverButton.vue'
 import LanguageSelector from '@/components/utils/LanguageSelector.vue'
 import { IconComponents, getUserStatusIcon } from '@/constants/iconComponents'
 import { exportProjectWithCancel } from '@/core/utils/projectExporter'
-import LoadingModal from '@/components/base/LoadingModal.vue'
 import EditProjectModal from '@/components/modals/EditProjectModal.vue'
 import LoginModal from '@/components/modals/LoginModal.vue'
 import UserInfoModal from '@/components/modals/UserInfoModal.vue'
@@ -153,16 +136,12 @@ const showExportDialog = ref(false)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
 
-// 导出进度状态（本地管理，替代使用单独模块）
-const isExporting = ref(false)
-const exportProgress = ref(0)
-const exportDetails = ref('')
-let cancelExport: (() => void) | null = null // 保存取消函数
+// 导出取消函数引用
+let cancelExport: (() => void) | null = null
 
 // 计算属性
 const projectStatus = computed(() => unifiedStore.projectStatus)
 const isSaving = computed(() => unifiedStore.isProjectSaving)
-const showExportProgress = computed(() => isExporting.value && exportProgress.value >= 0)
 
 // 当前项目配置对象（用于编辑对话框）
 const currentProject = computed(() => {
@@ -225,10 +204,21 @@ async function handleExportWithSettings(settings: {
 
     await unifiedStore.pause()
 
-    // 开始导出
-    isExporting.value = true
-    exportProgress.value = 0
-    exportDetails.value = ''
+    // 使用 createLoading 创建加载弹窗
+    const loading = unifiedStore.createLoading({
+      title: t('editor.exporting'),
+      showProgress: true,
+      showDetails: true,
+      showTips: true,
+      tipText: t('editor.exportTip'),
+      showCancel: true,
+      cancelText: t('common.cancel'),
+      onCancel: () => {
+        if (cancelExport) {
+          cancelExport()
+        }
+      }
+    })
 
     // 使用可取消的导出函数
     cancelExport = exportProjectWithCancel(
@@ -243,14 +233,16 @@ async function handleExportWithSettings(settings: {
         audioQuality: settings.audioQuality,
         frameRate: settings.frameRate,
         onProgress: (stage: string, progress: number, details?: string) => {
-          // 更新本地导出进度
-          exportProgress.value = Math.max(0, Math.min(100, progress))
-          exportDetails.value = details || ''
+          // 更新进度
+          loading.update({
+            progress: Math.max(0, Math.min(100, progress)),
+            details: details || ''
+          })
         },
       },
       // 成功回调
       () => {
-        isExporting.value = false
+        loading.close()
         cancelExport = null
         console.log('✅ [导出] 视频导出完成')
         unifiedStore.messageSuccess(t('editor.exportSuccess'))
@@ -259,44 +251,22 @@ async function handleExportWithSettings(settings: {
       (error: Error) => {
         console.error('导出项目失败:', error)
         // 显示错误通知
-        unifiedStore.messageError(error.message || t('editor.exportFailed'))
-
-        // 重置导出状态
-        isExporting.value = false
-        exportProgress.value = 0
-        exportDetails.value = ''
+        loading.close()
         cancelExport = null
+        unifiedStore.messageError(error.message || t('editor.exportFailed'))
       },
       // 取消回调
       () => {
         console.log('⚠️ [导出] 用户取消导出')
-        unifiedStore.messageInfo(t('editor.exportCancelled'))
-
-        // 重置导出状态
-        isExporting.value = false
-        exportProgress.value = 0
-        exportDetails.value = ''
+        loading.close()
         cancelExport = null
+        unifiedStore.messageInfo(t('editor.exportCancelled'))
       }
     )
   } catch (error) {
     console.error('导出项目失败:', error)
-    
     // 显示错误通知
     unifiedStore.messageError(error instanceof Error ? error.message : t('editor.exportFailed'))
-
-    // 重置导出状态
-    isExporting.value = false
-    exportProgress.value = 0
-    exportDetails.value = ''
-    cancelExport = null
-  }
-}
-
-// 处理取消导出
-function handleCancelExport() {
-  if (cancelExport) {
-    cancelExport()
   }
 }
 

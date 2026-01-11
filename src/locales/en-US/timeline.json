@@ -57,6 +57,15 @@
         "addTextTrack": "Text Track",
         "deleteTrack": "Delete Track"
       }
+    },
+    "sceneDetection": {
+      "title": "Smart Scene Detection",
+      "tip": "Analyzing video content, please wait...",
+      "splitting": "Detection complete, splitting {count} scenes...",
+      "success": "Successfully split into {count} scenes",
+      "noScenes": "No obvious scene boundaries detected",
+      "cancelled": "Scene detection cancelled",
+      "error": "Scene detection failed: {message}"
     }
   }
 }

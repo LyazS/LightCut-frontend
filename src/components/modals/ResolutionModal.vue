@@ -8,6 +8,8 @@
     :width="800"
     :max-width="'95%'"
     :max-height="'85vh'"
+    :confirm-text="t('common.confirm')"
+    :cancel-text="t('common.cancel')"
   >
     <!-- 预设分辨率 -->
     <div class="resolution-grid">

@@ -378,6 +378,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     createModal: unifiedUseNaiveUIModule.createModal,
     destroyAllModals: unifiedUseNaiveUIModule.destroyAllModals,
 
+    // 加载弹窗方法
+    createLoading: unifiedUseNaiveUIModule.createLoading,
+
     initApi: unifiedUseNaiveUIModule.initApi,
 
     // ==================== 历史模块状态和方法 ====================

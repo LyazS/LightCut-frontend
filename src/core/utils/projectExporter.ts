@@ -461,7 +461,7 @@ export class ExportManager {
 
         // 更新进度（10% - 95%）
         const progress = 10 + ((frameN + 1) / totalFrames) * 85
-        this.reportProgress('渲染', progress, `${frameN + 1}/${totalFrames} 帧`)
+        this.reportProgress('渲染', progress, `${frameN + 1}/${totalFrames}`)
       }
 
       // 处理最后部分

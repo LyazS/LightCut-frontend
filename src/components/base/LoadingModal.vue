@@ -35,8 +35,8 @@
         </div>
 
         <!-- 取消按钮（可选） -->
-        <button v-if="showCancel" class="cancel-button" @click="handleCancel">
-          取消
+        <button v-if="showCancel && cancelText" class="cancel-button" @click="handleCancel">
+          {{ cancelText }}
         </button>
       </div>
     </div>
@@ -73,6 +73,8 @@ interface Props {
   showTips?: boolean
   /** 是否显示取消按钮 */
   showCancel?: boolean
+  /** 取消按钮文本 */
+  cancelText?: string
 }
 
 const props = defineProps<Props>()
@@ -118,7 +120,9 @@ const handleCancel = () => {
 
 .modal-fade-enter-active .loading-modal,
 .modal-fade-leave-active .loading-modal {
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .modal-fade-enter-from,

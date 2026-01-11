@@ -365,7 +365,7 @@ export function useTimelineContextMenu(
   }
 
   /**
-   * 智能分镜头检测（基于 ContentDetector）
+   * 智能分镜头检测（使用 createLoading）
    */
   async function detectSceneBoundaries() {
     const clipId = contextMenuTarget.value.clipId
@@ -374,66 +374,92 @@ export function useTimelineContextMenu(
     const timelineItem = unifiedStore.getTimelineItem(clipId)
     if (!timelineItem) return
 
-    console.log('🎬 开始智能分镜头检测（ContentDetector）...')
-    console.log('📹 时间轴项目ID:', clipId)
-    console.log('📊 时间范围:', timelineItem.timeRange)
+    console.log('🎬 开始智能分镜头检测...')
+
+    // 创建 AbortController 用于取消操作
+    const abortController = new AbortController()
+
+    // 创建 loading 实例
+    const loading = unifiedStore.createLoading({
+      title: t('timeline.sceneDetection.title'),
+      showProgress: true,
+      showDetails: true,
+      showTips: true,
+      tipText: t('timeline.sceneDetection.tip'),
+      showCancel: true,
+      cancelText: t('common.cancel'),
+      onCancel: () => {
+        abortController.abort()
+        console.log('⚠️ 用户取消场景检测')
+      }
+    })
 
     try {
-      // 基本检测（基于直方图）
-      // const boundaries2 = await detectScene(timelineItem, {
-      //   threshold: 0.3,
-      //   maxSize: 600,
-      //   onProgress: (current, total, message) => {
-      //     console.log(`[${current}/${total}] ${message}`)
-      //   },
-      // })
-      // console.log('✅ 智能分镜头2检测完成！')
-      // console.log('🎯 分割点数量:', boundaries2.length)
-      // console.log('📍 分割点帧索引:', boundaries2)
-
-      // 场景检测（基于 Prominence）
-      const boundaries1 = await detectSceneAdv(timelineItem, {
+      // 调用 detectSceneAdv，传入进度回调和取消信号
+      const boundaries = await detectSceneAdv(timelineItem, {
         peakDetection: {
           minProminence: 0.03,
           minHeight: 0.08,
           minDistance: 15,
         },
         maxSize: 600,
+        signal: abortController.signal,
         onProgress: (current, total, message) => {
-          // console.log(`[${current}/${total}] ${message}`)
+          // 计算进度百分比
+          const progress = total > 0 ? (current / total) * 100 : 0
+          
+          // 更新 loading 状态
+          loading.update({
+            progress: Math.min(100, Math.round(progress)),
+            details: message
+          })
         },
         enableChart: false,
       })
-      console.log('✅ 智能分镜头1检测完成！')
-      console.log('🎯 分割点数量:', boundaries1.length)
-      console.log('📍 分割点帧索引:', boundaries1)
 
-      // 场景检测（基于 ContentDetector）
-      // const boundaries = await detectSceneContent(timelineItem, {
-      //   threshold: 27.0,
-      //   minSceneLen: 15,
-      //   maxSize: 600,
-      //   onProgress: (current, total, message) => {
-      //     console.log(`[${current}/${total}] ${message}`)
-      //   },
-      // })
+      // 检查是否被取消
+      if (abortController.signal.aborted) {
+        loading.close()
+        unifiedStore.messageInfo(t('timeline.sceneDetection.cancelled'))
+        return
+      }
 
-      // console.log('✅ 智能分镜头2检测完成！')
-      // console.log('🎯 分割点数量:', boundaries.length)
-      // console.log('📍 分割点帧索引:', boundaries)
+      // 处理检测结果
+      if (boundaries.length > 0) {
+        console.log('✅ 检测完成，共发现', boundaries.length, '个分割点')
+        
+        loading.update({
+          progress: 100,
+          details: t('timeline.sceneDetection.splitting', { count: boundaries.length })
+        })
 
-      // 使用检测到的分割点进行分割
-      if (boundaries1.length > 0) {
-        console.log('🔪 开始分割时间轴项目...')
-        // 将 bigint[] 转换为 number[]
-        const splitPoints = boundaries1.map((frame) => Number(frame))
+        const splitPoints = boundaries.map((frame) => Number(frame))
         await unifiedStore.splitTimelineItemAtTimeWithHistory(clipId, splitPoints)
+        
+        loading.close()
+        unifiedStore.messageSuccess(
+          t('timeline.sceneDetection.success', { count: boundaries.length })
+        )
         console.log('✅ 时间轴项目分割成功')
       } else {
-        console.log('⚠️ 未检测到场景边界，跳过分割')
+        console.log('⚠️ 未检测到场景边界')
+        loading.close()
+        unifiedStore.messageWarning(t('timeline.sceneDetection.noScenes'))
       }
     } catch (error) {
-      console.error('❌ 智能分镜头检测失败:', error)
+      loading.close()
+      
+      // 区分取消和错误
+      if (error instanceof Error && error.name === 'AbortError') {
+        unifiedStore.messageInfo(t('timeline.sceneDetection.cancelled'))
+      } else {
+        console.error('❌ 智能分镜头检测失败:', error)
+        unifiedStore.messageError(
+          t('timeline.sceneDetection.error', {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        )
+      }
     }
 
     showContextMenu.value = false

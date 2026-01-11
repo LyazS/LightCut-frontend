@@ -55,11 +55,14 @@
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
       <!-- 画布截帧按钮 -->
-      <HoverButton @click="captureCanvasFrame">
+      <HoverButton
+        @click="captureCanvasFrame"
+        :title="t('toolbar.capture.captureFrameTooltip')"
+      >
         <template #icon>
           <component :is="IconComponents.IMAGE_SMALL" size="14px" />
         </template>
-        画布截帧
+        {{ t('toolbar.capture.captureFrame') }}
       </HoverButton>
       <!-- 缩放控制 -->
       <div class="toolbar-section zoom-section">

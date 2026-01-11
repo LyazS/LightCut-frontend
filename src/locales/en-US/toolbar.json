@@ -36,6 +36,10 @@
       "splitAudioSupported": "Split selected clip at current time position",
       "splitTypeUnsupported": "This type does not support split function"
     },
+    "capture": {
+      "captureFrame": "Capture Frame",
+      "captureFrameTooltip": "Capture current canvas frame as image"
+    },
     "debug": {
       "undoSuccess": "Undo operation successful",
       "undoFailed": "No operations to undo",

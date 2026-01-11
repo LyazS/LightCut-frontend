@@ -36,6 +36,8 @@ interface SceneDetectorAdvConfig {
   onProgress?: (current: number, total: number, message: string) => void
   /** 是否绘制折线图（默认false） */
   enableChart?: boolean
+  /** 取消信号 */
+  signal?: AbortSignal
 }
 
 /**
@@ -408,6 +410,12 @@ export async function detectSceneAdv(
   try {
     // 遍历所有帧
     for (let frameOffset = 0n; frameOffset < totalFrames; frameOffset++) {
+      // 检查取消状态（循环顶部）
+      if (config.signal?.aborted) {
+        reportProgress(Number(frameOffset), totalFrames, '场景检测已取消')
+        return []  // 取消时返回空数组
+      }
+
       const currentFrameN = startFrame + frameOffset
 
       // 获取当前帧
@@ -442,7 +450,7 @@ export async function detectSceneAdv(
 
         // 显示进度
         if (Number(frameOffset) % 30 === 0) {
-          reportProgress(Number(frameOffset), totalFrames, `已处理 ${frameOffset}/${totalFrames} 帧`)
+          reportProgress(Number(frameOffset), totalFrames, `${frameOffset}/${totalFrames}`)
         }
       } finally {
         // 及时释放资源：videoSample、frame

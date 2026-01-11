@@ -1,6 +1,7 @@
 import { useMessage, useNotification } from 'naive-ui'
 import { createVNode, render, ref, watchEffect, nextTick, h, type VNode, type Component } from 'vue'
 import UniversalModal from '@/components/modals/UniversalModal.vue'
+import LoadingModal from '@/components/base/LoadingModal.vue'
 
 /**
  * 自定义 Modal 配置选项
@@ -26,6 +27,62 @@ export interface CustomModalOptions {
   onConfirm?: () => void | Promise<void>
   onCancel?: () => void
   onClose?: () => void
+}
+
+/**
+ * Loading Modal 配置选项
+ */
+export interface LoadingOptions {
+  /** 加载标题 */
+  title?: string
+  /** 当前加载阶段 */
+  stage?: string
+  /** 加载进度 (0-100) */
+  progress?: number
+  /** 详细信息 */
+  details?: string
+  /** 提示文本 */
+  tipText?: string
+  /** 是否显示标题 */
+  showTitle?: boolean
+  /** 是否显示阶段 */
+  showStage?: boolean
+  /** 是否显示进度条 */
+  showProgress?: boolean
+  /** 是否显示详细信息 */
+  showDetails?: boolean
+  /** 是否显示提示信息 */
+  showTips?: boolean
+  /** 是否显示取消按钮 */
+  showCancel?: boolean
+  /** 取消按钮文本 */
+  cancelText?: string
+  /** 取消回调 */
+  onCancel?: () => void
+}
+
+/**
+ * Loading Modal 更新选项
+ */
+export interface LoadingUpdateOptions {
+  /** 当前加载阶段 */
+  stage?: string
+  /** 加载进度 (0-100) */
+  progress?: number
+  /** 详细信息 */
+  details?: string
+  /** 提示文本 */
+  tipText?: string
+}
+
+/**
+ * Loading Modal 实例接口
+ */
+export interface LoadingInstance {
+  /** 更新加载状态 */
+  update: (options: LoadingUpdateOptions) => void
+  /** 关闭加载弹窗 */
+  close: () => void
 }
 
 /**
@@ -356,6 +413,80 @@ export function createUnifiedUseNaiveUIModule() {
     zIndexCounter = 1000
   }
 
+  /**
+   * 创建加载弹窗
+   */
+  function createLoading(options: LoadingOptions = {}): LoadingInstance {
+    // 创建容器
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    // 响应式状态
+    const visible = ref(false)
+    const stage = ref(options.stage)
+    const progress = ref(options.progress)
+    const details = ref(options.details)
+    const tipText = ref(options.tipText)
+
+    // 销毁函数
+    const destroy = () => {
+      visible.value = false
+      // 延迟销毁，等待动画完成（LoadingModal 的动画是 0.2s）
+      setTimeout(() => {
+        render(null, container)
+        if (document.body.contains(container)) {
+          document.body.removeChild(container)
+        }
+      }, 300)
+    }
+
+    // 处理取消
+    const handleCancel = () => {
+      if (options.onCancel) {
+        options.onCancel()
+      }
+      destroy()
+    }
+
+    // 使用 watchEffect 响应式渲染
+    watchEffect(() => {
+      const vnode = createVNode(LoadingModal, {
+        visible: visible.value,
+        title: options.title,
+        stage: stage.value,
+        progress: progress.value,
+        details: details.value,
+        tipText: tipText.value,
+        showTitle: options.showTitle !== false,
+        showStage: options.showStage !== false,
+        showProgress: options.showProgress !== false,
+        showDetails: options.showDetails !== false,
+        showTips: options.showTips !== false,
+        showCancel: options.showCancel !== false,
+        cancelText: options.cancelText,
+        onCancel: handleCancel,
+      })
+
+      render(vnode, container)
+    })
+
+    // 下一帧显示，触发动画
+    nextTick(() => {
+      visible.value = true
+    })
+
+    // 返回实例方法
+    return {
+      update: (updateOptions: LoadingUpdateOptions) => {
+        if (updateOptions.stage !== undefined) stage.value = updateOptions.stage
+        if (updateOptions.progress !== undefined) progress.value = updateOptions.progress
+        if (updateOptions.details !== undefined) details.value = updateOptions.details
+        if (updateOptions.tipText !== undefined) tipText.value = updateOptions.tipText
+      },
+      close: destroy,
+    }
+  }
+
   function initApi(api: {
     message: ReturnType<typeof useMessage>
     t?: (key: string) => string
@@ -382,6 +513,8 @@ export function createUnifiedUseNaiveUIModule() {
     // 便捷模态框方法
     createModal,
     destroyAllModals,
+    // 加载弹窗方法
+    createLoading,
   }
 }
 
