@@ -70,9 +70,9 @@ export const SUPPORTED_MEDIA_TYPES = {
  * 文件大小限制（字节）
  */
 export const FILE_SIZE_LIMITS = {
-  video: 500 * 1024 * 1024, // 500MB
-  audio: 100 * 1024 * 1024, // 100MB
-  image: 50 * 1024 * 1024, // 50MB
+  video: 1 * 1024 * 1024 * 1024,
+  audio: 512 * 1024 * 1024,
+  image: 256 * 1024 * 1024,
 } as const
 
 /**

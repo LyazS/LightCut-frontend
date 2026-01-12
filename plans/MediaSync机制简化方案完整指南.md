@@ -183,37 +183,48 @@ graph TB
 ```
 用户执行命令
     ↓
-检查素材是否ready ✅
+调用 TimelineItemFactory.rebuildForCmd()
     ↓
-如果ready:
-    TimelineItemFactory.rebuildForCmd()
-        ↓
-    创建TimelineItem (状态: ready)
-        ↓
-    直接调用setupTimelineItemBunny()
-        ↓
-    设置BunnyClip完成 ✅
-    
-如果not ready: 拒绝执行命令 ❌
+    【rebuildForCmd 内部处理】
+    ├─ 如果是 text 类型：
+    │   ├─ 创建 TimelineItem (状态: ready)
+    │   └─ 直接调用 setupTimelineItemBunny(timelineItem) ✅
+    │
+    └─ 如果是其他类型（音视频/图片）：
+        ├─ 检查 mediaItem 是否 ready
+        ├─ 如果 not ready: 抛出错误 ❌
+        ├─ 如果 ready: 创建 TimelineItem (状态: ready)
+        └─ 调用 setupTimelineItemBunny(timelineItem, mediaItem) ✅
+    ↓
+返回已完成的 TimelineItem（状态: ready，BunnyClip 已设置）
+    ↓
+直接添加到时间轴 ✅
 ```
 
 #### 项目加载场景（需要同步）
 ```
 加载工程项目
     ↓
-TimelineItemFactory.rebuildForProjLoad()
+调用 TimelineItemFactory.rebuildForProjLoad()
     ↓
-创建TimelineItem (状态: loading)
+    【rebuildForProjLoad 内部处理】
+    └─ 创建 TimelineItem (状态: loading)
+       （不设置 BunnyClip，等待后续同步）
     ↓
-TimelineItemMediaSync.setup(timelineItemId)
+返回 loading 状态的 TimelineItem
     ↓
-监听对应MediaItem的状态
+调用 TimelineItemMediaSync.setup(timelineItemId)
     ↓
-当mediaStatus变为ready时:
-    调用setupTimelineItemBunny()
-    设置TimelineItem状态为ready
-    ↓
-自动清理同步
+    【TimelineItemMediaSync 内部处理】
+    ├─ 获取关联的 mediaItem
+    ├─ 如果 mediaItem 已 ready：
+    │   └─ 立即调用 setupTimelineItemBunny() 并设置状态为 ready
+    └─ 如果 mediaItem 未 ready：
+        ├─ 监听 mediaItem 状态变化
+        └─ 当 mediaStatus 变为 ready 时：
+            ├─ 调用 setupTimelineItemBunny()
+            ├─ 设置 TimelineItem 状态为 ready
+            └─ 自动清理同步
 ```
 
 ### 2.4 TimelineItemFactory的两个重建方法
@@ -222,27 +233,35 @@ TimelineItemMediaSync.setup(timelineItemId)
 ```typescript
 /**
  * 为命令场景重建时间轴项目
- * 前提：素材必须已经ready
+ * 前提：非text类型的素材必须已经ready
  * 结果：直接创建ready状态的TimelineItem
  */
 async function rebuildForCmd(options: {
     originalTimelineItemData: UnifiedTimelineItemData
     getMediaItem: (id: string) => UnifiedMediaItemData | undefined
 }): Promise<UnifiedTimelineItemData> {
-    const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
-    
-    // ✅ 前置检查：素材必须ready
-    if (!mediaItem || mediaItem.mediaStatus !== 'ready') {
-        throw new Error('素材未就绪，无法执行命令')
-    }
+    const { originalTimelineItemData, getMediaItem } = options
     
     // 创建TimelineItem
     const timelineItem = cloneTimelineItem(originalTimelineItemData, {
         timelineStatus: 'ready' // ✅ 直接设置为ready
     })
     
-    // ✅ 立即设置BunnyClip
-    await setupTimelineItemBunny(timelineItem, mediaItem)
+    // ✅ 根据媒体类型处理
+    if (originalTimelineItemData.mediaType === 'text') {
+        // 文本类型：不需要mediaItem，直接设置textBitmap
+        await setupTimelineItemBunny(timelineItem)
+    } else {
+        // 音视频/图片类型：需要mediaItem且必须ready
+        const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
+        
+        if (!mediaItem || mediaItem.mediaStatus !== 'ready') {
+            throw new Error('素材未就绪，无法执行命令')
+        }
+        
+        // ✅ 立即设置BunnyClip
+        await setupTimelineItemBunny(timelineItem, mediaItem)
+    }
     
     return timelineItem
 }
@@ -375,13 +394,7 @@ export class TimelineItemMediaSync {
 所有命令的execute()和undo()方法都应该遵循这个模式：
 
 ```typescript
-// 1. 前置检查素材状态
-const mediaItem = this.mediaModule.getMediaItem(mediaItemId)
-if (!mediaItem || mediaItem.mediaStatus !== 'ready') {
-    throw new Error('素材未就绪')
-}
-
-// 2. 使用rebuildForCmd重建
+// 1. 使用rebuildForCmd重建（内部会处理text类型和素材检查）
 const rebuildResult = await TimelineItemFactory.rebuildForCmd({
     originalTimelineItemData: itemData,
     getMediaItem: this.mediaModule.getMediaItem,
@@ -390,11 +403,7 @@ const rebuildResult = await TimelineItemFactory.rebuildForCmd({
 
 const timelineItem = rebuildResult.timelineItem
 
-// 3. 直接设置BunnyClip
-await setupTimelineItemBunny(timelineItem, mediaItem)
-timelineItem.timelineStatus = 'ready'
-
-// 4. 添加到时间轴
+// 2. 添加到时间轴（timelineItem已经是ready状态，BunnyClip已设置）
 await this.timelineModule.addTimelineItem(timelineItem)
 ```
 
@@ -410,21 +419,10 @@ async execute(): Promise<void> {
     try {
         console.log(`🔄 执行添加操作：从源头重建时间轴项目...`)
 
-        // 1. 获取媒体项目并检查状态
-        const mediaItem = this.mediaModule.getMediaItem(
-            this.originalTimelineItemData.mediaItemId
-        )
-        
-        if (!mediaItem) {
-            throw new Error(`找不到关联的媒体项目: ${this.originalTimelineItemData.mediaItemId}`)
-        }
-        
-        // ✅ 前置检查：素材必须ready
-        if (mediaItem.mediaStatus !== 'ready') {
-            throw new Error(`素材未就绪，无法添加到时间轴: ${mediaItem.name}`)
-        }
-
-        // 2. 使用rebuildForCmd重建TimelineItem
+        // 1. 使用rebuildForCmd重建TimelineItem
+        // rebuildForCmd内部会：
+        // - 对text类型：直接创建ready状态并设置textBitmap
+        // - 对其他类型：检查素材ready状态并设置BunnyClip
         const rebuildResult = await TimelineItemFactory.rebuildForCmd({
             originalTimelineItemData: this.originalTimelineItemData,
             getMediaItem: this.mediaModule.getMediaItem,
@@ -437,13 +435,7 @@ async execute(): Promise<void> {
 
         const newTimelineItem = rebuildResult.timelineItem
 
-        // 3. ✅ 直接调用setupTimelineItemBunny设置BunnyClip
-        await setupTimelineItemBunny(newTimelineItem, mediaItem)
-        
-        // 4. ✅ 设置状态为ready
-        newTimelineItem.timelineStatus = 'ready'
-
-        // 5. 添加到时间轴
+        // 2. 添加到时间轴（timelineItem已经是ready状态）
         await this.timelineModule.addTimelineItem(newTimelineItem)
 
         console.log(`✅ 已添加时间轴项目: ${this.originalTimelineItemData.id}`)
@@ -490,21 +482,7 @@ async undo(): Promise<void> {
     try {
         console.log(`🔄 执行撤销删除操作：从源头重建时间轴项目...`)
 
-        // 1. 获取媒体项目并检查状态
-        const mediaItem = this.mediaModule.getMediaItem(
-            this.originalTimelineItemData.mediaItemId
-        )
-        
-        if (!mediaItem) {
-            throw new Error(`找不到关联的媒体项目: ${this.originalTimelineItemData.mediaItemId}`)
-        }
-        
-        // ✅ 前置检查：素材必须ready
-        if (mediaItem.mediaStatus !== 'ready') {
-            throw new Error(`素材未就绪，无法恢复到时间轴: ${mediaItem.name}`)
-        }
-
-        // 2. 使用rebuildForCmd重建
+        // 1. 使用rebuildForCmd重建
         const rebuildResult = await TimelineItemFactory.rebuildForCmd({
             originalTimelineItemData: this.originalTimelineItemData,
             getMediaItem: this.mediaModule.getMediaItem,
@@ -517,11 +495,7 @@ async undo(): Promise<void> {
 
         const newTimelineItem = rebuildResult.timelineItem
 
-        // 3. ✅ 直接设置BunnyClip
-        await setupTimelineItemBunny(newTimelineItem, mediaItem)
-        newTimelineItem.timelineStatus = 'ready'
-
-        // 4. 添加到时间轴
+        // 2. 添加到时间轴（timelineItem已经是ready状态）
         await this.timelineModule.addTimelineItem(newTimelineItem)
 
         console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)
@@ -574,18 +548,6 @@ async undo(): Promise<void> {
 
         // 2. 重建所有受影响的时间轴项目
         for (const itemData of this.affectedTimelineItems) {
-            // 获取媒体项目并检查状态
-            const mediaItem = this.mediaModule.getMediaItem(itemData.mediaItemId)
-            
-            if (!mediaItem) {
-                throw new Error(`找不到关联的媒体项目: ${itemData.mediaItemId}`)
-            }
-            
-            // ✅ 前置检查：素材必须ready
-            if (mediaItem.mediaStatus !== 'ready') {
-                throw new Error(`素材未就绪，无法恢复到时间轴: ${mediaItem.name}`)
-            }
-
             // 使用rebuildForCmd重建
             const rebuildResult = await TimelineItemFactory.rebuildForCmd({
                 originalTimelineItemData: itemData,
@@ -599,11 +561,7 @@ async undo(): Promise<void> {
 
             const newTimelineItem = rebuildResult.timelineItem
 
-            // ✅ 直接设置BunnyClip
-            await setupTimelineItemBunny(newTimelineItem, mediaItem)
-            newTimelineItem.timelineStatus = 'ready'
-
-            // 添加到时间轴
+            // 添加到时间轴（timelineItem已经是ready状态）
             await this.timelineModule.addTimelineItem(newTimelineItem)
             
             console.log(`✅ 已恢复时间轴项目: ${itemData.id}`)
@@ -780,9 +738,53 @@ import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 - **TimelineItemFactory应该区分场景** - rebuildForCmd vs rebuildForProjLoad
 - **同步的本质是设置BunnyClip** - 直接复用setupTimelineItemBunny()
 
-### 6.3 下一步行动
+### 6.3 关键技术细节：text 类型的特殊处理
+
+**重要发现：text 类型的 TimelineItem 不需要 mediaItem！**
+
+从 [`setupTimelineItemBunny()`](LightCut-frontend/src/core/bunnyUtils/timelineItemSetup.ts:17) 的实现可以看出：
+
+```typescript
+case 'text': {
+    // 文本类型：创建 textBitmap
+    const textConfig = timelineItem.config as TextMediaConfig
+    const bmap = await textToImageBitmap2(textConfig.text, textConfig.style)
+    timelineItem.runtime.textBitmap = bmap
+    break
+}
+```
+
+**text 类型的特点：**
+1. ✅ **不需要 mediaItem 参数** - 文本配置直接存储在 `timelineItem.config` 中
+2. ✅ **不需要等待素材 ready** - 因为根本没有关联的 mediaItem
+3. ✅ **可以立即创建 textBitmap** - 直接从配置生成位图
+4. ✅ **mediaItemId 可能为空或无效** - text 类型不依赖 mediaItem
+
+**因此 `rebuildForCmd` 必须区分处理：**
+
+```typescript
+if (originalTimelineItemData.mediaType === 'text') {
+    // 文本类型：不需要mediaItem，直接设置textBitmap
+    await setupTimelineItemBunny(timelineItem)
+} else {
+    // 音视频/图片类型：需要mediaItem且必须ready
+    const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
+    if (!mediaItem || mediaItem.mediaStatus !== 'ready') {
+        throw new Error('素材未就绪，无法执行命令')
+    }
+    await setupTimelineItemBunny(timelineItem, mediaItem)
+}
+```
+
+**这个区分处理非常关键：**
+- 如果对 text 类型也检查 mediaItem，会导致不必要的错误
+- 如果对音视频类型不检查 mediaItem，会导致运行时错误
+- 正确的做法是根据 `mediaType` 进行条件判断
+
+### 6.4 下一步行动
 1. 与团队讨论这个简化方案
 2. 确认没有遗漏的使用场景
 3. 按照6个阶段的迁移计划逐步实施
-4. 重点关注命令场景的素材ready前置检查
-5. 确保项目加载场景的兼容性
+4. **重点关注 text 类型的特殊处理**
+5. 重点关注命令场景的素材ready前置检查
+6. 确保项目加载场景的兼容性
