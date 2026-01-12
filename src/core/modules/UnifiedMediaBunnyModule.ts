@@ -329,12 +329,17 @@ export function createUnifiedMediaBunnyModule(
     mUpdatingClip = true
 
     // ✨ 使用缓冲管理器获取要处理的 items
-    const itemsToProcess = mBufferManager
-      ? mBufferManager.getItemsForRendering(timelineItems, currentTime)
-      : timelineItems
+    const itemsToProcess =
+      mBufferManager && playbackModule.isPlaying.value
+        ? mBufferManager.getItemsForRendering(timelineItems, currentTime)
+        : timelineItems
 
     // ✨ 检查是否需要更新后台缓冲
-    if (mBufferManager && mBufferManager.shouldUpdateBuffer(currentTime)) {
+    if (
+      playbackModule.isPlaying.value &&
+      mBufferManager &&
+      mBufferManager.shouldUpdateBuffer(currentTime)
+    ) {
       // 异步更新后台缓冲，不阻塞当前渲染
       void mBufferManager.updateBackBuffer(timelineItems, currentTime)
     }

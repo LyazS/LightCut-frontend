@@ -57,7 +57,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedMediaModule = createUnifiedMediaModule(registry)
   registry.register(MODULE_NAMES.MEDIA, unifiedMediaModule)
 
-  const unifiedTrackModule = createUnifiedTrackModule()
+  const unifiedTrackModule = createUnifiedTrackModule(registry)
   registry.register(MODULE_NAMES.TRACK, unifiedTrackModule)
 
   const unifiedUseNaiveUIModule = createUnifiedUseNaiveUIModule()

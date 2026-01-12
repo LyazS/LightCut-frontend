@@ -468,7 +468,7 @@ export class ExportManager {
       const bufferFrames = Math.round(this.frameRate * 2)
       const triggerInterval = Math.round(this.frameRate)
 
-      if (lastTriggerFrame >= 0 && totalFrames > lastTriggerFrame + 1) {
+      if (lastTriggerFrame >= 0) {
         // 有触发过音频渲染，且还有剩余帧
         const lastRenderedSegmentIndex = Math.floor(
           (lastTriggerFrame - bufferFrames + 1) / triggerInterval,
@@ -568,60 +568,26 @@ export function exportProjectWithCancel(
   options: ExportProjectOptions,
   onSuccess?: () => void,
   onError?: (error: Error) => void,
-  onCancel?: () => void
+  onCancel?: () => void,
 ): () => void {
   // 创建导出管理器实例
   const manager = new ExportManager(options)
-  
+
   // 执行导出并保存文件
-  manager.export()
+  manager
+    .export()
     .then(async (videoData) => {
       // 保存文件
       const blob = new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${options.projectName}.mp4`
+      a.click()
+      URL.revokeObjectURL(url)
 
-      // 使用 File System Access API 让用户选择保存位置
-      if ('showSaveFilePicker' in window) {
-        try {
-          const fileHandle = await window.showSaveFilePicker({
-            suggestedName: `${options.projectName}.mp4`,
-            types: [
-              {
-                description: 'MP4 视频文件',
-                accept: {
-                  'video/mp4': ['.mp4'],
-                },
-              },
-            ],
-          })
-
-          const writable = await fileHandle.createWritable()
-          await writable.write(blob)
-          await writable.close()
-
-          console.log('✅ 项目导出成功')
-          onSuccess?.()
-        } catch (error) {
-          // 用户取消了保存操作
-          if ((error as Error).name === 'AbortError') {
-            console.log('⚠️ 用户取消了保存操作')
-            onError?.(new Error('用户取消了保存操作'))
-          } else {
-            throw error
-          }
-        }
-      } else {
-        // 降级方案：使用传统的下载方式（不支持 File System Access API 的浏览器）
-        console.warn('⚠️ 浏览器不支持 File System Access API，使用传统下载方式')
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${options.projectName}.mp4`
-        a.click()
-        URL.revokeObjectURL(url)
-
-        console.log('✅ 项目导出成功（传统方式）')
-        onSuccess?.()
-      }
+      console.log('✅ 项目导出成功（传统方式）')
+      onSuccess?.()
     })
     .catch((error) => {
       // 区分取消操作和其他错误
@@ -633,7 +599,7 @@ export function exportProjectWithCancel(
         onError?.(error instanceof Error ? error : new Error(String(error)))
       }
     })
-  
+
   // 返回取消函数
   return () => manager.cancel()
 }

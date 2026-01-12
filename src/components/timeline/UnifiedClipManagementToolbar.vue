@@ -204,10 +204,9 @@ async function splitSelectedClip() {
     )
 
     // 使用带历史记录的分割方法（传入帧数数组）
-    await unifiedStore.splitTimelineItemAtTimeWithHistory(
-      unifiedStore.selectedTimelineItemId,
-      [unifiedStore.currentFrame],
-    )
+    await unifiedStore.splitTimelineItemAtTimeWithHistory(unifiedStore.selectedTimelineItemId, [
+      unifiedStore.currentFrame,
+    ])
     console.log('✅ 时间轴项目分割成功')
   }
 }
@@ -220,15 +219,8 @@ async function deleteSelectedClip() {
       `🗑️ 删除时间轴项目: ${mediaItem?.name || '未知'} (ID: ${unifiedStore.selectedTimelineItemId})`,
     )
 
-    try {
-      // 使用带历史记录的删除方法
-      await unifiedStore.removeTimelineItemWithHistory(unifiedStore.selectedTimelineItemId)
-      console.log('✅ 时间轴项目删除成功')
-    } catch (error) {
-      console.error('❌ 删除时间轴项目失败:', error)
-      // 如果历史记录删除失败，回退到直接删除
-      unifiedStore.removeTimelineItem(unifiedStore.selectedTimelineItemId)
-    }
+    await unifiedStore.removeTimelineItemWithHistory(unifiedStore.selectedTimelineItemId)
+    console.log('✅ 时间轴项目删除成功')
   }
 }
 

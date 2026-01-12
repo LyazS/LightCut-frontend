@@ -19,6 +19,7 @@ export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private trackData: UnifiedTrackData // 保存被删除的轨道数据
+  private trackIndex: number // 保存被删除的轨道在tracks数组中的原始索引位置
   private affectedTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的时间轴项目的重建元数据
   private _isDisposed = false
 
@@ -46,6 +47,12 @@ export class RemoveTrackCommand implements SimpleCommand {
     const track = this.trackModule.getTrack(trackId)
     if (!track) {
       throw new Error(`找不到要删除的轨道: ${trackId}`)
+    }
+
+    // 保存轨道在tracks数组中的原始索引位置
+    this.trackIndex = this.trackModule.tracks.value.findIndex((t) => t.id === trackId)
+    if (this.trackIndex === -1) {
+      throw new Error(`找不到轨道在tracks数组中的索引: ${trackId}`)
     }
 
     this.trackData = { ...track }
@@ -115,14 +122,9 @@ export class RemoveTrackCommand implements SimpleCommand {
     try {
       console.log(`🔄 撤销删除轨道操作：重建轨道 ${this.trackData.name}...`)
 
-      // 1. 重建轨道
-      // 找到正确的插入位置（按ID排序）并使用 addTrack 方法
-      const tracks = this.trackModule.tracks.value
-      const insertIndex = tracks.findIndex((track) => track.id > this.trackData.id)
-      const position = insertIndex === -1 ? undefined : insertIndex
-
-      // 使用 trackModule 的 addTrack 方法而不是手动操作数组
-      this.trackModule.addTrack({ ...this.trackData }, position)
+      // 1. 重建轨道，使用保存的原始索引位置
+      // 使用 trackModule 的 addTrack 方法，传入保存的原始索引位置
+      this.trackModule.addTrack({ ...this.trackData }, this.trackIndex)
 
       // 2. 重建所有受影响的时间轴项目
       for (const itemData of this.affectedTimelineItems) {
@@ -144,7 +146,7 @@ export class RemoveTrackCommand implements SimpleCommand {
         // 1. 添加到时间轴
         await this.timelineModule.addTimelineItem(newTimelineItem)
 
-        // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+        // 2. 针对loading状态的项目设置状态同步
         if (TimelineItemQueries.isLoading(newTimelineItem)) {
           MediaSyncFactory.forCommand(
             this.id,
