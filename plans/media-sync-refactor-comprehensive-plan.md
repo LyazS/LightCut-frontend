@@ -975,7 +975,15 @@ shouldUpdateTimelineItem: !timelineItem.runtime.isInitialized
 - [ ] 更新 `UnifiedProjectModule`：保持单个时间轴项目
 - [ ] 确保所有命令都遵循统一的 MediaSync 创建模式（只在 loading 状态时创建）
 
-### 阶段 3：测试和验证
+### 阶段 3：清理旧代码
+- [ ] 删除 `BaseMediaSync` 类
+- [ ] 删除 `CommandMediaSync` 类
+- [ ] 删除 `ProjectLoadMediaSync` 类
+- [ ] 删除 `MediaSyncManager` 类（不再需要）
+- [ ] 删除 `cleanupCommandMediaSync` 等辅助函数
+- [ ] 更新相关文档
+
+### 阶段 4：测试和验证
 - [ ] 测试单个时间轴项目场景
 - [ ] 测试批量时间轴项目场景
 - [ ] 测试性能提升（100 个项目场景）
@@ -983,14 +991,6 @@ shouldUpdateTimelineItem: !timelineItem.runtime.isInitialized
 - [ ] 测试错误处理
 - [ ] 测试媒体已 ready 时的快速路径（无 MediaSync）
 - [ ] 测试媒体未 ready 时的正常路径（有 MediaSync）
-
-### 阶段 4：清理旧代码
-- [ ] 删除 `BaseMediaSync` 类
-- [ ] 删除 `CommandMediaSync` 类
-- [ ] 删除 `ProjectLoadMediaSync` 类
-- [ ] 删除 `MediaSyncManager` 类（不再需要）
-- [ ] 删除 `cleanupCommandMediaSync` 等辅助函数
-- [ ] 更新相关文档
 
 ---
 
@@ -1436,38 +1436,6 @@ async function restoreTimelineItems(
 
 ---
 
-## 优势总结
-
-### 1. 消除重复代码
-- 只需维护一个 `MediaSync` 类
-- 通过配置控制行为，而不是继承
-
-### 2. 职责清晰
-- `shouldUpdateCommand`: 明确控制是否更新命令数据
-- `shouldUpdateTimelineItem`: 明确控制是否更新时间轴项目数据
-- `syncId`: 明确用于管理器的标识符
-- 两个独立的布尔标记位，语义清晰，配置即文档
-
-### 3. 性能优化
-- 按媒体项目自动去重，避免重复 watcher
-- 批量场景性能提升高达 **99%**
-- 对单个项目场景无影响
-
-### 4. 扩展性更好
-- 未来如果需要新的同步场景，只需使用不同的配置选项
-- 不需要创建新的子类或工厂方法
-
-### 5. 更容易测试
-- 可以直接测试不同配置下的行为
-- 不需要为每个场景创建测试类
-
-### 6. 更好的扩展性
-- 两个独立的标记位可以自由组合，支持未来的新场景
-- 不需要添加新的 scenario 枚举值
-- 更容易理解和维护
-
----
-
 ## 关键设计决策
 
 ### 为什么使用标记位而不是 scenario 枚举？
@@ -1518,7 +1486,6 @@ async function restoreTimelineItems(
 
 ### 低风险
 - 外部调用代码需要修改为直接使用 `new MediaSync`，但配置选项清晰明确
-- 可以逐步迁移，保持向后兼容
 
 ### 需要注意
 - 命令必须正确实现`dispose()`方法来清理MediaSync
