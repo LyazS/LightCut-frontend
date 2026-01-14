@@ -274,6 +274,11 @@ export interface FileSlot {
 export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConfig | FileInputConfig
 
 /**
+ * 上传服务器类型
+ */
+export type UploadServerType = 'bizyair' | string
+
+/**
  * AI 生成配置结构
  */
 export interface AIGenerateConfig {
@@ -282,6 +287,7 @@ export interface AIGenerateConfig {
   description: I18nText
   contentType: ContentType
   aiTaskType: AITaskType
+  uploadServer?: UploadServerType // 上传服务器类型，默认为 'default'
   aiConfig: Record<string, any> // 不再包含 web_app_id
   uiConfig: UIConfig[]
 }

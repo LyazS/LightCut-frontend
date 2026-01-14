@@ -209,25 +209,27 @@ async function handleGenerate() {
     isGenerating.value = true
     const configData = collection[selectedConfig.value]
 
-    // 🆕 1. 使用管道函数处理文件上传
-    const { newConfig, uploadResults } = await BizyairFileUploader.processConfigUploads(
-      aiConfig.value,
-      unifiedStore.getMediaItem,
-      unifiedStore.getTimelineItem,
-      (fileIndex, stage, progress) => {
-        console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
-      },
-    )
+    // 🆕 1. 根据 uploadServer 配置选择上传处理器
+    const uploadServer = configData.uploadServer
+    let newConfig: Record<string, any> = cloneDeep(aiConfig.value)
 
-    // 检查上传结果
-    for (const [index, result] of uploadResults.entries()) {
-      if (!result.success) {
-        throw new Error(`文件上传失败: ${result.error}`)
+    if (uploadServer) {
+      if (uploadServer === 'bizyair') {
+        newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {
+            unifiedStore.messageSuccess('文件上传完成')
+          },
+        )
+      } else {
+        // TODO: 实现其他上传处理器
+        throw new Error(`不支持的上传服务器: ${uploadServer}`)
       }
-    }
-
-    if (uploadResults.size > 0) {
-      unifiedStore.messageSuccess('文件上传完成')
     }
 
     // 3. 准备请求参数
@@ -367,24 +369,34 @@ async function handleDebugOutput() {
     console.warn('⚠️ [GeneratePanel] aiConfig 为空')
     return
   }
-
+  console.log(JSON.stringify(aiConfig.value, null, 2))
   try {
-    // 使用管道函数处理文件上传（仅用于调试）
-    const { newConfig, uploadResults } = await BizyairFileUploader.processConfigUploads(
-      aiConfig.value,
-      unifiedStore.getMediaItem,
-      unifiedStore.getTimelineItem,
-      (fileIndex, stage, progress) => {
-        console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
-      },
-    )
+    // 根据 uploadServer 配置选择上传处理器（仅用于调试）
+    if (!selectedConfig.value) {
+      console.warn('⚠️ [GeneratePanel] 未选择配置')
+      return
+    }
+    const configData = collection[selectedConfig.value]
+    const uploadServer = configData.uploadServer
+    let newConfig: Record<string, any>
 
-    if (uploadResults.size > 0) {
-      console.log('🔍 [GeneratePanel] 上传后的配置:')
-      console.log(JSON.stringify(newConfig, null, 2))
-    } else {
-      console.log('🔍 [GeneratePanel] 无需上传文件')
-      console.log('aiConfig:', JSON.stringify(aiConfig.value, null, 2))
+    if (uploadServer) {
+      if (uploadServer === 'bizyair') {
+        newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+        )
+
+        console.log('🔍 [GeneratePanel] 上传后的配置:')
+        console.log(JSON.stringify(newConfig, null, 2))
+      } else {
+        // TODO: 实现其他上传处理器
+        console.warn(`⚠️ [GeneratePanel] 不支持的上传服务器: ${uploadServer}`)
+      }
     }
   } catch (error) {
     console.error('❌ 调试输出失败:', error)

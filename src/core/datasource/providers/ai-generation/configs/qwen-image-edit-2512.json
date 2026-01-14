@@ -10,6 +10,7 @@
   },
   "contentType": "image",
   "aiTaskType": "bizyair_generate_media",
+  "uploadServer": "bizyair",
   "aiConfig": {
     "ref_images": [],
     "prompt": "",

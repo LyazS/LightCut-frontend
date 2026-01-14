@@ -274,17 +274,16 @@ export class BizyairFileUploader {
    * @param getMediaItem 获取媒体项的函数
    * @param getTimelineItem 获取时间轴项的函数
    * @param onProgress 进度回调
-   * @returns 包含新配置和上传结果的对象
+   * @param onSuccess 上传成功回调
+   * @returns 新配置对象
    */
   static async processConfigUploads(
     config: Record<string, any>,
     getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
     onProgress?: (fileIndex: number, stage: string, progress: number) => void,
-  ): Promise<{
-    newConfig: Record<string, any>
-    uploadResults: Map<number, UploadResult>
-  }> {
+    onSuccess?: () => void,
+  ): Promise<Record<string, any>> {
     // 1. 深度克隆配置，避免修改原对象
     const newConfig = cloneDeep(config)
 
@@ -301,10 +300,7 @@ export class BizyairFileUploader {
     }
 
     if (filesToUpload.length === 0) {
-      return {
-        newConfig,
-        uploadResults: new Map(),
-      }
+      return newConfig
     }
 
     // 3. 批量上传文件
@@ -315,7 +311,19 @@ export class BizyairFileUploader {
       onProgress,
     )
 
-    // 4. 更新新配置中的URL
+    // 4. 检查上传结果
+    for (const [index, result] of uploadResults.entries()) {
+      if (!result.success) {
+        throw new Error(`文件上传失败: ${result.error}`)
+      }
+    }
+
+    // 5. 如果有文件上传成功，调用成功回调
+    if (uploadResults.size > 0 && onSuccess) {
+      onSuccess()
+    }
+
+    // 6. 更新新配置中的URL
     let fileIndex = 0
     for (const [key, value] of Object.entries(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
@@ -330,9 +338,6 @@ export class BizyairFileUploader {
       }
     }
 
-    return {
-      newConfig,
-      uploadResults,
-    }
+    return newConfig
   }
 }
