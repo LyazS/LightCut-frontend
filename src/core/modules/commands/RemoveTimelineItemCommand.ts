@@ -14,7 +14,7 @@ import type { VideoResolution } from '@/core/types'
 
 // ==================== 新架构工具导入 ====================
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { MediaSync } from '@/core/managers/media'
+import { MediaSync } from '@/core/managers/sync'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**

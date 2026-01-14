@@ -7,7 +7,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem'
-import { MediaSync } from '@/core/managers/media'
+import { MediaSync } from '@/core/managers/sync'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**

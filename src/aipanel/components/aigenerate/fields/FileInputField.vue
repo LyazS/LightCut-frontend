@@ -27,7 +27,7 @@
           placement="bottom"
           :delay="500"
           trigger="hover"
-          :max-width="280"
+          :style="{ maxWidth: '280px' }"
         >
           <template #trigger>
             <div class="filled-slot">
