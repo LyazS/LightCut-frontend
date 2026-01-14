@@ -11,9 +11,4 @@ export { fileSystemService } from './filesystem/fileSystemService'
 
 // ==================== 媒体管理器 ====================
 
-export {
-  MediaSyncFactory,
-  cleanupCommandMediaSync,
-  cleanupProjectLoadMediaSync,
-  getMediaSyncInfo,
-} from './media'
+// 媒体同步相关导出已移除，请使用新的 MediaSync 类

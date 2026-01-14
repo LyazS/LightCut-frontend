@@ -7,7 +7,6 @@
 import { generateCommandId, generateTimelineItemId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import { cleanupCommandMediaSync } from '@/core/managers/media'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 新架构类型导入 ====================
@@ -220,6 +219,9 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
       // 修改状态为 ready
       fragmentItem.timelineStatus = 'ready'
+      
+      // ✅ 分割命令：新创建的片段，已完成初始化
+      fragmentItem.runtime.isInitialized = true
 
       console.log(
         `✅ [SplitTimelineItemCommand] 片段 ${i + 1} bunny 对象创建完成，状态已设置为 ready`,
@@ -323,6 +325,10 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
       // 修改状态为 ready
       originalItem.timelineStatus = 'ready'
+      
+      // ✅ 分割命令的 undo：恢复原有的 isInitialized 标记
+      // 注意：isInitialized 是必选字段，originalTimelineItemData 中一定有值
+      originalItem.runtime.isInitialized = this.originalTimelineItemData.runtime.isInitialized
 
       console.log(`✅ [SplitTimelineItemCommand] 原始项目 bunny 对象创建完成，状态已设置为 ready`)
 
@@ -359,8 +365,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     this._isDisposed = true
-    // 清理媒体同步
-    cleanupCommandMediaSync(this.id)
+    // 注意：SplitTimelineItemCommand 不使用 MediaSync，因为分割操作总是产生 ready 状态的项目
     console.log(`🗑️ [SplitTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

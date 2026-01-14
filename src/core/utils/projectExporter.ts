@@ -691,7 +691,9 @@ async function exportVideoMediaItem(
       volume: 1,
       isMuted: false,
     },
-    runtime: {},
+    runtime: {
+      isInitialized: true, // 导出场景：临时创建的项目，已完成初始化
+    },
   }
 
   // 3. 构造 ExportProjectOptions
@@ -805,7 +807,9 @@ async function exportVideoTimelineItem(
       volume: 1,
       isMuted: false,
     },
-    runtime: {},
+    runtime: {
+      isInitialized: true, // 导出场景：临时创建的项目，已完成初始化
+    },
   }
 
   // 4. 构造 ExportProjectOptions

@@ -8,7 +8,6 @@ import {
   UnifiedMediaItemActions,
 } from '@/core'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
-import { cleanupMediaItemSync } from '@/core/managers/media'
 import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import type { UnifiedProjectModule } from '@/core/modules/UnifiedProjectModule'
@@ -119,10 +118,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
       // 2. 清理相关的时间轴项目
       await cleanupRelatedTimelineItems(mediaItemId)
 
-      // 3. 清理命令同步
-      cleanupCommandMediaSyncForMediaItem(mediaItemId)
-
-      // 🆕 4. 删除硬盘文件（媒体文件 + Meta文件）
+      // 3. 删除硬盘文件（媒体文件 + Meta文件）
       try {
         const deleteResult = await globalMetaFileManager.deleteMediaFiles(mediaItemId)
 
@@ -454,13 +450,6 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
     }
   }
 
-  /**
-   * 清理与媒体项目相关的命令同步
-   * @param mediaItemId 媒体项目ID
-   */
-  function cleanupCommandMediaSyncForMediaItem(mediaItemId: string): void {
-    cleanupMediaItemSync(mediaItemId)
-  }
 
   return {
     // 状态
@@ -496,7 +485,6 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
     // 清理方法
     cleanupRelatedTimelineItems,
-    cleanupCommandMediaSyncForMediaItem,
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData,

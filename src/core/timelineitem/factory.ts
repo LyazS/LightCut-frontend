@@ -15,15 +15,13 @@ import type {
   GetConfigs,
 } from '@/core/timelineitem/type'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import type {
-  UnifiedTimelineItemData,
-  TimelineItemStatus,
-} from '@/core/timelineitem/type'
+import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/type'
 import type { GetAnimation } from './bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
 import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 克隆和复制函数 ====================
 
@@ -46,7 +44,10 @@ export function cloneTimelineItem<T extends MediaType>(
   // 深拷贝原始对象，排除不需要克隆的 runtime 属性
   const cloned = cloneDeep({
     ...original,
-    runtime: {}, // 明确排除 runtime，它需要重新创建
+    runtime: {
+      // ✅ 只保留 isInitialized，其他 runtime 字段（bunnyClip、textBitmap 等）会在后续重建
+      isInitialized: original.runtime.isInitialized,
+    },
   })
 
   // 应用覆盖值
@@ -210,11 +211,24 @@ export interface RebuildTextTimelineItemResult {
 }
 
 /**
- * 为命令场景重建时间轴项目（总是创建 loading 状态）
- * 用于命令执行和项目加载场景，确保状态转换的一致性
+ * 为命令场景重建时间轴项目（智能决定初始状态）
+ * 用于命令执行和项目加载场景，根据原始数据初始化状态和媒体状态智能决定 TimelineItem 的初始状态
+ *
+ * 状态决策逻辑：
+ * 1. 文本项目 → 直接返回 ready 状态（不依赖外部媒体）
+ * 2. originalData.isInitialized === true && mediaItem.ready → 返回 ready 状态
+ * 3. 其他所有情况 → 返回 loading 状态（需要 MediaSync）
+ *
+ * 决策矩阵：
+ * | originalData.isInitialized | mediaItem状态 | 返回状态 | isInitialized | 说明 |
+ * |---------------------------|--------------|---------|---------------|------|
+ * | false | ready   | loading | false | 需要同步数据，即使媒体已就绪 |
+ * | false | loading | loading | false | 需要等待并同步 |
+ * | true  | ready   | ready   | true  | 已初始化且媒体就绪，直接完成 |
+ * | true  | loading | loading | true  | 已初始化，只需等待媒体就绪，不需要重新同步数据 |
  *
  * @param options 重建选项
- * @returns 重建结果，TimelineItem 总是 loading 状态（文本项目除外）
+ * @returns 重建结果，TimelineItem 状态根据两个维度智能决定
  */
 export async function rebuildTimelineItemForCmd(
   options: RebuildKnownTimelineItemOptions,
@@ -226,32 +240,85 @@ export async function rebuildTimelineItemForCmd(
       throw new Error('时间轴项目数据不存在')
     }
 
-    console.log(`🔄 [${logIdentifier}] 开始重建时间轴项目（统一loading状态）...`)
+    console.log(`🔄 [${logIdentifier}] 开始重建时间轴项目（智能状态决策）...`)
 
+    // 1. 文本项目特殊处理：直接返回 ready 状态
     if (TimelineItemQueries.isTextTimelineItem(originalTimelineItemData)) {
-      // 文本项目也创建 loading 状态，由 TimelineItemTransitioner 统一处理
-      console.log(`🔄 [${logIdentifier}] 检测到文本时间轴项目，创建loading状态`)
+      console.log(`✅ [${logIdentifier}] 文本项目直接创建为 ready 状态`)
 
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
-        timelineStatus: 'loading',
+        timelineStatus: 'ready',
       })
+      await setupTimelineItemBunny(newTimelineItem)
+      newTimelineItem.runtime.isInitialized = true
+
+      return {
+        timelineItem: newTimelineItem,
+        success: true,
+      }
+    }
+
+    // 2. 非文本项目：检查媒体状态
+    const mediaItem = getMediaItem(originalTimelineItemData.mediaItemId)
+
+    if (!mediaItem) {
+      throw new Error(`找不到媒体项目: ${originalTimelineItemData.mediaItemId}`)
+    }
+
+    // 3. 同时考虑原始数据的初始化状态和媒体状态
+    const isOriginalInitialized = originalTimelineItemData.runtime.isInitialized
+    const isMediaReady = UnifiedMediaItemQueries.isReady(mediaItem)
+
+    // 只有当原始数据已初始化 AND 媒体已就绪时，才返回 ready 状态
+    if (isOriginalInitialized && isMediaReady) {
+      const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
+        timelineStatus: 'ready',
+      }) as UnifiedTimelineItemData<MediaType>
+
+      // 为 ready 状态的 TimelineItem 设置 bunny 对象
+      // 这一步不能省略，否则 TimelineItem 无法渲染
+      await setupTimelineItemBunny(newTimelineItem, mediaItem)
+      newTimelineItem.runtime.isInitialized = true
 
       return {
         timelineItem: newTimelineItem,
         success: true,
       }
     } else {
-      // 非文本项目：总是创建 loading 状态，不再根据媒体状态决定
-      console.log(`🔄 [${logIdentifier}] 创建loading状态的时间轴项目`)
+      // ⚠️ 其他所有情况：返回 loading 状态，等待 MediaSync 处理
+      // - originalData未初始化 + media已ready → loading（需要同步数据）
+      // - originalData未初始化 + media未ready → loading（需要等待并同步）
+      // - originalData已初始化 + media未ready → loading（只需等待媒体就绪，不需要同步）
+
+      let reason = ''
+      if (!isOriginalInitialized && isMediaReady) {
+        reason = '原始数据未初始化，需要从媒体同步数据'
+      } else if (!isOriginalInitialized && !isMediaReady) {
+        reason = '原始数据未初始化且媒体未就绪，需要等待并同步'
+      } else if (isOriginalInitialized && !isMediaReady) {
+        reason = '原始数据已初始化但媒体未就绪，只需等待媒体加载（不需要同步数据）'
+      }
+
+      console.log(`🔄 [${logIdentifier}] 创建 loading 状态: ${reason}`, {
+        isOriginalInitialized,
+        mediaStatus: mediaItem.mediaStatus,
+      })
 
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
         timelineStatus: 'loading',
       }) as UnifiedTimelineItemData<MediaType>
 
-      console.log(`🔄 [${logIdentifier}] loading状态时间轴项目创建完成:`, {
+      // ⚠️ 关键：保持原始数据的 isInitialized 状态
+      // - 如果原始数据未初始化 → isInitialized = false（需要同步）
+      // - 如果原始数据已初始化 → isInitialized = true（只需等待，不需要同步）
+      newTimelineItem.runtime.isInitialized = isOriginalInitialized
+
+      console.log(`🔄 [${logIdentifier}] loading 状态时间轴项目创建完成:`, {
         id: newTimelineItem.id,
         mediaType: originalTimelineItemData.mediaType,
         timelineStatus: newTimelineItem.timelineStatus,
+        isInitialized: newTimelineItem.runtime.isInitialized,
+        mediaStatus: mediaItem.mediaStatus,
       })
 
       return {

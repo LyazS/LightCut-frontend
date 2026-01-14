@@ -97,7 +97,10 @@ export function useTimelineItemOperations() {
         config: config,
         animation: undefined, // 新创建的项目默认没有动画
         timelineStatus: timelineStatus, // 根据素材状态设置时间轴项目状态
-        runtime: {}, // 添加必需的 runtime 字段
+        runtime: {
+          // ✅ 新创建的项目，未初始化，需要从 mediaItem 同步数据
+          isInitialized: false,
+        },
       }
 
       await unifiedStore.addTimelineItemWithHistory(timelineItemData)

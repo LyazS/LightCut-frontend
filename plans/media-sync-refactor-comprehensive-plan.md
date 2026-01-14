@@ -473,19 +473,44 @@ await this.trackModule.removeTrack(this.trackId)
 
 ### 问题描述
 
-当前 [`TimelineItemFactory.rebuildForCmd()`](LightCut-frontend/src/core/timelineitem/factory.ts:219-272) 的实现存在一个性能问题：**总是返回 `loading` 状态的 TimelineItem**，即使：
+当前 [`TimelineItemFactory.rebuildForCmd()`](LightCut-frontend/src/core/timelineitem/factory.ts:219-272) 的实现存在一个逻辑问题：**只根据 mediaItem 状态决定返回的 TimelineItem 状态**，没有考虑 `originalTimelineItemData.runtime.isInitialized` 的值。
 
-1. **媒体已经是 `ready` 状态**：不需要等待加载，但仍创建 `loading` 状态
-2. **文本项目**：不依赖外部媒体，但仍创建 `loading` 状态
+这导致以下问题：
 
-这导致：
-- 不必要的 MediaSync 创建和状态转换
-- 额外的异步操作开销
-- 代码逻辑不够清晰
+1. **场景1：originalData未初始化 + media已ready**
+   - 当前行为：直接返回 ready 状态
+   - 问题：虽然媒体已就绪，但原始数据标记为未初始化，说明需要从 mediaItem 同步数据
+   - 正确行为：应该返回 loading 状态，等待 MediaSync 同步数据
+
+2. **场景2：originalData已初始化 + media未ready**
+   - 当前行为：返回 loading 状态
+   - 问题：虽然原始数据已初始化，但媒体未就绪，无法完成渲染
+   - 正确行为：应该返回 loading 状态，等待媒体就绪后再转换
 
 ### 修正方案
 
-`rebuildForCmd` 应该**智能判断媒体状态**，返回正确的初始状态：
+`rebuildForCmd` 应该**同时考虑两个维度**来决定返回状态：
+1. **originalTimelineItemData.runtime.isInitialized**：原始数据是否已初始化
+2. **mediaItem.mediaStatus**：媒体是否已就绪
+
+#### 决策矩阵
+
+| originalData.isInitialized | mediaItem状态 | 返回状态 | isInitialized | 说明 |
+|---------------------------|--------------|---------|---------------|------|
+| `false` | ready | **loading** | **false** | 需要同步数据，即使媒体已就绪 |
+| `false` | loading | loading | false | 需要等待并同步 |
+| `true` | ready | ready | true | 已初始化且媒体就绪，直接完成 |
+| `true` | loading | **loading** | **true** | 已初始化，只需等待媒体就绪，不需要重新同步数据 |
+
+#### 核心原则
+
+**只有当两个条件同时满足时，才能返回 ready 状态：**
+1. `originalTimelineItemData.runtime.isInitialized === true`（原始数据已初始化）
+2. `mediaItem.mediaStatus === 'ready'`（媒体已就绪）
+
+**其他情况返回 loading 状态，isInitialized 的设置规则：**
+- `originalData.isInitialized = false` → `newItem.isInitialized = false`（需要同步数据）
+- `originalData.isInitialized = true` → `newItem.isInitialized = true`（保持已初始化状态，只等待媒体就绪）
 
 #### 决策逻辑
 
@@ -495,8 +520,8 @@ await this.trackModule.removeTrack(this.trackId)
  *
  * 状态决策逻辑：
  * 1. 文本项目 → 直接返回 ready 状态（不依赖外部媒体）
- * 2. 媒体已 ready → 直接返回 ready 状态（无需等待）
- * 3. 媒体未 ready → 返回 loading 状态（需要 MediaSync）
+ * 2. originalData.isInitialized === true && mediaItem.ready → 返回 ready 状态
+ * 3. 其他所有情况 → 返回 loading 状态（需要 MediaSync）
  */
 ```
 
@@ -505,10 +530,10 @@ await this.trackModule.removeTrack(this.trackId)
 ```typescript
 /**
  * 为命令场景重建时间轴项目（智能决定初始状态）
- * 用于命令执行和项目加载场景，根据媒体状态智能决定 TimelineItem 的初始状态
+ * 用于命令执行和项目加载场景，根据原始数据初始化状态和媒体状态智能决定 TimelineItem 的初始状态
  *
  * @param options 重建选项
- * @returns 重建结果，TimelineItem 状态根据媒体状态智能决定
+ * @returns 重建结果，TimelineItem 状态根据两个维度智能决定
  */
 export async function rebuildTimelineItemForCmd(
   options: RebuildKnownTimelineItemOptions,
@@ -534,6 +559,9 @@ export async function rebuildTimelineItemForCmd(
       // 文本类型不需要 mediaItem 参数
       await setupTimelineItemBunny(newTimelineItem)
       
+      // ✅ 文本项目已完成初始化
+      newTimelineItem.runtime.isInitialized = true
+      
       return {
         timelineItem: newTimelineItem,
         success: true,
@@ -547,10 +575,14 @@ export async function rebuildTimelineItemForCmd(
       throw new Error(`找不到媒体项目: ${originalTimelineItemData.mediaItemId}`)
     }
 
-    // 3. 根据媒体状态决定 TimelineItem 状态
-    if (UnifiedMediaItemQueries.isReady(mediaItem)) {
-      // 媒体已就绪：直接创建 ready 状态
-      console.log(`✅ [${logIdentifier}] 媒体已就绪，直接创建 ready 状态`)
+    // 3. 🔧 关键修正：同时考虑原始数据的初始化状态和媒体状态
+    const isOriginalInitialized = originalTimelineItemData.runtime.isInitialized
+    const isMediaReady = UnifiedMediaItemQueries.isReady(mediaItem)
+    
+    // 只有当原始数据已初始化 AND 媒体已就绪时，才返回 ready 状态
+    if (isOriginalInitialized && isMediaReady) {
+      // ✅ 场景：originalData已初始化 + media已ready → 直接返回 ready
+      console.log(`✅ [${logIdentifier}] 原始数据已初始化且媒体已就绪，直接创建 ready 状态`)
       
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
         timelineStatus: 'ready',
@@ -560,22 +592,47 @@ export async function rebuildTimelineItemForCmd(
       // 这一步不能省略，否则 TimelineItem 无法渲染
       await setupTimelineItemBunny(newTimelineItem, mediaItem)
       
+      // ✅ 媒体已就绪，TimelineItem 已完成初始化
+      newTimelineItem.runtime.isInitialized = true
+      
       return {
         timelineItem: newTimelineItem,
         success: true,
       }
     } else {
-      // 媒体未就绪：创建 loading 状态，等待 MediaSync 处理
-      console.log(`🔄 [${logIdentifier}] 媒体未就绪（${mediaItem.mediaStatus}），创建 loading 状态`)
+      // ⚠️ 其他所有情况：返回 loading 状态，等待 MediaSync 处理
+      // - originalData未初始化 + media已ready → loading（需要同步数据）
+      // - originalData未初始化 + media未ready → loading（需要等待并同步）
+      // - originalData已初始化 + media未ready → loading（只需等待媒体就绪，不需要同步）
+      
+      let reason = ''
+      if (!isOriginalInitialized && isMediaReady) {
+        reason = '原始数据未初始化，需要从媒体同步数据'
+      } else if (!isOriginalInitialized && !isMediaReady) {
+        reason = '原始数据未初始化且媒体未就绪，需要等待并同步'
+      } else if (isOriginalInitialized && !isMediaReady) {
+        reason = '原始数据已初始化但媒体未就绪，只需等待媒体加载（不需要同步数据）'
+      }
+      
+      console.log(`🔄 [${logIdentifier}] 创建 loading 状态: ${reason}`, {
+        isOriginalInitialized,
+        mediaStatus: mediaItem.mediaStatus,
+      })
       
       const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
         timelineStatus: 'loading',
       }) as UnifiedTimelineItemData<MediaType>
       
+      // ⚠️ 关键：保持原始数据的 isInitialized 状态
+      // - 如果原始数据未初始化 → isInitialized = false（需要同步）
+      // - 如果原始数据已初始化 → isInitialized = true（只需等待，不需要同步）
+      newTimelineItem.runtime.isInitialized = isOriginalInitialized
+      
       console.log(`🔄 [${logIdentifier}] loading 状态时间轴项目创建完成:`, {
         id: newTimelineItem.id,
         mediaType: originalTimelineItemData.mediaType,
         timelineStatus: newTimelineItem.timelineStatus,
+        isInitialized: newTimelineItem.runtime.isInitialized,
         mediaStatus: mediaItem.mediaStatus,
       })
       
@@ -671,6 +728,7 @@ if (TimelineItemQueries.isLoading(newTimelineItem)) {
 ```typescript
 async execute(): Promise<void> {
   // 1. 重建时间轴项目（智能状态决策）
+  // rebuildForCmd 会根据 originalData.isInitialized 和 mediaItem.status 智能决定返回状态和 isInitialized
   const rebuildResult = await TimelineItemFactory.rebuildForCmd({
     originalTimelineItemData: this.originalTimelineItemData,
     getMediaItem: this.mediaModule.getMediaItem,
@@ -683,10 +741,17 @@ async execute(): Promise<void> {
 
   const newTimelineItem = rebuildResult.timelineItem
 
-  // 2. 添加到时间轴
+  // 2. ⚠️ 注意：rebuildForCmd 已经智能设置了 isInitialized
+  // - ready 状态：isInitialized = true（已完成初始化）
+  // - loading 状态：isInitialized = 保持原值（originalData.isInitialized）
+  //   - 如果原始数据未初始化 → false（需要同步数据）
+  //   - 如果原始数据已初始化 → true（只需等待媒体，不需要同步）
+  // 调用方通常不需要再修改 isInitialized
+
+  // 3. 添加到时间轴
   await this.timelineModule.addTimelineItem(newTimelineItem)
 
-  // 3. 只有 loading 状态才需要 MediaSync
+  // 4. 只有 loading 状态才需要 MediaSync
   if (TimelineItemQueries.isLoading(newTimelineItem)) {
     // 先清理旧的 MediaSync（防止重复执行）
     if (this.mediaSync) {
@@ -698,7 +763,7 @@ async execute(): Promise<void> {
       syncId: this.id,
       timelineItemIds: [newTimelineItem.id],
       shouldUpdateCommand: true,
-      shouldUpdateTimelineItem: true,
+      shouldUpdateTimelineItem: !newTimelineItem.runtime.isInitialized, // 根据 isInitialized 决定是否同步数据
       commandId: this.id,
     })
     await this.mediaSync.setup()
@@ -768,16 +833,21 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
   renderConfig?: GetConfigs<T>
   
   /**
-   * 标识时间轴项目是否已经从 mediaItem 初始化过
-   * - true: 已经初始化，不应该再从 mediaItem 同步数据（即使是 loading 状态）
-   * - false/undefined: 未初始化，需要等待 mediaItem ready 后同步数据
+   * 标识时间轴项目是否已经从 mediaItem 初始化过（必选字段）
+   * - true: 已经初始化，不应该再从 mediaItem 同步数据
+   * - false: 未初始化，需要等待 mediaItem ready 后同步数据
+   *
+   * 设置时机：
+   * 1. rebuildForCmd 返回 ready 状态时：自动设置为 true（已完成初始化）
+   * 2. rebuildForCmd 返回 loading 状态时：由调用方根据场景设置
+   * 3. TimelineItemTransitioner 完成转换后：设置为 true（标记初始化完成）
    *
    * 使用场景：
    * 1. 项目加载：从工程文件加载的项目，isInitialized = true（已有用户调整的数据）
    * 2. 命令添加：新创建的项目，isInitialized = false（需要从 mediaItem 同步）
-   * 3. Undo/Redo：从命令恢复的项目，isInitialized = true（已有保存的数据）
+   * 3. Undo/Redo：从命令恢复的项目，保持原有的 isInitialized 值
    */
-  isInitialized?: boolean
+  isInitialized: boolean
 }
 ```
 
@@ -785,32 +855,62 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
 
 #### 规则总结表
 
-| 场景 | isInitialized 设置 | shouldUpdateTimelineItem | 原因 |
-|------|-------------------|-------------------------|------|
-| **添加命令 execute** | `false` | `true` | 新创建的项目，需要从 mediaItem 同步 |
-| **添加命令 undo** | N/A（删除） | N/A | 直接删除项目 |
-| **删除命令 execute** | N/A（删除） | `false` | 项目已删除，不更新 |
-| **删除命令 undo** | **保持原值** | 根据原值 | 恢复原有状态，不改变初始化标记 |
-| **删除轨道 execute** | N/A（删除） | `false` | 项目已删除，不更新 |
-| **删除轨道 undo** | **保持原值** | 根据原值 | 恢复原有状态，不改变初始化标记 |
-| **项目加载** | `true` | `false` | 从工程文件加载，已有用户数据 |
+此表格考虑了两个关键维度：
+1. **场景类型**：添加、删除、项目加载等
+2. **MediaItem 状态**：ready 或 loading
+
+| 场景 | MediaItem 状态 | rebuildForCmd 返回状态 | isInitialized 设置 | shouldUpdateTimelineItem | 是否创建 MediaSync | 说明 |
+|------|---------------|----------------------|-------------------|-------------------------|------------------|------|
+| **添加命令 execute** | ready | ready | `true` | N/A | ❌ 否 | 媒体已就绪，直接完成初始化 |
+| **添加命令 execute** | loading | loading | `false` | `true` | ✅ 是 | 新创建的项目，需要从 mediaItem 同步 |
+| **添加命令 undo** | - | N/A（删除） | N/A | N/A | ❌ 否 | 直接删除项目 |
+| **删除命令 execute** | - | N/A（删除） | N/A | `false` | ✅ 是（仅更新命令） | 项目已删除，只更新命令数据 |
+| **删除命令 undo** | ready | ready | `true` | N/A | ❌ 否 | 恢复时媒体已就绪，直接完成 |
+| **删除命令 undo** | loading | loading | **保持原值** | `!原值` | ✅ 是 | 恢复原有状态，保持原初始化标记 |
+| **删除轨道 execute** | - | N/A（删除） | N/A | `false` | ✅ 是（仅更新命令） | 项目已删除，只更新命令数据 |
+| **删除轨道 undo** | ready | ready | `true` | N/A | ❌ 否 | 恢复时媒体已就绪，直接完成 |
+| **删除轨道 undo** | loading | loading | **保持原值** | `!原值` | ✅ 是 | 恢复原有状态，保持原初始化标记 |
+| **项目加载** | ready | ready | `true` | N/A | ❌ 否 | 从工程文件加载，媒体已就绪 |
+| **项目加载** | loading | loading | `true` | `false` | ✅ 是 | 从工程文件加载，已有用户数据，不覆盖 |
 
 #### 关键原则
 
-1. **添加命令**：新创建 → `isInitialized = false`
-2. **项目加载**：从文件恢复 → `isInitialized = true`
-3. **删除命令的 undo**：恢复原状态 → **保持原有的 `isInitialized` 值**
-4. **删除轨道的 undo**：恢复原状态 → **保持原有的 `isInitialized` 值**
+1. **MediaItem ready 时**：
+   - `rebuildForCmd` 直接返回 ready 状态的 TimelineItem
+   - `isInitialized` 自动设置为 `true`（已完成初始化）
+   - 不需要创建 MediaSync（无需等待）
+   - `shouldUpdateTimelineItem` 不适用（已经在 rebuildForCmd 中完成）
+
+2. **MediaItem loading 时**：
+   - `rebuildForCmd` 返回 loading 状态的 TimelineItem
+   - `isInitialized` 由调用方根据场景设置
+   - 需要创建 MediaSync 等待媒体就绪
+   - `shouldUpdateTimelineItem` 根据 `isInitialized` 决定
+
+3. **场景规则**：
+   - **添加命令**：新创建 → `isInitialized = false`（需要同步）
+   - **项目加载**：从文件恢复 → `isInitialized = true`（已有用户数据）
+   - **删除命令的 undo**：恢复原状态 → **保持原有的 `isInitialized` 值**
+   - **删除轨道的 undo**：恢复原状态 → **保持原有的 `isInitialized` 值**
+
+4. **设置时机**：
+   - `rebuildForCmd` 返回 ready 状态：在函数内部设置 `isInitialized = true`
+   - `rebuildForCmd` 返回 loading 状态：由调用方在添加到 timeline 前设置
+   - `TimelineItemTransitioner` 完成转换：设置 `isInitialized = true`
 
 ### 实现细节
 
-#### 1. 在 `rebuildForCmd` 中不设置 `isInitialized`
+#### 1. 在 `rebuildForCmd` 中的 `isInitialized` 设置规则
 
-`rebuildForCmd` 只负责重建时间轴项目，**不负责设置 `isInitialized`**。这个标记应该由调用方根据场景设置。
+`rebuildForCmd` 的 `isInitialized` 设置遵循以下规则：
+
+- **返回 ready 状态时**：在函数内部设置 `isInitialized = true`（已完成初始化）
+- **返回 loading 状态时**：不设置，由调用方根据场景设置
 
 ```typescript
-// TimelineItemFactory.rebuildForCmd() 不设置 isInitialized
-// 保持 runtime.isInitialized 为 undefined，由调用方设置
+// TimelineItemFactory.rebuildForCmd() 的 isInitialized 设置规则：
+// 1. ready 状态：函数内部设置 isInitialized = true
+// 2. loading 状态：由调用方根据场景设置
 ```
 
 #### 2. 在命令中根据场景设置 `isInitialized`
@@ -942,6 +1042,161 @@ shouldUpdateTimelineItem: !timelineItem.runtime.isInitialized
 - 未初始化的项目（`isInitialized = false`）→ `shouldUpdateTimelineItem = true` → 会被更新
 - 已初始化的项目（`isInitialized = true`）→ `shouldUpdateTimelineItem = false` → 不会被更新
 
+### 所有创建 TimelineItem 的地方及 `isInitialized` 设置规则
+
+#### 1. [`useTimelineItemOperations.createTimelineItemFromMediaItem()`](LightCut-frontend/src/core/composables/useTimelineItemOperations.ts:28)
+**场景**：用户从素材库拖拽素材到时间轴
+
+**当前代码**：
+```typescript
+const timelineItemData: UnifiedTimelineItemData = {
+  // ... 其他字段
+  timelineStatus: 'loading',
+  runtime: {
+    // ❌ 缺少 isInitialized 字段
+  },
+}
+```
+
+**需要修改为**：
+```typescript
+const timelineItemData: UnifiedTimelineItemData = {
+  // ... 其他字段
+  timelineStatus: 'loading',
+  runtime: {
+    isInitialized: false, // ✅ 新创建的项目，需要从 mediaItem 同步
+  },
+}
+```
+
+**说明**：这是用户直接拖拽素材创建的新项目，应该设置 `isInitialized = false`，让 MediaSync 从 mediaItem 同步数据。
+
+---
+
+#### 2. [`useBatchCommandBuilder.createAddTimelineItemCommand()`](LightCut-frontend/src/aipanel/composables/useBatchCommandBuilder.ts:90)
+**场景**：AI 面板批量添加素材到时间轴
+
+**当前代码**：
+```typescript
+const timelineItemData = {
+  // ... 其他字段
+  timelineStatus: timelineStatus, // 'ready' 或 'loading'
+  runtime: {
+    // ❌ 缺少 isInitialized 字段
+  },
+}
+```
+
+**需要修改为**：
+```typescript
+const timelineItemData = {
+  // ... 其他字段
+  timelineStatus: timelineStatus,
+  runtime: {
+    isInitialized: timelineStatus === 'ready' ? true : false,
+    // ✅ ready 状态：已完成初始化
+    // ✅ loading 状态：需要从 mediaItem 同步
+  },
+}
+```
+
+**说明**：
+- 如果 mediaItem 已经 ready，直接创建 ready 状态，`isInitialized = true`
+- 如果 mediaItem 还在 loading，创建 loading 状态，`isInitialized = false`
+
+---
+
+#### 3. [`TimelineItemFactory.cloneTimelineItem()`](LightCut-frontend/src/core/timelineitem/factory.ts:34)
+**场景**：克隆现有的 TimelineItem（用于命令的 undo/redo）
+
+**当前代码**：
+```typescript
+const cloned = cloneDeep({
+  ...original,
+  runtime: {}, // ❌ 清空了所有 runtime 字段（包括 bunnyClip、textBitmap、isInitialized 等）
+})
+```
+
+**需要修改为**：
+```typescript
+const cloned = cloneDeep({
+  ...original,
+  runtime: {
+    // ✅ 只保留 isInitialized，其他 runtime 字段（bunnyClip、textBitmap 等）会在后续重建
+    isInitialized: original.runtime.isInitialized,
+  },
+})
+```
+
+**说明**：
+- 克隆时需要保留原有的 `isInitialized` 状态，因为克隆的项目继承了原项目的初始化状态
+- 其他 runtime 字段（如 bunnyClip、textBitmap）会在后续的 `setupTimelineItemBunny` 中重新创建
+
+---
+
+#### 4. [`TimelineItemFactory.duplicateTimelineItem()`](LightCut-frontend/src/core/timelineitem/factory.ts:87)
+**场景**：复制 TimelineItem 到新轨道（用户复制粘贴）
+
+**当前实现**：调用 `cloneTimelineItem()`，会继承上面的修改
+
+**说明**：复制的项目应该保留原项目的 `isInitialized` 状态。
+
+---
+
+#### 5. [`TimelineItemFactory.rebuildForCmd()`](LightCut-frontend/src/core/timelineitem/factory.ts:219)
+**场景**：命令执行时重建 TimelineItem
+
+**当前代码**：
+```typescript
+const newTimelineItem = cloneTimelineItem(originalTimelineItemData, {
+  timelineStatus: 'loading',
+})
+// ❌ loading 状态时没有设置 isInitialized
+```
+
+**需要修改为**：
+```typescript
+// ⚠️ 注意：rebuildForCmd 的 isInitialized 设置规则
+// - ready 状态：函数内部设置 isInitialized = true
+// - loading 状态：由调用方根据场景设置（见计划文档中的规则）
+```
+
+**说明**：
+- `rebuildForCmd` 返回 ready 状态时，会在函数内部设置 `isInitialized = true`
+- `rebuildForCmd` 返回 loading 状态时，由调用方根据场景设置
+
+---
+
+#### 6. [`createTextTimelineItem()`](LightCut-frontend/src/core/utils/textTimelineUtils.ts)
+**场景**：创建文本类型的 TimelineItem
+
+**需要检查并修改**：
+```typescript
+const textItem = {
+  // ... 其他字段
+  runtime: {
+    isInitialized: true, // ✅ 文本项目不依赖外部媒体，直接完成初始化
+  },
+}
+```
+
+**说明**：文本项目不依赖外部媒体加载，创建时就已经完成初始化。
+
+---
+
+### 修改优先级和影响范围
+
+| 位置 | 优先级 | 影响范围 | 修改难度 |
+|------|--------|---------|---------|
+| `createTimelineItemFromMediaItem` | 🔴 高 | 用户拖拽素材 | 简单 |
+| `createAddTimelineItemCommand` (AI面板) | 🔴 高 | AI 批量操作 | 简单 |
+| `cloneTimelineItem` | 🔴 高 | 所有命令的 undo/redo | 中等 |
+| `duplicateTimelineItem` | 🟡 中 | 用户复制粘贴 | 简单（依赖 clone） |
+| `rebuildForCmd` | 🟢 低 | 已在计划中明确 | 无需修改 |
+| `createTextTimelineItem` | 🟡 中 | 创建文本项目 | 简单 |
+
+---
+
 ### 方案优势
 
 1. **解决核心问题**：完美解决 Undo 后数据被覆盖的问题
@@ -949,16 +1204,124 @@ shouldUpdateTimelineItem: !timelineItem.runtime.isInitialized
 3. **职责分离**：将"状态"和"是否初始化"两个维度分开
 4. **易于维护**：代码逻辑更清晰，减少理解成本
 5. **扩展性好**：为未来的运行时状态管理提供基础
+6. **类型安全**：必选字段避免了 `undefined` 的歧义
+7. **智能优化**：考虑 mediaItem ready 状态，避免不必要的 MediaSync 创建
+
+### 关键修正点总结
+
+#### 修正前的问题
+1. **`isInitialized` 是可选字段**（`isInitialized?: boolean`），存在 `undefined` 歧义
+2. **规则总结表不完整**：没有考虑 mediaItem 是否 ready 的情况
+3. **`rebuildForCmd` 行为不明确**：返回 ready 状态时，`isInitialized` 设置不清晰
+
+#### 修正后的改进
+
+1. **`isInitialized` 改为必选字段**（`isInitialized: boolean`）
+   - ✅ 消除 `undefined` 歧义
+   - ✅ 每个 TimelineItem 都有明确的初始化状态
+   - ✅ 类型系统强制要求设置此字段
+   
+2. **规则总结表增加 mediaItem ready 维度**
+   - ✅ 清晰区分 ready 和 loading 两种情况
+   - ✅ 明确何时创建 MediaSync，何时直接完成
+   - ✅ 涵盖所有可能的场景组合
+   
+3. **`rebuildForCmd` 智能设置 `isInitialized`**
+   - ✅ 返回 ready 状态：自动设置 `isInitialized = true`
+   - ✅ 返回 loading 状态：由调用方根据场景设置
+   - ✅ 职责清晰：函数内部处理 ready 情况，调用方处理 loading 情况
+   
+4. **所有代码示例统一更新**
+   - ✅ 添加 ready/loading 状态判断
+   - ✅ 正确设置 `isInitialized`
+   - ✅ 确保 `shouldUpdateTimelineItem` 与 `isInitialized` 一致
+
+#### 实际影响
+
+**场景 1：添加命令 + 媒体已 ready**
+```typescript
+// 修正前：创建 loading → MediaSync → 转换为 ready
+// 修正后：直接创建 ready，isInitialized = true（rebuildForCmd 自动设置）
+// 优势：消除不必要的异步操作
+```
+
+**场景 2：添加命令 + 媒体 loading**
+```typescript
+// 修正前：创建 loading，isInitialized 可能是 undefined
+// 修正后：创建 loading，调用方明确设置 isInitialized = false
+// 优势：类型安全，语义明确
+```
+
+**场景 3：项目加载 + 媒体 ready**
+```typescript
+// 修正前：创建 loading → MediaSync → 转换为 ready
+// 修正后：直接创建 ready，isInitialized = true（rebuildForCmd 自动设置）
+// 优势：加载速度更快
+```
+
+**场景 4：项目加载 + 媒体 loading**
+```typescript
+// 修正前：创建 loading，isInitialized 可能是 undefined，可能被错误覆盖
+// 修正后：创建 loading，调用方明确设置 isInitialized = true
+// 优势：保护用户数据不被覆盖
+```
+
+**场景 5：Undo 删除 + 媒体 ready**
+```typescript
+// 修正前：创建 loading → MediaSync → 可能覆盖原有数据
+// 修正后：直接创建 ready，isInitialized = true（rebuildForCmd 自动设置）
+// 优势：恢复速度快，数据安全
+```
+
+**场景 6：Undo 删除 + 媒体 loading**
+```typescript
+// 修正前：创建 loading，isInitialized 不明确，可能被错误覆盖
+// 修正后：创建 loading，保持原有的 isInitialized 值
+// 优势：完美保护原有状态
+```
 
 ---
 
 ## 实施计划
 
-### 阶段 0：修正 TimelineItemFactory.rebuildForCmd（优先级最高）
-- [ ] 修改 `rebuildForCmd` 实现，添加智能状态决策逻辑
+### 阶段 0：添加 `isInitialized` 字段到所有创建 TimelineItem 的地方（优先级最高）
+
+#### 0.1 修改类型定义
+- [ ] 修改 [`UnifiedTimelineItemRuntime`](LightCut-frontend/src/core/timelineitem/type.ts) 类型定义
+  - [ ] 将 `isInitialized?: boolean` 改为 `isInitialized: boolean`（必选字段）
+
+#### 0.2 修改创建 TimelineItem 的函数
+- [ ] 修改 [`createTimelineItemFromMediaItem()`](LightCut-frontend/src/core/composables/useTimelineItemOperations.ts:28)
+  - [ ] 在 `runtime` 中添加 `isInitialized: false`
+  - [ ] 添加注释说明：新创建的项目，需要从 mediaItem 同步
+
+- [ ] 修改 [`createAddTimelineItemCommand()`](LightCut-frontend/src/aipanel/composables/useBatchCommandBuilder.ts:90)
+  - [ ] 在 `runtime` 中添加 `isInitialized: timelineStatus === 'ready' ? true : false`
+  - [ ] 添加注释说明：根据 mediaItem 状态决定
+
+- [ ] 修改 [`cloneTimelineItem()`](LightCut-frontend/src/core/timelineitem/factory.ts:34)
+  - [ ] 在 `runtime` 中保留 `isInitialized: original.runtime.isInitialized`
+  - [ ] 添加注释说明：保留原有的初始化状态
+
+- [ ] 检查并修改 [`createTextTimelineItem()`](LightCut-frontend/src/core/utils/textTimelineUtils.ts)
+  - [ ] 在 `runtime` 中添加 `isInitialized: true`
+  - [ ] 添加注释说明：文本项目不依赖外部媒体，直接完成初始化
+
+#### 0.3 修改 `rebuildForCmd` 实现
+- [ ] 修改 [`rebuildForCmd`](LightCut-frontend/src/core/timelineitem/factory.ts:219) 实现，添加智能状态决策逻辑
 - [ ] 添加对 `UnifiedMediaItemQueries.isReady()` 的调用
-- [ ] 更新文本项目处理逻辑，直接返回 ready 状态
-- [ ] 测试修正后的行为：
+- [ ] 更新文本项目处理逻辑，直接返回 ready 状态并设置 `isInitialized = true`
+- [ ] 更新媒体项目处理逻辑：
+  - [ ] 媒体已 ready：返回 ready 状态，设置 `isInitialized = true`
+  - [ ] 媒体未 ready：返回 loading 状态，不设置 `isInitialized`（由调用方设置）
+
+#### 0.4 测试修正后的行为
+- [ ] 测试用户拖拽素材到时间轴
+- [ ] 测试 AI 面板批量添加素材
+- [ ] 测试命令的 undo/redo
+- [ ] 测试用户复制粘贴
+- [ ] 测试创建文本项目
+- [ ] 测试 `rebuildForCmd` 的智能状态决策：
   - [ ] 媒体已 ready 时返回 ready 状态
   - [ ] 媒体未 ready 时返回 loading 状态
   - [ ] 文本项目返回 ready 状态
@@ -1024,8 +1387,15 @@ async execute(): Promise<void> {
 
     const newTimelineItem = rebuildResult.timelineItem
 
-    // ✅ 添加命令：新创建的项目，未初始化
-    newTimelineItem.runtime.isInitialized = false
+    // ✅ 根据 TimelineItem 状态设置 isInitialized
+    if (newTimelineItem.timelineStatus === 'ready') {
+      // 媒体已就绪，rebuildForCmd 已设置 isInitialized = true
+      // 无需额外操作
+    } else {
+      // 媒体未就绪，loading 状态
+      // 添加命令：新创建的项目，未初始化
+      newTimelineItem.runtime.isInitialized = false
+    }
 
     // 1. 添加到时间轴
     await this.timelineModule.addTimelineItem(newTimelineItem)
@@ -1165,8 +1535,16 @@ async undo(): Promise<void> {
 
     const newTimelineItem = rebuildResult.timelineItem
 
-    // ✅ 删除命令的 undo：恢复原有的 isInitialized 标记（保持原封不动）
-    newTimelineItem.runtime.isInitialized = this.originalTimelineItemData.runtime.isInitialized ?? true
+    // ✅ 根据 TimelineItem 状态设置 isInitialized
+    if (newTimelineItem.timelineStatus === 'ready') {
+      // 媒体已就绪，rebuildForCmd 已设置 isInitialized = true
+      // 无需额外操作
+    } else {
+      // 媒体未就绪，loading 状态
+      // 删除命令的 undo：恢复原有的 isInitialized 标记
+      // 注意：isInitialized 是必选字段，originalTimelineItemData 中一定有值
+      newTimelineItem.runtime.isInitialized = this.originalTimelineItemData.runtime.isInitialized
+    }
 
     // 1. 添加到时间轴
     await this.timelineModule.addTimelineItem(newTimelineItem)
@@ -1302,8 +1680,16 @@ async undo(): Promise<void> {
 
       const newTimelineItem = rebuildResult.timelineItem
 
-      // ✅ 删除轨道命令的 undo：恢复原有的 isInitialized 标记（保持原封不动）
-      newTimelineItem.runtime.isInitialized = itemData.runtime.isInitialized ?? true
+      // ✅ 根据 TimelineItem 状态设置 isInitialized
+      if (newTimelineItem.timelineStatus === 'ready') {
+        // 媒体已就绪，rebuildForCmd 已设置 isInitialized = true
+        // 无需额外操作
+      } else {
+        // 媒体未就绪，loading 状态
+        // 删除轨道命令的 undo：恢复原有的 isInitialized 标记
+        // 注意：isInitialized 是必选字段，itemData 中一定有值
+        newTimelineItem.runtime.isInitialized = itemData.runtime.isInitialized
+      }
 
       // 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
@@ -1394,8 +1780,15 @@ async function restoreTimelineItems(
 
           const newTimelineItem = rebuildResult.timelineItem
 
-          // ✅ 项目加载：从工程文件加载，已初始化
-          newTimelineItem.runtime.isInitialized = true
+          // ✅ 根据 TimelineItem 状态设置 isInitialized
+          if (newTimelineItem.timelineStatus === 'ready') {
+            // 媒体已就绪，rebuildForCmd 已设置 isInitialized = true
+            // 无需额外操作
+          } else {
+            // 媒体未就绪，loading 状态
+            // 项目加载：从工程文件加载，已初始化（已有用户调整的数据）
+            newTimelineItem.runtime.isInitialized = true
+          }
 
           // 1. 添加到时间轴
           await timelineModule.addTimelineItem(newTimelineItem)

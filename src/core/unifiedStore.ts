@@ -26,7 +26,6 @@ import {
   isPlayheadInTimelineItem,
   findOverlappingTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
-import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/factory'
 
 /**
  * 统一视频编辑器存储
@@ -232,10 +231,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     getReadyTimelineItem: unifiedTimelineModule.getReadyTimelineItem,
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
-
-    // 时间轴项目工厂函数
-    cloneTimelineItemData: cloneTimelineItem,
-    duplicateTimelineItem,
 
     // ==================== 统一项目模块状态和方法 ====================
 

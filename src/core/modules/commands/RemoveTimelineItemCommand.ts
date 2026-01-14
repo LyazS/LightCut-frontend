@@ -15,7 +15,8 @@ import type { VideoResolution } from '@/core/types'
 // ==================== 新架构工具导入 ====================
 import { TimelineItemFactory } from '@/core/timelineitem'
 
-import { MediaSyncFactory, cleanupCommandMediaSync } from '@/core/managers/media'
+import { MediaSync } from '@/core/managers/media'
+import type { MediaSyncOptions } from '@/core/managers/media'
 
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
@@ -29,6 +30,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly description: string
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
   private _isDisposed = false
+  private mediaSync?: MediaSync // 持有MediaSync引用
 
   constructor(
     private timelineItemId: string,
@@ -64,21 +66,25 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       if (!this.originalTimelineItemData) {
         // 保存重建所需的完整元数据
         this.originalTimelineItemData = TimelineItemFactory.clone(existingItem)
-        console.log('💾 保存删除已知项目的重建数据:', {
-          id: this.originalTimelineItemData.id,
-          mediaItemId: this.originalTimelineItemData.mediaItemId,
-          mediaType: this.originalTimelineItemData.mediaType,
-          timeRange: this.originalTimelineItemData.timeRange,
-          config: this.originalTimelineItemData.config,
-        })
       }
 
       // 设置媒体同步（只针对loading状态的项目）
+      // 注意：即使项目即将被删除，仍需要同步以更新命令数据（用于撤销）
       if (TimelineItemQueries.isLoading(existingItem)) {
-        const mediaItem = this.mediaModule.getMediaItem(existingItem.mediaItemId)
-        if (mediaItem) {
-          MediaSyncFactory.forCommand(this.id, mediaItem.id).setup()
+        // 先清理旧的MediaSync实例（防止重复执行时创建多个同步）
+        if (this.mediaSync) {
+          this.mediaSync.cleanup()
+          this.mediaSync = undefined
         }
+
+        this.mediaSync = new MediaSync(existingItem.mediaItemId, {
+          syncId: this.id, // 使用命令ID作为syncId
+          timelineItemIds: [existingItem.id], // 保存时间轴项目ID
+          shouldUpdateCommand: !existingItem.runtime.isInitialized, // 需要更新命令数据（撤销用）
+          commandId: this.id,
+          description: `RemoveTimelineItemCommand: ${this.id}`,
+        })
+        await this.mediaSync.setup()
       }
 
       // 删除时间轴项目（这会自动处理sprite的清理和WebAV画布移除）
@@ -117,13 +123,26 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       // 1. 添加到时间轴
       await this.timelineModule.addTimelineItem(newTimelineItem)
 
-      // 2. 针对loading状态的项目设置状态同步（确保时间轴项目已添加到store）
+      // 2. 针对loading状态的项目设置状态同步
       if (TimelineItemQueries.isLoading(newTimelineItem)) {
-        MediaSyncFactory.forCommand(
-          this.id,
-          newTimelineItem.mediaItemId,
-          newTimelineItem.id,
-        ).setup()
+        // 先清理旧的MediaSync实例（防止重复执行时创建多个同步）
+        if (this.mediaSync) {
+          this.mediaSync.cleanup()
+          this.mediaSync = undefined
+        }
+
+        // 🔧 关键：根据 isInitialized 决定是否需要更新命令数据
+        // - 如果已初始化：命令中已有完整数据，不需要更新命令（shouldUpdateCommand = false）
+        // - 如果未初始化：需要等待媒体就绪后更新命令数据（shouldUpdateCommand = true）
+
+        this.mediaSync = new MediaSync(newTimelineItem.mediaItemId, {
+          syncId: this.id,
+          timelineItemIds: [newTimelineItem.id],
+          shouldUpdateCommand: !newTimelineItem.runtime.isInitialized,
+          commandId: this.id,
+          description: `RemoveTimelineItemCommand undo: ${this.id}`,
+        })
+        await this.mediaSync.setup()
       }
       console.log(`✅ 已撤销删除时间轴项目: ${this.originalTimelineItemData.id}`)
     } catch (error) {
@@ -186,8 +205,11 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     }
 
     this._isDisposed = true
-    // 清理媒体同步
-    cleanupCommandMediaSync(this.id)
+    // 清理MediaSync
+    if (this.mediaSync) {
+      this.mediaSync.cleanup()
+      this.mediaSync = undefined
+    }
     console.log(`🗑️ [RemoveTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

@@ -2,16 +2,11 @@
  * 媒体同步模块导出
  */
 
-export { MediaSyncFactory } from './MediaSyncFactory'
-export { BaseMediaSync } from './BaseMediaSync'
-export { CommandMediaSync } from './CommandMediaSync'
-export { ProjectLoadMediaSync } from './ProjectLoadMediaSync'
+// 新的统一MediaSync类
+export { MediaSync } from './MediaSync'
+export type { MediaSyncOptions } from './MediaSync'
+
 export { TimelineItemTransitioner } from './TimelineItemTransitioner'
-export {
-  MediaSyncManager,
-  cleanupCommandMediaSync,
-  cleanupProjectLoadMediaSync,
-  cleanupMediaItemSync,
-  getMediaSyncInfo,
-} from './MediaSyncManager'
-export type { MediaSyncScenario, MediaSyncInfo, TransitionOptions, IMediaSync } from './types'
+
+// 类型导出
+export type { TransitionOptions } from './types'

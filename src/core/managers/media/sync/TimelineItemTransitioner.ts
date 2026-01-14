@@ -18,122 +18,77 @@ import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 /**
- * 时间轴项目状态转换器（增强版 - 支持文本类型）
+ * 时间轴项目状态转换器（不支持文本类型）
  */
 export class TimelineItemTransitioner {
   constructor(
     private timelineItemId: string,
-    private mediaItem?: UnifiedMediaItemData, // 文本类型时为 undefined
+    private mediaItem: UnifiedMediaItemData,
   ) {}
 
   /**
    * 转换时间轴项目为 ready 状态（支持文本类型）
    */
   async transitionToReady(options: TransitionOptions): Promise<void> {
-    try {
-      const { scenario, commandId, description } = options
-      console.log(`🎨 [TimelineItemTransitioner] 开始转换时间轴项目状态: ${this.timelineItemId}`, {
-        scenario,
-        commandId,
-        mediaType: this.mediaItem?.mediaType || 'text',
-      })
+    const { commandId, description } = options
+    const store = useUnifiedStore()
+    const timelineItem = store.getTimelineItem(this.timelineItemId)
 
-      const store = useUnifiedStore()
-      const timelineItem = store.getTimelineItem(this.timelineItemId)
-
-      if (!timelineItem) {
-        console.log(
-          `⚠️ [TimelineItemTransitioner] 找不到时间轴项目: ${this.timelineItemId}，跳过状态转换`,
-        )
-        return
-      }
-
-      if (timelineItem.timelineStatus !== 'loading') {
-        console.log(
-          `⏭️ [TimelineItemTransitioner] 跳过状态转换，时间轴项目状态不是loading: ${this.timelineItemId}`,
-          {
-            currentStatus: timelineItem.timelineStatus,
-            scenario,
-            commandId,
-          },
-        )
-        return
-      }
-
-      // 检查是否为文本类型
-      if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
-        await this.transitionTextTimelineItem(timelineItem, options)
-      } else {
-        await this.transitionMediaTimelineItem(
-          timelineItem as UnifiedTimelineItemData<Exclude<MediaType, 'text'>>,
-          options,
-        )
-      }
-
-      // 通用的后续处理
-      timelineItem.timelineStatus = 'ready'
-
-      console.log(`🎉 [TimelineItemTransitioner] 时间轴项目状态转换完成: ${this.timelineItemId}`)
-    } catch (error) {
-      console.error(
-        `❌ [TimelineItemTransitioner] 转换时间轴项目状态失败: ${this.timelineItemId}`,
-        error,
+    if (!timelineItem) {
+      console.log(
+        `⚠️ [TimelineItemTransitioner] 找不到时间轴项目: ${this.timelineItemId}，跳过状态转换`,
       )
-      throw error
-    }
-  }
-
-  /**
-   * 处理文本类型的状态转换
-   */
-  private async transitionTextTimelineItem(
-    timelineItem: UnifiedTimelineItemData<'text'>,
-    options: TransitionOptions,
-  ): Promise<void> {
-    console.log(`🎨 [TimelineItemTransitioner] 转换文本时间轴项目: ${timelineItem.id}`)
-
-    // 使用 setupTimelineItemBunny 创建 textBitmap
-    await setupTimelineItemBunny(timelineItem)
-    // 如果是命令加入的，还需要更新原本时间轴项目的尺寸
-    if (options.scenario === 'command') {
-      timelineItem.config.width = timelineItem.runtime.textBitmap?.width ?? 0
-      timelineItem.config.height = timelineItem.runtime.textBitmap?.height ?? 0
+      return
     }
 
-    console.log(`✅ [TimelineItemTransitioner] 文本时间轴项目转换完成: ${timelineItem.id}`)
-  }
+    console.log(`🎨 [TimelineItemTransitioner] 开始转换时间轴项目状态: ${this.timelineItemId}`, {
+      isInitialized: timelineItem.runtime.isInitialized,
+      commandId,
+      mediaType: this.mediaItem.mediaType,
+    })
 
-  /**
-   * 处理媒体类型的状态转换（现有逻辑）
-   */
-  private async transitionMediaTimelineItem(
-    timelineItem: UnifiedTimelineItemData<Exclude<MediaType, 'text'>>,
-    options: TransitionOptions,
-  ): Promise<void> {
-    if (!this.mediaItem) {
-      throw new Error('媒体类型的时间轴项目必须提供 mediaItem')
+    if (timelineItem.timelineStatus !== 'loading') {
+      console.log(
+        `⏭️ [TimelineItemTransitioner] 跳过状态转换，时间轴项目状态不是loading: ${this.timelineItemId}`,
+        {
+          currentStatus: timelineItem.timelineStatus,
+          isInitialized: timelineItem.runtime.isInitialized,
+          commandId,
+        },
+      )
+      return
     }
 
-    // 如果是工程加载的，时间轴项目已经同步了素材属性或者用户修改了的，因此不需要更新
-    // 如果是命令加入的，由于时间轴项目还是初始化状态，因此需要使用素材属性来更新项目属性
-    if (options.scenario === 'command') {
-      this.updateTimelineItem(timelineItem)
+    // 检查是否为文本类型
+    if (TimelineItemQueries.isTextTimelineItem(timelineItem)) {
+      // 不应该出现文本类型的
+      console.warn(
+        `⚠️ [TimelineItemTransitioner] 文本类型时间轴项目不需要状态转换: ${this.timelineItemId}`,
+      )
+    } else {
+      // 媒体类型的状态转换
+      // 🔧 直接检查 isInitialized，而不是使用 shouldUpdateTimelineItem
+      // 只有未初始化的项目才需要从媒体项目同步数据
+      if (!timelineItem.runtime.isInitialized) {
+        this.updateTimelineItem(timelineItem)
+      }
+
+      await setupTimelineItemBunny(timelineItem, this.mediaItem)
     }
 
-    await setupTimelineItemBunny(timelineItem, this.mediaItem)
+    // 通用的后续处理
+    timelineItem.timelineStatus = 'ready'
+
+    // ✅ 完成初始化后，标记为已初始化
+    timelineItem.runtime.isInitialized = true
+
+    console.log(`🎉 [TimelineItemTransitioner] 时间轴项目状态转换完成: ${this.timelineItemId}`)
   }
 
   /**
    * 更新时间轴项目的尺寸信息
    */
   private updateTimelineItem(timelineItem: UnifiedTimelineItemData): void {
-    if (!this.mediaItem) {
-      console.warn(
-        `⚠️ [TimelineItemTransitioner] 无法更新尺寸，mediaItem 不存在: ${timelineItem.id}`,
-      )
-      return
-    }
-
     // 更新timeRange - 使用媒体项目的duration
     if (this.mediaItem.duration && timelineItem.timeRange) {
       const duration = this.mediaItem.duration

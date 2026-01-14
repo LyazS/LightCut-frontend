@@ -86,7 +86,10 @@ export async function createTextTimelineItem(
     config: textConfig,
     animation: undefined, // 新创建的文本项目默认没有动画
     timelineStatus: 'loading', // 文本项目创建后即为就绪状态
-    runtime: {}, // 不包含 sprite，需要单独创建
+    runtime: {
+      // ✅ 文本项目不依赖外部媒体，直接完成初始化
+      isInitialized: true,
+    },
   })
 
   return timelineItem
