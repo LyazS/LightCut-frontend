@@ -8,7 +8,3 @@ export { UnifiedProjectManager, unifiedProjectManager } from './project/UnifiedP
 
 // ==================== 文件系统服务 ====================
 export { fileSystemService } from './filesystem/fileSystemService'
-
-// ==================== 媒体管理器 ====================
-
-// 媒体同步相关导出已移除，请使用新的 MediaSync 类

@@ -77,16 +77,6 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
    * 标识时间轴项目是否已经从 mediaItem 初始化过（必选字段）
    * - true: 已经初始化，不应该再从 mediaItem 同步数据
    * - false: 未初始化，需要等待 mediaItem ready 后同步数据
-   *
-   * 设置时机：
-   * 1. rebuildForCmd 返回 ready 状态时：自动设置为 true（已完成初始化）
-   * 2. rebuildForCmd 返回 loading 状态时：由调用方根据场景设置
-   * 3. TimelineItemTransitioner 完成转换后：设置为 true（标记初始化完成）
-   *
-   * 使用场景：
-   * 1. 项目加载：从工程文件加载的项目，isInitialized = true（已有用户调整的数据）
-   * 2. 命令添加：新创建的项目，isInitialized = false（需要从 mediaItem 同步）
-   * 3. Undo/Redo：从命令恢复的项目，保持原有的 isInitialized 值
    */
   isInitialized: boolean
 }

@@ -10,7 +10,6 @@ import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManag
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
 import { MediaSync } from '@/core/managers/media'
-import type { MediaSyncOptions } from '@/core/managers/media'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { i18n } from '@/locales'
@@ -542,16 +541,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
             }
 
             const newTimelineItem = rebuildResult.timelineItem
-
-            // ✅ 根据 TimelineItem 状态设置 isInitialized
-            if (newTimelineItem.timelineStatus === 'ready') {
-              // 媒体已就绪，rebuildForCmd 已设置 isInitialized = true
-              // 无需额外操作
-            } else {
-              // 媒体未就绪，loading 状态
-              // 项目加载场景：从磁盘加载的项目，视为已初始化
-              newTimelineItem.runtime.isInitialized = true
-            }
 
             // 添加到时间轴
             await timelineModule.addTimelineItem(newTimelineItem)

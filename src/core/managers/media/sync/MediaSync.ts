@@ -14,42 +14,8 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { UnifiedMediaItemQueries } from '@/core/mediaitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { TimelineItemTransitioner } from './TimelineItemTransitioner'
-
-/**
- * 媒体同步配置选项
- */
-export interface MediaSyncOptions {
-  /**
-   * 同步标识符（用于日志和调试）
-   * - 命令场景：使用 commandId
-   * - 项目加载场景：使用 timelineItemId
-   */
-  syncId: string
-  
-  /**
-   * 时间轴项目ID列表
-   * 保存在配置中，因为在某些场景（如删除命令）中，
-   * 时间轴项目可能已经被删除，无法从 store 中获取
-   */
-  timelineItemIds: string[]
-  
-  /**
-   * 是否需要更新命令数据
-   * - true: 媒体就绪时调用 command.updateMediaData()
-   * - false: 不更新命令
-   */
-  shouldUpdateCommand: boolean
-  
-  /**
-   * 命令ID（当 shouldUpdateCommand 为 true 时必需）
-   */
-  commandId?: string
-  
-  /**
-   * 场景描述（用于日志和调试）
-   */
-  description?: string
-}
+import { sleep } from '@/utils/fetchClient'
+import type { MediaSyncOptions } from './types'
 
 /**
  * 统一的媒体同步类
@@ -61,7 +27,7 @@ export class MediaSync {
 
   constructor(
     private mediaItemId: string,
-    private options: MediaSyncOptions
+    private options: MediaSyncOptions,
   ) {
     this.syncId = options.syncId
   }
@@ -151,12 +117,12 @@ export class MediaSync {
    */
   private async transitionTimelineItem(
     mediaItem: UnifiedMediaItemData,
-    timelineItemId: string
+    timelineItemId: string,
   ): Promise<void> {
     // 检查时间轴项目是否还存在（可能已被删除）
     const store = useUnifiedStore()
     const timelineItem = store.getTimelineItem(timelineItemId)
-    
+
     if (!timelineItem) {
       console.log(`⏭️ [MediaSync] 时间轴项目不存在，跳过转换: ${timelineItemId}`)
       return
@@ -185,6 +151,7 @@ export class MediaSync {
         })
 
         if (newStatus === 'ready') {
+          // await sleep(5 * 1000) // 测试延迟准备 --- IGNORE ---
           await this.handleReadyMedia(mediaItem)
           // 媒体就绪后自动清理watcher
           this.cleanup()
@@ -194,7 +161,7 @@ export class MediaSync {
           this.cleanup()
         }
       },
-      { immediate: true }
+      { immediate: true },
     )
   }
 
