@@ -60,10 +60,10 @@
         </button>
 
         <!-- 调试输出按钮 -->
-        <!-- <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
+        <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
           <component :is="IconComponents.DEBUG" size="16px" class="button-icon" />
           <span>调试输出</span>
-        </button> -->
+        </button>
       </div>
     </n-scrollbar>
   </div>

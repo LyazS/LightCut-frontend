@@ -162,8 +162,8 @@ const initializePanelPercentages = () => {
 }
 
 // 响应式数据
-const previewHeight = ref(45)
-const timelineHeight = ref(55)
+const previewHeight = ref(66)
+const timelineHeight = ref(34)
 const isDragging = ref(false)
 
 // 垂直分割器相关
