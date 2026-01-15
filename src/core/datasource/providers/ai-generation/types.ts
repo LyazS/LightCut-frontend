@@ -12,6 +12,7 @@ export enum AITaskType {
   TEXT_TO_IMAGE = 'text_to_image',
   REMOTE_IMAGE = 'remote_image',
   BIZYAIR_GENERATE_MEDIA = 'bizyair_generate_media',
+  BLTCY_SORA2 = 'bltcy_sora2',  // BLTCY Sora2 视频生成（支持 T2V 和 I2V）
 }
 
 /**
@@ -276,7 +277,7 @@ export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConf
 /**
  * 上传服务器类型
  */
-export type UploadServerType = 'bizyair' | string
+export type UploadServerType = 'bizyair' | 'bltcy'
 
 /**
  * AI 生成配置结构

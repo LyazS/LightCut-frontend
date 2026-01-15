@@ -84,6 +84,7 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { fetchClient } from '@/utils/fetchClient'
 import { generateMediaId } from '@/core/utils/idGenerator'
 import { BizyairFileUploader } from '@/core/utils/bizyairFileUploader'
+import { BltcyFileUploader } from '@/core/utils/bltcyFileUploader'
 import {
   AIGenerationSourceFactory,
   TaskStatus,
@@ -216,6 +217,18 @@ async function handleGenerate() {
     if (uploadServer) {
       if (uploadServer === 'bizyair') {
         newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {
+            unifiedStore.messageSuccess('文件上传完成')
+          },
+        )
+      } else if (uploadServer === 'bltcy') {
+        newConfig = await BltcyFileUploader.processConfigUploads(
           aiConfig.value,
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
@@ -383,6 +396,18 @@ async function handleDebugOutput() {
     if (uploadServer) {
       if (uploadServer === 'bizyair') {
         newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+        )
+
+        console.log('🔍 [GeneratePanel] 上传后的配置:')
+        console.log(JSON.stringify(newConfig, null, 2))
+      } else if (uploadServer === 'bltcy') {
+        newConfig = await BltcyFileUploader.processConfigUploads(
           aiConfig.value,
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
