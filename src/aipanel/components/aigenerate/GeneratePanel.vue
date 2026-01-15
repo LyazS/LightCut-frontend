@@ -34,7 +34,7 @@
         />
 
         <!-- 输出位置选择 -->
-        <div v-if="aiConfig" class="output-location-field">
+        <!-- <div v-if="aiConfig" class="output-location-field">
           <label class="field-label">
             {{ t('aiPanel.outputLocation') }}
           </label>
@@ -46,7 +46,7 @@
               {{ t('aiPanel.currentDirectory') }}
             </n-radio>
           </n-radio-group>
-        </div>
+        </div> -->
 
         <!-- 发送按钮 -->
         <button
@@ -60,10 +60,10 @@
         </button>
 
         <!-- 调试输出按钮 -->
-        <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
+        <!-- <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
           <component :is="IconComponents.DEBUG" size="16px" class="button-icon" />
           <span>调试输出</span>
-        </button>
+        </button> -->
       </div>
     </n-scrollbar>
   </div>
