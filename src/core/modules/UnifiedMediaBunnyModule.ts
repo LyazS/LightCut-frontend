@@ -39,6 +39,7 @@ import {
   type FrameData,
   type RenderContext,
 } from '@/core/bunnyUtils/canvasRenderer'
+import { TimelineItemsBufferManager } from '@/core/mediabunny/TimelineItemsBufferManager'
 
 if (!(await canEncodeAudio('mp3'))) {
   registerMp3Encoder()
@@ -68,6 +69,9 @@ export function createUnifiedMediaBunnyModule(
   let mRenderLoopCleanup: (() => void) | null = null
   const mExpectFrameTime: number = 1000 / RENDERER_FPS
   let mUpdatingClip: boolean = false
+
+  // ✨ 双缓冲管理器
+  let mBufferManager: TimelineItemsBufferManager | null = null
 
   // Web Audio API 相关
   let mAudioContext: AudioContext | null = null
@@ -112,6 +116,9 @@ export function createUnifiedMediaBunnyModule(
         width: mCanvas.width,
         height: mCanvas.height,
       })
+
+      // ✨ 初始化缓冲管理器
+      mBufferManager = new TimelineItemsBufferManager(RENDERER_FPS)
 
       // 初始化音频系统
       initializeAudioSystem()
@@ -161,6 +168,12 @@ export function createUnifiedMediaBunnyModule(
       frameData.videoSample.close()
     }
     mBunnyCurFrameMap.clear()
+
+    // ✨ 清理缓冲管理器
+    if (mBufferManager) {
+      mBufferManager.clearBuffers()
+      mBufferManager = null
+    }
 
     // 清理引用（不删除 canvas 元素，由 Vue 组件管理）
     mCanvas = null
@@ -284,6 +297,7 @@ export function createUnifiedMediaBunnyModule(
         oldFrame?.videoSample.close()
         mBunnyCurFrameMap.set(item.id, {
           frameNumber: currentTime,
+          clockwiseRotation: bunnyClip.clockwiseRotation,
           videoSample: video,
         })
       }
@@ -314,7 +328,23 @@ export function createUnifiedMediaBunnyModule(
     if (mUpdatingClip) return
     mUpdatingClip = true
 
-    for (const item of timelineItems) {
+    // ✨ 使用缓冲管理器获取要处理的 items
+    const itemsToProcess =
+      mBufferManager && playbackModule.isPlaying.value
+        ? mBufferManager.getItemsForRendering(timelineItems, currentTime)
+        : timelineItems
+
+    // ✨ 检查是否需要更新后台缓冲
+    if (
+      playbackModule.isPlaying.value &&
+      mBufferManager &&
+      mBufferManager.shouldUpdateBuffer(currentTime)
+    ) {
+      // 异步更新后台缓冲，不阻塞当前渲染
+      void mBufferManager.updateBackBuffer(timelineItems, currentTime)
+    }
+
+    for (const item of itemsToProcess) {
       // 应用动画插值到 config
       applyAnimationToConfig(item, currentTime)
 
@@ -325,7 +355,7 @@ export function createUnifiedMediaBunnyModule(
       ) {
         const track = trackModule.getTrack(item.trackId || '')
         const isTrackMuted = track?.isMuted ?? false
-        
+
         // ✅ 使用辅助函数获取渲染配置（包含动画插值后的音量）
         const config = TimelineItemQueries.getRenderConfig(item)
         const isItemMuted = config.isMuted ?? false
@@ -388,12 +418,16 @@ export function createUnifiedMediaBunnyModule(
   /**
    * 调度音频缓冲
    */
-  function scheduleAudioBuffers(wrappedBuffers: WrappedAudioBuffer[], rate: number, volume: number): void {
+  function scheduleAudioBuffers(
+    wrappedBuffers: WrappedAudioBuffer[],
+    rate: number,
+    volume: number,
+  ): void {
     if (!mAudioContext || !mGainNode) return
 
     for (const wrapped of wrappedBuffers) {
       const node = mAudioContext.createBufferSource()
-      node.buffer = wrapped.buffer  // 直接使用 AudioBuffer，无需转换
+      node.buffer = wrapped.buffer // 直接使用 AudioBuffer，无需转换
       node.playbackRate.value = rate
 
       // 为每个音频节点创建独立的增益节点以控制音量
@@ -474,6 +508,11 @@ export function createUnifiedMediaBunnyModule(
   function seekToFrame(frames: number): void {
     stopAllAudioNodes()
 
+    // ✨ Seek 时清空所有缓冲
+    if (mBufferManager) {
+      mBufferManager.clearBuffers()
+    }
+
     // seek只需要更新 mPlaybackTimeAtStart 即可
     // 渲染循环会不断以 mPlaybackTimeAtStart 为基准点来渲染
     const clampedFrames = Math.max(0, Math.min(mTimelineDuration, frames))
@@ -538,6 +577,58 @@ export function createUnifiedMediaBunnyModule(
     return destroy()
   }
 
+  // ==================== 截帧功能 ====================
+
+  /**
+   * 截取当前画布画面并下载
+   * @param filename 下载文件名（可选，默认为 'screenshot-时间戳.png'）
+   * @returns Promise<Blob> 返回截取的 Blob 对象
+   */
+  async function captureCanvasFrame(filename?: string): Promise<Blob> {
+    if (!mCanvas || !mCtx) {
+      throw new Error('Canvas 未初始化，无法截帧')
+    }
+
+    try {
+      // 将 Canvas 内容转换为 Blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        mCanvas!.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob)
+            } else {
+              reject(new Error('Canvas 转换为 Blob 失败'))
+            }
+          },
+          'image/png',
+          1.0, // 最高质量
+        )
+      })
+
+      // 生成文件名
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      const defaultFilename = `screenshot-${timestamp}.png`
+      const finalFilename = filename || defaultFilename
+
+      // 创建下载链接并触发下载
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = finalFilename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      console.log(`📸 画布截帧成功: ${finalFilename}`)
+      return blob
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error('❌ 画布截帧失败:', errorMessage)
+      throw error
+    }
+  }
+
   // ==================== 导出接口 ====================
 
   return {
@@ -555,6 +646,9 @@ export function createUnifiedMediaBunnyModule(
     stopPlayback,
     seekToFrame,
     updateTimelineDuration,
+
+    // 截帧功能
+    captureCanvasFrame,
 
     // 工具方法
     isMediaBunnyAvailable,

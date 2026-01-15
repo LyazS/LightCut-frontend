@@ -3,7 +3,7 @@
  * 基于新架构从零开始实现
  */
 
-import type { FileInputConfig } from '@/core/datasource/providers/ai-generation/types'
+import type { FileInputConfig, MultiFileData } from '@/core/datasource/providers/ai-generation/types'
 
 // ==================== 拖拽源类型 ====================
 
@@ -142,6 +142,8 @@ export interface FolderOrTabDropTargetInfo {
 export interface AIGenerationPanelDropTargetInfo {
   targetType: DropTargetType.AI_GENERATION_PANEL
   fieldConfig: FileInputConfig // 字段配置信息
+  targetIndex?: number // 目标槽位索引
+  currentFiles?: MultiFileData // 当前已有文件
   position?: never
 }
 
@@ -183,6 +185,15 @@ export interface DragPreviewData {
 export interface DropResult {
   success: boolean
   data?: any // 可选的返回数据
+  error?: string // 错误信息
+}
+
+/**
+ * 多文件拖拽放置结果
+ */
+export interface MultiFileDropResult extends DropResult {
+  targetIndex?: number // 目标槽位索引
+  operation?: 'add' | 'replace' // 操作类型
 }
 
 // ==================== 拖拽处理器接口 ====================

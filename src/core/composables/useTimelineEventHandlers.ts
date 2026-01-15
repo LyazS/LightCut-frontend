@@ -121,7 +121,7 @@ export function useTimelineEventHandlers(
   /**
    * 处理键盘事件
    */
-  function handleKeyDown(event: KeyboardEvent) {
+  async function handleKeyDown(event: KeyboardEvent) {
     // 检查是否有修饰键（除了Escape和Delete），如果有则不处理（让全局快捷键处理）
     if (
       (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) &&
@@ -140,9 +140,9 @@ export function useTimelineEventHandlers(
     if (event.key === 'Delete') {
       const selectedItems = unifiedStore.selectedTimelineItemIds
       if (selectedItems.size > 0) {
-        selectedItems.forEach((itemId: string) => {
-          handleTimelineItemRemove(itemId)
-        })
+        for (const itemId of selectedItems) {
+          await handleTimelineItemRemove(itemId)
+        }
       }
     }
   }

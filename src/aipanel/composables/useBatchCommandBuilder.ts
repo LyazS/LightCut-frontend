@@ -150,7 +150,12 @@ export function useBatchCommandBuilder(
       config: config,
       animation: undefined, // 新创建的项目默认没有动画
       timelineStatus: timelineStatus,
-      runtime: {}, // 添加必需的 runtime 字段
+      runtime: {
+        // ✅ 根据 mediaItem 状态决定：
+        // - ready 状态：已完成初始化
+        // - loading 状态：需要从 mediaItem 同步
+        isInitialized: timelineStatus === 'ready' ? true : false,
+      },
     }
 
     return new AddTimelineItemCommand(

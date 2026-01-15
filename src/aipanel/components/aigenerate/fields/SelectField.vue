@@ -13,7 +13,7 @@
         :key="option.value"
         :value="option.value"
       >
-        {{ option.label }}
+        {{ option.label[locale] }}
       </option>
     </select>
   </div>

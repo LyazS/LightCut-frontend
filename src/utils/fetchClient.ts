@@ -218,7 +218,7 @@ export class FetchClient {
   private async streamWithoutAuth<T>(
     method: 'GET' | 'POST',
     url: string,
-    onMessage: (message: T) => void,
+    onMessage: (message: T) => boolean | void,
     data?: any,
     config: RequestConfig = {},
   ): Promise<void> {
@@ -265,7 +265,11 @@ export class FetchClient {
 
         // 处理每个JSON消息
         for (const message of messages) {
-          onMessage(message)
+          const shouldStop = onMessage(message)
+          if (shouldStop) {
+            console.log('[FetchClient] 收到停止信号，提前退出流读取')
+            return
+          }
         }
       }
     } finally {
@@ -448,3 +452,20 @@ export class FetchClient {
 
 // 创建全局实例
 export const fetchClient = new FetchClient()
+
+export function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+export async function sleepWithAbortSignal(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, ms)
+
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId)
+        reject(new Error('Sleep interrupted'))
+      })
+    }
+  })
+}

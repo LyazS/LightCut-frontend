@@ -11,7 +11,9 @@ import {
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import { LayoutConstants } from '@/constants/LayoutConstants'
-import { exportTimelineItem } from '@/core/utils/projectExporter'
+import { detectScene } from '@/core/utils/scene-detector'
+import { detectSceneAdv } from '@/core/utils/scene-detector-adv'
+import { detectSceneContent } from '@/core/utils/scene-detector-content'
 
 /**
  * 菜单项类型定义
@@ -115,29 +117,33 @@ export function useTimelineContextMenu(
 
     const menuItems: MenuItem[] = []
 
-    // 导出片段 - 仅支持视频和图片
-    if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'image') {
+    // 只有 ready 状态的 timelineItem 才有各种右键选项
+    // 非 ready 状态（loading 或 error）只有删除选项
+    if (timelineItem.timelineStatus === 'ready') {
+      // 智能分镜头 - 仅视频类型支持
+      if (timelineItem.mediaType === 'video') {
+        menuItems.push({
+          label: t('timeline.contextMenu.clip.smartSceneDetection'),
+          icon: IconComponents.LAYOUT,
+          onClick: () => detectSceneBoundaries(),
+        })
+
+        // 分隔符
+        menuItems.push({ type: 'separator' } as MenuItem)
+      }
+
+      // 复制片段 - 所有类型都支持
       menuItems.push({
-        label: t('timeline.contextMenu.clip.exportClip'),
-        icon: IconComponents.DOWNLOAD,
-        onClick: () => exportClip(),
+        label: t('timeline.contextMenu.clip.duplicateClip'),
+        icon: IconComponents.COPY,
+        onClick: () => duplicateClip(),
       })
 
       // 分隔符
       menuItems.push({ type: 'separator' } as MenuItem)
     }
 
-    // 复制片段 - 所有类型都支持
-    menuItems.push({
-      label: t('timeline.contextMenu.clip.duplicateClip'),
-      icon: IconComponents.COPY,
-      onClick: () => duplicateClip(),
-    })
-
-    // 分隔符
-    menuItems.push({ type: 'separator' } as MenuItem)
-
-    // 删除片段 - 所有类型都支持
+    // 删除片段 - 所有状态都支持
     menuItems.push({
       label: t('timeline.contextMenu.clip.deleteClip'),
       icon: IconComponents.DELETE,
@@ -359,6 +365,110 @@ export function useTimelineContextMenu(
   }
 
   /**
+   * 智能分镜头检测（使用 createLoading）
+   */
+  async function detectSceneBoundaries() {
+    const clipId = contextMenuTarget.value.clipId
+    if (!clipId) return
+
+    const timelineItem = unifiedStore.getTimelineItem(clipId)
+    if (!timelineItem) return
+
+    console.log('🎬 开始智能分镜头检测...')
+
+    // 暂停播放
+    await unifiedStore.pause()
+
+    // 创建 AbortController 用于取消操作
+    const abortController = new AbortController()
+
+    // 创建 loading 实例
+    const loading = unifiedStore.createLoading({
+      title: t('timeline.sceneDetection.title'),
+      showProgress: true,
+      showDetails: true,
+      showTips: true,
+      tipText: t('timeline.sceneDetection.tip'),
+      showCancel: true,
+      cancelText: t('common.cancel'),
+      onCancel: () => {
+        abortController.abort()
+        console.log('⚠️ 用户取消场景检测')
+      }
+    })
+
+    try {
+      // 调用 detectSceneAdv，传入进度回调和取消信号
+      const boundaries = await detectSceneAdv(timelineItem, {
+        peakDetection: {
+          minProminence: 0.03,
+          minHeight: 0.08,
+          minDistance: 15,
+        },
+        maxSize: 600,
+        signal: abortController.signal,
+        onProgress: (current, total, message) => {
+          // 计算进度百分比
+          const progress = total > 0 ? (current / total) * 100 : 0
+          
+          // 更新 loading 状态
+          loading.update({
+            progress: Math.min(100, Math.round(progress)),
+            details: message
+          })
+        },
+        enableChart: false,
+      })
+
+      // 检查是否被取消
+      if (abortController.signal.aborted) {
+        loading.close()
+        unifiedStore.messageInfo(t('timeline.sceneDetection.cancelled'))
+        return
+      }
+
+      // 处理检测结果
+      if (boundaries.length > 0) {
+        console.log('✅ 检测完成，共发现', boundaries.length, '个分割点')
+        
+        loading.update({
+          progress: 100,
+          details: t('timeline.sceneDetection.splitting', { count: boundaries.length })
+        })
+
+        const splitPoints = boundaries.map((frame) => Number(frame))
+        await unifiedStore.splitTimelineItemAtTimeWithHistory(clipId, splitPoints)
+        
+        loading.close()
+        unifiedStore.messageSuccess(
+          t('timeline.sceneDetection.success', { count: boundaries.length })
+        )
+        console.log('✅ 时间轴项目分割成功')
+      } else {
+        console.log('⚠️ 未检测到场景边界')
+        loading.close()
+        unifiedStore.messageWarning(t('timeline.sceneDetection.noScenes'))
+      }
+    } catch (error) {
+      loading.close()
+      
+      // 区分取消和错误
+      if (error instanceof Error && error.name === 'AbortError') {
+        unifiedStore.messageInfo(t('timeline.sceneDetection.cancelled'))
+      } else {
+        console.error('❌ 智能分镜头检测失败:', error)
+        unifiedStore.messageError(
+          t('timeline.sceneDetection.error', {
+            message: error instanceof Error ? error.message : String(error)
+          })
+        )
+      }
+    }
+
+    showContextMenu.value = false
+  }
+
+  /**
    * 重命名轨道
    */
   function renameTrack() {
@@ -419,74 +529,6 @@ export function useTimelineContextMenu(
     return Math.max(0, Math.round(timeFrames))
   }
 
-  /**
-   * 导出时间轴片段
-   */
-  async function exportClip() {
-    const clipId = contextMenuTarget.value.clipId
-    if (!clipId) return
-
-    const timelineItem = unifiedStore.getTimelineItem(clipId)
-    if (!timelineItem) return
-
-    showContextMenu.value = false
-
-    try {
-      console.log('🚀 开始导出时间轴片段:', timelineItem.id)
-
-      // 显示进度提示
-      unifiedStore.messageInfo(t('timeline.contextMenu.clip.exportStarted', { id: timelineItem.id }))
-
-      // 调用导出方法
-      const blob = await exportTimelineItem({
-        timelineItem,
-        getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
-        onProgress: (progress: number) => {
-          console.log(`📊 导出进度: ${progress.toFixed(2)}%`)
-        },
-      })
-
-      // 获取媒体项目名称用于文件命名
-      const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
-      const baseName = mediaItem?.name || 'timeline-clip'
-
-      // 创建下载链接
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${baseName}_clip.${getFileExtension(timelineItem.mediaType)}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      unifiedStore.messageSuccess(t('timeline.contextMenu.clip.exportSuccess', { id: timelineItem.id }))
-      console.log('✅ 时间轴片段导出成功')
-    } catch (error) {
-      console.error('❌ 导出时间轴片段失败:', error)
-      unifiedStore.messageError(
-        t('timeline.contextMenu.clip.exportFailed', {
-          id: timelineItem.id,
-          error: error instanceof Error ? error.message : '未知错误',
-        }),
-      )
-    }
-  }
-
-  /**
-   * 获取文件扩展名
-   */
-  function getFileExtension(mediaType: string): string {
-    switch (mediaType) {
-      case 'video':
-        return 'mp4'
-      case 'image':
-        return 'png'
-      default:
-        return 'bin'
-    }
-  }
-
   return {
     // 状态
     showContextMenu,
@@ -502,6 +544,6 @@ export function useTimelineContextMenu(
     duplicateClip,
     renameTrack,
     showAddTrackMenu,
-    exportClip,
+    detectSceneBoundaries,
   }
 }

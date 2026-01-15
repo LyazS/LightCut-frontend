@@ -72,6 +72,13 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
   textBitmap?: ImageBitmap // 专门用于文本渲染的ImageBitmap
   /** 动画插值后的临时配置（运行时数据，不持久化） */
   renderConfig?: GetConfigs<T>
+  
+  /**
+   * 标识时间轴项目是否已经从 mediaItem 初始化过（必选字段）
+   * - true: 已经初始化，不应该再从 mediaItem 同步数据
+   * - false: 未初始化，需要等待 mediaItem ready 后同步数据
+   */
+  isInitialized: boolean
 }
 // ==================== 核心接口设计 ====================
 

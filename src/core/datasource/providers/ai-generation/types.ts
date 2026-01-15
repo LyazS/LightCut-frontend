@@ -12,6 +12,7 @@ export enum AITaskType {
   TEXT_TO_IMAGE = 'text_to_image',
   REMOTE_IMAGE = 'remote_image',
   BIZYAIR_GENERATE_MEDIA = 'bizyair_generate_media',
+  BLTCY_SORA2 = 'bltcy_sora2',  // BLTCY Sora2 视频生成（支持 T2V 和 I2V）
 }
 
 /**
@@ -39,6 +40,7 @@ export enum TaskStatus {
  */
 export enum TaskStreamEventType {
   PROGRESS_UPDATE = 'progress_update',
+  NOT_FOUND = 'not_found',
   ERROR = 'error',
   FINAL = 'final',
   HEARTBEAT = 'heartbeat',
@@ -108,6 +110,14 @@ export interface ErrorEvent extends BaseTaskStreamEvent {
 }
 
 /**
+ * 任务不存在，那就是错误
+ */
+export interface NotFoundEvent extends BaseTaskStreamEvent {
+  type: TaskStreamEventType.NOT_FOUND
+  message: string
+}
+
+/**
  * 心跳事件
  */
 export interface HeartbeatEvent extends BaseTaskStreamEvent {
@@ -118,7 +128,12 @@ export interface HeartbeatEvent extends BaseTaskStreamEvent {
 /**
  * 流事件联合类型
  */
-export type TaskStreamEvent = ProgressUpdateEvent | FinalEvent | ErrorEvent | HeartbeatEvent
+export type TaskStreamEvent =
+  | ProgressUpdateEvent
+  | NotFoundEvent
+  | FinalEvent
+  | ErrorEvent
+  | HeartbeatEvent
 
 // ==================== 处理器相关类型 ====================
 
@@ -190,7 +205,7 @@ export interface TextareaInputConfig extends BaseUIConfig {
 export interface SelectInputConfig extends BaseUIConfig {
   type: 'select-input'
   options: Array<{
-    label: string
+    label: I18nText
     value: string
   }>
 }
@@ -202,16 +217,67 @@ export interface FileInputConfig extends BaseUIConfig {
   type: 'file-input'
   accept?: string[] // 接受的文件类型，如 ['image', 'video']
   placeholder?: I18nText // 占位符文本
+  maxFiles?: number // 最大文件数量，默认为 1
+}
+
+/**
+ * 文件数据接口
+ */
+export interface FileData {
+  // 类型标识符，用于运行时类型检查
+  readonly __type__: 'FileData'
+
+  name: string
+  mediaType: 'video' | 'image' | 'audio'
+  mediaItemId?: string
+  timelineItemId?: string
+  duration?: number
+  resolution?: {
+    width: number
+    height: number
+  }
+  timeRange?: {
+    clipStartTime: number
+    clipEndTime: number
+    timelineStartTime: number
+    timelineEndTime: number
+  }
+  source: 'media-item' | 'timeline-item'
+}
+
+/**
+ * 多文件数据类型（数组形式）
+ */
+export type MultiFileData = FileData[]
+
+/**
+ * 文件项状态枚举
+ */
+export enum FileItemStatus {
+  EMPTY = 'empty', // 空槽位（显示上传框）
+  FILLED = 'filled', // 已填充文件
+}
+
+/**
+ * 文件槽位接口
+ */
+export interface FileSlot {
+  index: number
+  status: FileItemStatus
+  fileData: FileData | null
+  isDragOver: boolean
+  canAcceptDrop: boolean
 }
 
 /**
  * UI 配置项联合类型
  */
-export type UIConfig =
-  | NumberInputConfig
-  | TextareaInputConfig
-  | SelectInputConfig
-  | FileInputConfig
+export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConfig | FileInputConfig
+
+/**
+ * 上传服务器类型
+ */
+export type UploadServerType = 'bizyair' | 'bltcy'
 
 /**
  * AI 生成配置结构
@@ -222,6 +288,7 @@ export interface AIGenerateConfig {
   description: I18nText
   contentType: ContentType
   aiTaskType: AITaskType
+  uploadServer?: UploadServerType // 上传服务器类型，默认为 'default'
   aiConfig: Record<string, any> // 不再包含 web_app_id
   uiConfig: UIConfig[]
 }

@@ -208,13 +208,6 @@
         @change="handleFileSelect"
       />
 
-      <!-- 文生图对话框 -->
-      <TextToImageModal
-        :show="showTextToImageModal"
-        :is-processing="isGenerating"
-        @close="showTextToImageModal = false"
-        @submit="handleTextToImageSubmit"
-      />
     </n-scrollbar>
   </div>
 </template>
@@ -255,7 +248,6 @@ import {
 } from '@imengyu/vue3-context-menu'
 import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
 import RenameModal from '@/components/modals/RenameModal.vue'
-import TextToImageModal from '@/components/modals/TextToImageModal.vue'
 import MediaItemThumbnail from '@/components/panels/MediaItemThumbnail.vue'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
@@ -264,7 +256,6 @@ import {
   shouldShowRechargePrompt,
   isRetryableError,
 } from '@/utils/errorMessageBuilder'
-import { exportMediaItem } from '@/core/utils/projectExporter'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -294,9 +285,6 @@ const showRenameModal = ref(false)
 const renameCurrentName = ref('')
 const renameTarget = ref<DisplayItem | null>(null)
 
-// 文生图对话框状态
-const showTextToImageModal = ref(false)
-const isGenerating = ref(false)
 
 // 文件夹拖拽状态（每个文件夹独立状态）
 const folderDragState = ref<Record<string, { isDragOver: boolean; canDrop: boolean }>>({})
@@ -463,14 +451,6 @@ const currentMenuItems = computed((): MenuItem[] => {
             icon: IconComponents.UPLOAD,
             onClick: () => {
               triggerFileInput()
-              showContextMenu.value = false
-            },
-          },
-          {
-            label: t('media.aiGeneration'),
-            icon: IconComponents.MAGIC,
-            onClick: () => {
-              handleTextToImage()
               showContextMenu.value = false
             },
           },
@@ -663,14 +643,6 @@ const currentMenuItems = computed((): MenuItem[] => {
           startRename(target)
           showContextMenu.value = false
         },
-      },
-      { type: 'separator' },
-      // 🆕 新增：导出选项
-      {
-        label: t('media.export'),
-        icon: IconComponents.DOWNLOAD,
-        onClick: () => handleExportMediaItem(target),
-        disabled: !canExportMediaItem(target),
       },
       { type: 'separator' },
       // 🆕 新增：取消选项
@@ -1195,51 +1167,6 @@ async function addMediaItem(file: File): Promise<void> {
   }
 }
 
-// ==================== AI生成功能 ====================
-
-// 打开文生图对话框
-function handleTextToImage(): void {
-  showTextToImageModal.value = true
-}
-
-// 应用测试模式修改请求参数
-function applyTestMode(params: MediaGenerationRequest, testMode: string): MediaGenerationRequest {
-  console.log(`🧪 [LibraryMediaGrid] 应用测试模式: ${testMode}`)
-
-  switch (testMode) {
-    case 'unsupported_type':
-      // 测试场景1: 不支持的任务类型
-      console.log('🧪 测试: 发送不支持的任务类型 "invalid_task_type"')
-      return {
-        ...params,
-        ai_task_type: 'invalid_task_type' as any, // 故意发送无效类型
-      }
-
-    case 'missing_text':
-      // 测试场景2: 缺少text字段
-      console.log('🧪 测试: 移除 task_config 中的 text 字段')
-      const { text, ...restConfig } = params.task_config
-      return {
-        ...params,
-        task_config: restConfig,
-      }
-
-    case 'empty_text':
-      // 测试场景3: 空text字段
-      console.log('🧪 测试: 发送空字符串的 text 字段')
-      return {
-        ...params,
-        task_config: {
-          ...params.task_config,
-          text: '', // 空字符串
-        },
-      }
-
-    default:
-      return params
-  }
-}
-
 // 提交AI生成任务到后端
 async function submitAIGenerationTask(
   requestParams: MediaGenerationRequest,
@@ -1264,211 +1191,6 @@ async function submitAIGenerationTask(
         error: error instanceof Error ? error.message : '网络请求失败',
       },
     }
-  }
-}
-
-// 文生图提交处理
-async function handleTextToImageSubmit(config: {
-  processor: string
-  text?: string
-  motionDescription?: string // 视频动作描述
-  width?: number
-  height?: number
-  testMode?: string
-  debugError?: string // 错误代码
-  mediaType?: string // 新增：媒体类型
-}): Promise<void> {
-  if (!currentDir.value) {
-    unifiedStore.messageError(t('media.selectDirectoryFirst'))
-    return
-  }
-
-  try {
-    isGenerating.value = true
-
-    // 1. 准备请求参数
-    let requestParams: MediaGenerationRequest
-    let mediaItemName: string
-    let expectedMediaType: 'image' | 'video' | 'audio' = 'image'
-
-    // BizyAir 图片生成
-    if (config.processor === 'bizyair_image') {
-      requestParams = {
-        ai_task_type: AITaskType.BIZYAIR_GENERATE_MEDIA,
-        content_type: ContentType.IMAGE,
-        task_config: {
-          web_app_id: 39492, // qwen-image-4step 固定配置
-          prompt: config.text || '', // 后端期望的字段名是 prompt
-          // width 和 height 使用后端默认值 (1024x960)
-          // seed 使用后端自动生成
-        },
-      }
-      mediaItemName = `BizyAir图片_${Date.now()}`
-      expectedMediaType = 'image'
-    } else if (config.processor === 'bizyair_video') {
-      // BizyAir 视频生成 (wan2.2 i2v)
-      requestParams = {
-        ai_task_type: AITaskType.BIZYAIR_GENERATE_MEDIA,
-        content_type: ContentType.VIDEO,
-        task_config: {
-          web_app_id: 39835, // z-image wan2.2 i2v 固定配置
-          image_description: config.text || '', // 图片描述（第一帧）
-          motion_description: config.motionDescription || '', // 视频动作描述（可选）
-          // width: 默认 1024
-          // height: 默认 1024
-          // frame_count: 默认 81
-          // steps: 默认 20
-          // seed_ksampler, seed_wan_video_1, seed_wan_video_2: 后端自动生成
-        },
-      }
-      mediaItemName = `BizyAir视频_${Date.now()}`
-      expectedMediaType = 'video'
-    } else if (config.processor === 'remote_image') {
-      // 远程媒体生成
-      // 根据 mediaType 参数确定内容类型
-      let contentType = ContentType.IMAGE
-      if (config.mediaType === 'video') {
-        contentType = ContentType.VIDEO
-        expectedMediaType = 'video'
-        mediaItemName = t('media.remoteVideoName', { timestamp: Date.now() })
-      } else if (config.mediaType === 'audio') {
-        contentType = ContentType.AUDIO
-        expectedMediaType = 'audio'
-        mediaItemName = t('media.remoteAudioName', { timestamp: Date.now() })
-      } else {
-        mediaItemName = t('media.remoteImageName', { timestamp: Date.now() })
-      }
-
-      // 直接构造远程媒体请求
-      requestParams = {
-        ai_task_type: AITaskType.REMOTE_IMAGE,
-        content_type: contentType,
-        task_config: {}, // 远程媒体不需要配置参数
-      }
-    } else {
-      // 本地文生图 - 直接构造请求
-      requestParams = {
-        ai_task_type: AITaskType.TEXT_TO_IMAGE,
-        content_type: ContentType.IMAGE,
-        task_config: {
-          text: config.text!,
-          width: config.width || 800,
-          height: config.height || 450,
-          style: 'default',
-          quality: 'standard',
-          format: 'png',
-        },
-      }
-      mediaItemName = t('media.aiGeneratedName', { timestamp: Date.now() })
-    }
-
-    // 2. 🌟 如果有 debugError，添加到 task_config
-    if (config.debugError) {
-      console.log(`🔥 [LibraryMediaGrid] 错误注入测试: ${config.debugError}`)
-      requestParams.task_config._debug_error = config.debugError
-    }
-
-    // 3. 🌟 根据测试模式修改请求参数（原有的测试模式）
-    if (config.testMode && config.testMode !== 'normal' && !config.debugError) {
-      console.log(`🧪 [LibraryMediaGrid] 测试模式: ${config.testMode}`)
-      requestParams = applyTestMode(requestParams, config.testMode)
-    }
-
-    // 4. 🌟 提交任务到后端
-    console.log('🚀 [LibraryMediaGrid] 提交AI生成任务到后端...', requestParams)
-    const submitResult = await submitAIGenerationTask(requestParams)
-
-    if (!submitResult.success) {
-      // 任务提交失败，使用新的错误处理逻辑
-      const errorMessage = buildTaskErrorMessage(
-        submitResult.error_code,
-        submitResult.error_details,
-        t,
-      )
-
-      // 根据错误类型提供不同的用户体验
-      if (shouldShowRechargePrompt(submitResult.error_code)) {
-        // 余额不足：显示充值引导对话框
-        unifiedStore.dialogWarning({
-          title: t('media.error.insufficientBalance'),
-          content: errorMessage + '\n\n' + t('media.error.rechargePrompt'),
-          positiveText: t('media.confirm'),
-          negativeText: t('media.cancel'),
-          onPositiveClick: () => {
-            // TODO: 跳转到充值页面
-            console.log('跳转到充值页面')
-          },
-        })
-      } else if (isRetryableError(submitResult.error_code)) {
-        // 可重试错误：显示重试选项
-        unifiedStore.dialogWarning({
-          title: t('media.generationFailed', { error: '' }),
-          content: errorMessage,
-          positiveText: t('media.retry'),
-          negativeText: t('media.cancel'),
-          onPositiveClick: () => {
-            // 重新提交任务
-            handleTextToImageSubmit(config)
-          },
-        })
-      } else {
-        // 其他错误：直接显示错误消息
-        unifiedStore.messageError(errorMessage)
-      }
-
-      return
-    }
-
-    console.log(
-      `✅ [LibraryMediaGrid] 任务提交成功: ${submitResult.task_id}, 成本: ${submitResult.cost}`,
-    )
-
-    // 5. 使用真实的任务ID创建AI生成数据源
-    const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
-      {
-        type: 'ai-generation',
-        aiTaskId: submitResult.task_id, // 🌟 使用真实的后端任务ID
-        requestParams: requestParams,
-        estimatedCost: submitResult.cost, // 使用后端返回的实际成本
-        taskStatus: TaskStatus.PENDING, // 🌟 初始状态为 PENDING
-      },
-      SourceOrigin.USER_CREATE,
-    )
-
-    // 6. 创建媒体项目
-    // 根据内容类型确定文件扩展名
-    let extension = 'png'
-    if (expectedMediaType === 'video') {
-      extension = 'mp4'
-    } else if (expectedMediaType === 'audio') {
-      extension = 'mp3'
-    }
-
-    const mediaId = generateMediaId(extension)
-    const mediaItem = unifiedStore.createUnifiedMediaItemData(mediaId, mediaItemName, aiSource, {
-      mediaType: expectedMediaType,
-      // 🌟 预设时长：图片5秒，视频和音频使用默认值
-      duration: expectedMediaType === 'image' ? 5 : undefined,
-    })
-
-    // 7. 添加到媒体库和当前目录
-    unifiedStore.addMediaItem(mediaItem)
-    unifiedStore.addMediaToDirectory(mediaId, currentDir.value.id)
-
-    // 8. 关闭对话框
-    showTextToImageModal.value = false
-
-    // 9. 启动媒体处理流程（现在只负责进度监控和文件获取）
-    unifiedStore.startMediaProcessing(mediaItem)
-
-    console.log('✅ [LibraryMediaGrid] AI生成流程启动完成:', config.processor)
-  } catch (error) {
-    console.error('❌ [LibraryMediaGrid] 文生图失败:', error)
-    unifiedStore.messageError(
-      t('media.generationFailed', { error: error instanceof Error ? error.message : '未知错误' }),
-    )
-  } finally {
-    isGenerating.value = false
   }
 }
 
@@ -1596,7 +1318,6 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
   // 3. 重置数据源状态
   aiSource.progress = 0
   aiSource.errorMessage = undefined
-  aiSource.generationProgress = 0
   aiSource.streamConnected = false
 
   // 4. 重置媒体状态
@@ -1608,90 +1329,36 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
   unifiedStore.messageSuccess(t('media.retryStarted', { name: mediaItem.name }))
 }
 
-// ==================== 导出功能 ====================
-
-/**
- * 检查媒体项是否可以导出
- */
-function canExportMediaItem(item: DisplayItem): boolean {
-  if (item.type !== 'media') return false
-
-  const mediaItem = getMediaItem(item.id)
-  if (!mediaItem) return false
-
-  // 只有就绪状态的视频和图片可以导出
-  return (
-    mediaItem.mediaStatus === 'ready' &&
-    (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image')
-  )
-}
-
-/**
- * 处理媒体项导出
- */
-async function handleExportMediaItem(item: DisplayItem): Promise<void> {
-  if (item.type !== 'media') return
-
-  const mediaItem = getMediaItem(item.id)
-  if (!mediaItem) return
-
-  showContextMenu.value = false
-
-  try {
-    console.log('🚀 开始导出媒体项目:', mediaItem.name)
-
-    // 显示进度提示
-    unifiedStore.messageInfo(t('media.exportStarted', { name: mediaItem.name }))
-
-    // 调用导出方法
-    const blob = await exportMediaItem({
-      mediaItem,
-      onProgress: (progress) => {
-        console.log(`📊 导出进度: ${progress.toFixed(2)}%`)
-      },
-    })
-
-    // 创建下载链接
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${mediaItem.name}.${getFileExtension(mediaItem.mediaType)}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    unifiedStore.messageSuccess(t('media.exportSuccess', { name: mediaItem.name }))
-    console.log('✅ 媒体项目导出成功')
-  } catch (error) {
-    console.error('❌ 导出媒体项目失败:', error)
-    unifiedStore.messageError(
-      t('media.exportFailed', {
-        name: mediaItem.name,
-        error: error instanceof Error ? error.message : '未知错误',
-      }),
-    )
-  }
-}
-
-/**
- * 获取文件扩展名
- */
-function getFileExtension(mediaType: string): string {
-  switch (mediaType) {
-    case 'video':
-      return 'mp4'
-    case 'image':
-      return 'png'
-    default:
-      return 'bin'
-  }
-}
-
 // 移除媒体项（考虑引用计数）
 function removeMediaItem(mediaId: string): void {
+  if (!currentDir.value) return
+
   const mediaItem = getMediaItem(mediaId)
-  if (!mediaItem || !currentDir.value) return
+
+  // 如果媒体项不存在，直接移除无效引用
+  if (!mediaItem) {
+    unifiedStore.dialogWarning({
+      title: t('media.deleteMedia'),
+      content: t('media.deleteInvalidMedia', { id: mediaId }),
+      positiveText: t('media.confirm'),
+      negativeText: t('media.cancel'),
+      draggable: true,
+      onPositiveClick: async () => {
+        try {
+          const result = await unifiedStore.deleteMediaItem(mediaId, currentDir.value!.id)
+          if (result.success) {
+            unifiedStore.messageSuccess(t('media.invalidMediaRemoved'))
+          } else {
+            unifiedStore.messageError(t('media.deleteFailed'))
+          }
+        } catch (error) {
+          console.error(`❌ 删除无效媒体失败: ${mediaId}`, error)
+          unifiedStore.messageError(t('media.deleteFailed'))
+        }
+      },
+    })
+    return
+  }
 
   // 检查引用计数
   const refCount = mediaItem.runtime.refCount || 0

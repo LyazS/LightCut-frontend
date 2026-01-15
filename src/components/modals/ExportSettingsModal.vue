@@ -8,6 +8,7 @@
     @cancel="handleClose"
     :confirm-disabled="!form.title.trim()"
     :confirm-text="t('editor.export')"
+    :cancel-text="t('common.cancel')"
   >
     <div class="dialog-body">
       <!-- 视频标题 -->

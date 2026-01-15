@@ -9,6 +9,7 @@
     :confirm-disabled="!form.name.trim() || isSaving"
     :loading="isSaving"
     :confirm-text="isSaving ? t('common.saving') + '...' : t('common.save')"
+    :cancel-text="t('common.cancel')"
   >
     <div class="dialog-body">
       <div class="form-group">

@@ -90,6 +90,8 @@
     "deleteMediaMultiRef": "确定要删除素材 {name} 吗？此素材被 {count} 个文件夹引用，删除后将从所有文件夹中移除。",
     "deleteMediaSingleRef": "确定要删除素材 {name} 吗？此素材仅被当前文件夹引用，删除后将同时删除素材文件。",
     "deleteMediaNoRef": "确定要删除素材 {name} 吗？此素材未被任何文件夹引用，将直接删除素材文件。",
+    "deleteInvalidMedia": "检测到无效的媒体引用（ID: {id}），是否从目录中移除？",
+    "invalidMediaRemoved": "无效媒体引用已从目录中移除",
     "mediaDeletedWithFile": "素材 {name} 已删除（包括文件）",
     "mediaRemovedFromFolder": "素材 {name} 已从当前文件夹移除",
     "deleteFolderConfirm": "确定要删除文件夹 {name} 吗？此操作将递归删除所有子文件夹，并删除不再被其他文件夹引用的素材文件。",

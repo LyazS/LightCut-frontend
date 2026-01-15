@@ -22,6 +22,7 @@ import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManag
 import type { UnifiedMediaItemData, MediaStatus, MediaType } from '@/core/mediaitem/types'
 import { UnifiedMediaItemActions } from '@/core/mediaitem/actions'
 import { DATA_SOURCE_CONCURRENCY } from '@/constants/ConcurrencyConstants'
+import { sleep } from '@/utils/fetchClient'
 
 // ==================== 用户选择文件处理器 ====================
 
@@ -142,6 +143,7 @@ export class UserSelectedFileProcessor extends DataSourceProcessor {
       }
 
       // 7. 设置为就绪状态
+      // await sleep(5 * 1000) // 测试延迟准备
       this.transitionMediaStatus(mediaItem, 'ready')
 
       console.log(`✅ [UserSelectedFileProcessor] 媒体项目处理完成: ${mediaItem.name}`)

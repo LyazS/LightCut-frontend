@@ -9,7 +9,7 @@ import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
-import { MediaSyncFactory, cleanupProjectLoadMediaSync } from '@/core/managers/media'
+import { MediaSync } from '@/core/managers/sync'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { i18n } from '@/locales'
@@ -55,6 +55,9 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
   const loadingProgress = ref(0) // 0-100
   const loadingStage = ref('') // 当前加载阶段
   const loadingDetails = ref('') // 详细信息
+  
+  // 🌟 项目加载时的MediaSync实例数组（批量优化）
+  const projectLoadMediaSyncs: MediaSync[] = []
 
   // ==================== 计算属性 ====================
   /**
@@ -179,7 +182,10 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
           timelineItems: timelineModule.timelineItems.value.map((item) => {
             const clonedItem = TimelineItemFactory.clone(item)
             if (clonedItem.runtime) {
-              clonedItem.runtime = {}
+              // 清空运行时数据，但保留 isInitialized 字段（必选）
+              clonedItem.runtime = {
+                isInitialized: clonedItem.runtime.isInitialized,
+              }
             }
             return clonedItem
           }),
@@ -481,6 +487,9 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
       // 清空现有时间轴项目
       timelineModule.timelineItems.value = []
 
+      // 收集所有成功重建的时间轴项目
+      const rebuiltTimelineItems: UnifiedTimelineItemData[] = []
+
       // 恢复时间轴项目数据
       if (savedTimelineItems && savedTimelineItems.length > 0) {
         for (const itemData of savedTimelineItems) {
@@ -533,16 +542,11 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
             const newTimelineItem = rebuildResult.timelineItem
 
-            // 1. 添加到时间轴
+            // 添加到时间轴
             await timelineModule.addTimelineItem(newTimelineItem)
-
-            // 2. 针对loading状态的项目设置状态同步
-            if (newTimelineItem.timelineStatus === 'loading') {
-              MediaSyncFactory.forProjectLoad(
-                newTimelineItem.mediaItemId,
-                newTimelineItem.id,
-              ).setup()
-            }
+            
+            // 收集重建的项目
+            rebuiltTimelineItems.push(newTimelineItem)
 
             console.log(`✅ 已恢复时间轴项目: ${itemData.id} (${itemData.mediaType})`)
           } catch (error) {
@@ -552,7 +556,37 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
         }
       }
 
+      // 🌟 性能优化：按媒体项目分组loading状态的时间轴项目
+      const loadingItemsByMedia = new Map<string, string[]>()
+      
+      for (const item of rebuiltTimelineItems) {
+        if (item.timelineStatus === 'loading') {
+          const timelineIds = loadingItemsByMedia.get(item.mediaItemId) || []
+          timelineIds.push(item.id)
+          loadingItemsByMedia.set(item.mediaItemId, timelineIds)
+        }
+      }
+
+      // 🌟 为每个唯一的媒体项目创建一个MediaSync（避免重复watcher）
+      // 先清理旧的MediaSync实例
+      projectLoadMediaSyncs.forEach(sync => sync.cleanup())
+      projectLoadMediaSyncs.length = 0
+      
+      for (const [mediaItemId, timelineItemIds] of loadingItemsByMedia) {
+        const mediaSync = new MediaSync(mediaItemId, {
+          syncId: `project-load-${configModule.projectId.value}`,
+          timelineItemIds: timelineItemIds,         // 传递所有相关的时间轴项目ID数组
+          shouldUpdateCommand: false,                // 项目加载不需要更新命令
+          description: `Project Load: ${configModule.projectId.value}`,
+        })
+        await mediaSync.setup()
+        projectLoadMediaSyncs.push(mediaSync)  // 保存引用
+      }
+
       console.log(`✅ 时间轴项目恢复完成: ${timelineModule.timelineItems.value.length}个项目`)
+      if (loadingItemsByMedia.size > 0) {
+        console.log(`📊 创建了 ${projectLoadMediaSyncs.length} 个 MediaSync 实例，监听 ${loadingItemsByMedia.size} 个媒体项目`)
+      }
     } catch (error) {
       console.error('❌ 恢复时间轴项目失败:', error)
       throw error
@@ -570,7 +604,9 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
    * 清理项目加载时的媒体同步
    */
   function cleanupProjectMediaSync(): void {
-    cleanupProjectLoadMediaSync()
+    console.log(`🗑️ 清理项目加载的 MediaSync 实例: ${projectLoadMediaSyncs.length} 个`)
+    projectLoadMediaSyncs.forEach(sync => sync.cleanup())
+    projectLoadMediaSyncs.length = 0
   }
 
   /**

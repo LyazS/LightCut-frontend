@@ -23,7 +23,7 @@ export class ScriptExecutor {
     }
 
     // 创建Worker实例
-    const workerUrl = new URL('./executors/ScriptExecutor.worker.ts', import.meta.url)
+    const workerUrl = new URL('./ScriptExecutor.worker.ts', import.meta.url)
     this.worker = new Worker(workerUrl, { type: 'module' })
   }
 

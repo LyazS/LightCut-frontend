@@ -37,13 +37,10 @@
         "addTextTrack": "Add Text Track"
       },
       "clip": {
+        "smartSceneDetection": "Scene Detection",
         "duplicateClip": "Duplicate Clip",
         "regenerateThumbnail": "Regenerate Thumbnail",
-        "deleteClip": "Delete Clip",
-        "exportClip": "Export Clip",
-        "exportStarted": "Starting export of clip {id}...",
-        "exportSuccess": "Clip {id} exported successfully",
-        "exportFailed": "Clip {id} export failed: {error}"
+        "deleteClip": "Delete Clip"
       },
       "track": {
         "addText": "Add Text",
@@ -60,6 +57,15 @@
         "addTextTrack": "Text Track",
         "deleteTrack": "Delete Track"
       }
+    },
+    "sceneDetection": {
+      "title": "Smart Scene Detection",
+      "tip": "Analyzing video content, please wait...",
+      "splitting": "Detection complete, splitting {count} scenes...",
+      "success": "Successfully split into {count} scenes",
+      "noScenes": "No obvious scene boundaries detected",
+      "cancelled": "Scene detection cancelled",
+      "error": "Scene detection failed: {message}"
     }
   }
 }

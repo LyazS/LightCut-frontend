@@ -31,6 +31,7 @@ export class BunnyMedia {
   public durationN: bigint = 0n
   public width: number = 0
   public height: number = 0
+  public clockwiseRotation: number = 0
 
   constructor(file: File) {
     this.ready = this.loadFile(file)
@@ -69,6 +70,7 @@ export class BunnyMedia {
 
         this.width = this.videoTrack.displayWidth
         this.height = this.videoTrack.displayHeight
+        this.clockwiseRotation = this.videoTrack.rotation
         videoDuration = await this.videoTrack.computeDuration()
         this.videoSink = new VideoSampleSink(this.videoTrack)
       }

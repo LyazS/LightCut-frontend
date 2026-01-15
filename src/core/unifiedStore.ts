@@ -26,7 +26,6 @@ import {
   isPlayheadInTimelineItem,
   findOverlappingTimelineItems,
 } from '@/core/utils/timelineSearchUtils'
-import { cloneTimelineItem, duplicateTimelineItem } from '@/core/timelineitem/factory'
 
 /**
  * 统一视频编辑器存储
@@ -57,7 +56,7 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedMediaModule = createUnifiedMediaModule(registry)
   registry.register(MODULE_NAMES.MEDIA, unifiedMediaModule)
 
-  const unifiedTrackModule = createUnifiedTrackModule()
+  const unifiedTrackModule = createUnifiedTrackModule(registry)
   registry.register(MODULE_NAMES.TRACK, unifiedTrackModule)
 
   const unifiedUseNaiveUIModule = createUnifiedUseNaiveUIModule()
@@ -233,10 +232,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     updateTimelineItemPosition: unifiedTimelineModule.updateTimelineItemPosition,
     updateTimelineItemTransform: unifiedTimelineModule.updateTimelineItemTransform,
 
-    // 时间轴项目工厂函数
-    cloneTimelineItemData: cloneTimelineItem,
-    duplicateTimelineItem,
-
     // ==================== 统一项目模块状态和方法 ====================
 
     // 项目状态
@@ -324,6 +319,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     mediaBunnySeekToFrame: unifiedMediaBunnyModule.seekToFrame,
     updateMediaBunnyTimelineDuration: unifiedMediaBunnyModule.updateTimelineDuration,
 
+    // MediaBunny截帧功能
+    captureCanvasFrame: unifiedMediaBunnyModule.captureCanvasFrame,
+
     // MediaBunny工具方法
     isMediaBunnyAvailable: unifiedMediaBunnyModule.isMediaBunnyAvailable,
     resetMediaBunnyToDefaults: unifiedMediaBunnyModule.resetToDefaults,
@@ -374,6 +372,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 便捷模态框方法
     createModal: unifiedUseNaiveUIModule.createModal,
     destroyAllModals: unifiedUseNaiveUIModule.destroyAllModals,
+
+    // 加载弹窗方法
+    createLoading: unifiedUseNaiveUIModule.createLoading,
 
     initApi: unifiedUseNaiveUIModule.initApi,
 

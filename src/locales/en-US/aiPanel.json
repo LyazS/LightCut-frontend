@@ -9,6 +9,24 @@
     "tempDirectory": "Temporary Directory",
     "currentDirectory": "Current Directory",
     "taskSubmitted": "Task submitted",
-    "submitFailed": "Task submission failed: {error}"
+    "submitFailed": "Task submission failed: {error}",
+    "fileInput": {
+      "dragPlaceholder": "Drag media or timeline clip here",
+      "replace": "Replace",
+      "type": "Type",
+      "duration": "Duration",
+      "resolution": "Resolution",
+      "clipRange": "Clip Range",
+      "source": "Source",
+      "mediaLibrary": "Media Library",
+      "timeline": "Timeline",
+      "video": "Video",
+      "image": "Image",
+      "audio": "Audio",
+      "unknown": "Unknown",
+      "fileAdded": "File added: {name}",
+      "dragFailed": "File drag failed, please retry",
+      "thumbnailLoadFailed": "Thumbnail load failed, will show file type icon"
+    }
   }
 }

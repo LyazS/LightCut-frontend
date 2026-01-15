@@ -17,8 +17,6 @@ import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import { getMediaPath } from '@/core/utils/mediaPathUtils'
-import { DataSourceQueries } from '@/core/datasource/core/DataSourceTypes'
 
 export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   readonly targetType: DropTargetType = TargetType.AI_GENERATION_PANEL
@@ -48,6 +46,12 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const panelTargetInfo = targetInfo as AIGenerationPanelDropTargetInfo
     const acceptTypes = panelTargetInfo.fieldConfig.accept || []
 
+    // 注意：不需要在这里检查文件数量限制
+    // 因为组件的渐进式UI设计已经天然地限制了文件数量：
+    // - 当达到 maxFiles 时，不会显示新的空槽位
+    // - 用户只能拖拽到已填充的槽位进行替换操作
+    // - 这是一个更优雅的用户体验设计
+
     // 检查文件类型兼容性
     if (dragData.sourceType === DragSourceType.MEDIA_ITEM) {
       const mediaData = dragData as MediaItemDragData
@@ -69,10 +73,16 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   ): Promise<DropResult> {
     if (targetInfo.targetType !== TargetType.AI_GENERATION_PANEL) {
       console.error('目标类型不匹配，期望 AI_GENERATION_PANEL')
-      return { success: false }
+      return { success: false, error: '目标类型不匹配' }
     }
 
     const panelTargetInfo = targetInfo as AIGenerationPanelDropTargetInfo
+
+    // 注意：不需要在这里检查文件数量限制
+    // 因为组件的渐进式UI设计已经天然地限制了文件数量：
+    // - 当达到 maxFiles 时，不会显示新的空槽位
+    // - 用户只能拖拽到已填充的槽位进行替换操作
+    // - 这是一个更优雅的用户体验设计
 
     try {
       if (dragData.sourceType === DragSourceType.MEDIA_ITEM) {
@@ -82,10 +92,10 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
       }
     } catch (error) {
       console.error('处理拖拽放置失败:', error)
-      return { success: false }
+      return { success: false, error: '处理拖拽放置失败' }
     }
 
-    return { success: false }
+    return { success: false, error: '不支持的拖拽源类型' }
   }
 
   /**
@@ -98,23 +108,32 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const mediaItem = this.mediaModule.getMediaItem(mediaData.mediaItemId)
     if (!mediaItem) {
       console.error('找不到素材项目:', mediaData.mediaItemId)
-      return { success: false }
+      return { success: false, error: '找不到素材项目' }
     }
 
     // 检查类型兼容性
     const acceptTypes = targetInfo.fieldConfig.accept || []
     if (!this.isMediaTypeAccepted(mediaItem.mediaType, acceptTypes)) {
       console.error(`素材类型 ${mediaItem.mediaType} 不被接受`)
-      return { success: false }
+      return { success: false, error: `不支持的素材类型: ${mediaItem.mediaType}` }
     }
 
     // 提取文件信息
     const fileData = {
+      __type__: 'FileData' as const,
       name: mediaItem.name,
       mediaType: mediaItem.mediaType,
       mediaItemId: mediaItem.id,
       duration: mediaItem.duration,
-      path: this.extractMediaPath(mediaItem),
+      
+      // 新增：分辨率信息
+      resolution: mediaItem.runtime.bunny?.originalWidth ? {
+        width: mediaItem.runtime.bunny.originalWidth,
+        height: mediaItem.runtime.bunny.originalHeight,
+      } : undefined,
+      
+      // 新增：来源标识
+      source: 'media-item' as const,
     }
 
     console.log('✅ 素材拖拽成功:', fileData)
@@ -136,31 +155,38 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
     const timelineItem = this.timelineModule.getTimelineItem(timelineData.itemId)
     if (!timelineItem) {
       console.error('找不到时间轴项目:', timelineData.itemId)
-      return { success: false }
+      return { success: false, error: '找不到时间轴项目' }
     }
 
     // 检查类型兼容性
     const acceptTypes = targetInfo.fieldConfig.accept || []
     if (!this.isMediaTypeAccepted(timelineItem.mediaType, acceptTypes)) {
       console.error(`时间轴项目类型 ${timelineItem.mediaType} 不被接受`)
-      return { success: false }
+      return { success: false, error: `不支持的时间轴项目类型: ${timelineItem.mediaType}` }
     }
 
     // 获取关联的素材项目
     const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
     if (!mediaItem) {
       console.error('找不到关联的素材项目:', timelineItem.mediaItemId)
-      return { success: false }
+      return { success: false, error: '找不到关联的素材项目' }
     }
 
     // 提取文件信息（包含时间范围）
     const fileData = {
+      __type__: 'FileData' as const,
       name: mediaItem.name,
       mediaType: timelineItem.mediaType,
       timelineItemId: timelineItem.id,
       mediaItemId: mediaItem.id,
       duration: timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime,
-      path: this.extractMediaPath(mediaItem),
+      
+      // 新增：分辨率信息
+      resolution: mediaItem.runtime.bunny?.originalWidth ? {
+        width: mediaItem.runtime.bunny.originalWidth,
+        height: mediaItem.runtime.bunny.originalHeight,
+      } : undefined,
+      
       // 时间轴特有信息
       timeRange: {
         clipStartTime: timelineItem.timeRange.clipStartTime,
@@ -168,6 +194,9 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
         timelineStartTime: timelineItem.timeRange.timelineStartTime,
         timelineEndTime: timelineItem.timeRange.timelineEndTime,
       },
+      
+      // 新增：来源标识
+      source: 'timeline-item' as const,
     }
 
     console.log('✅ 时间轴片段拖拽成功:', fileData)
@@ -185,32 +214,5 @@ export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   private isMediaTypeAccepted(mediaType: string, acceptTypes: string[]): boolean {
     if (acceptTypes.length === 0) return true // 未指定则接受所有类型
     return acceptTypes.includes(mediaType)
-  }
-
-  /**
-   * 从媒体项目提取文件路径
-   */
-  private extractMediaPath(mediaItem: UnifiedMediaItemData): string | undefined {
-    try {
-      const source = mediaItem.source
-      
-      // 用户选择的文件
-      if (DataSourceQueries.isUserSelectedSource(source)) {
-        // 使用 media/id 格式的路径
-        return getMediaPath(mediaItem.id)
-      }
-      
-      // AI生成的文件
-      if (DataSourceQueries.isAIGenerationSource(source)) {
-        // 如果有 resultPath，使用它；否则使用 media/id 格式
-        return source.resultPath || getMediaPath(mediaItem.id)
-      }
-      
-      console.warn(`未知的数据源类型`)
-      return undefined
-    } catch (error) {
-      console.error('提取文件路径失败:', error)
-      return undefined
-    }
   }
 }

@@ -54,6 +54,18 @@
 
     <!-- 调试按钮放在最右边 -->
     <div class="toolbar-section debug-section">
+      <!-- 缩放控制 -->
+      <div class="toolbar-section zoom-section">
+        <SliderInput
+          :model-value="zoomSliderValue"
+          @input="handleZoomChange"
+          :min="0"
+          :max="100"
+          :step="0.1"
+          slider-class="zoom-slider"
+        />
+      </div>
+
       <!-- 吸附开关按钮 -->
       <HoverButton
         @click="toggleSnap"
@@ -66,7 +78,7 @@
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
-      <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息"> 调试 </HoverButton>
+      <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息"> 调试 </HoverButton> -->
       <!-- <HoverButton @click="debugHistory" title="在控制台打印历史操作记录信息">
         <template #icon>
           <RemixIcon name="history-line" size="1x" />
@@ -84,12 +96,56 @@ import { useAppI18n } from '@/core/composables/useI18n'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
 import HoverButton from '@/components/base/HoverButton.vue'
+import SliderInput from '@/components/base/SliderInput.vue'
 import { IconComponents, getSnapIcon } from '@/constants/iconComponents'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 
 const timelineItems = computed(() => unifiedStore.timelineItems)
+
+// 缩放级别相关
+const zoomLevel = computed(() => unifiedStore.zoomLevel)
+const minZoomLevel = computed(() => unifiedStore.minZoomLevel)
+const maxZoomLevel = computed(() =>
+  unifiedStore.getMaxZoomLevelForTimeline(unifiedStore.TimelineContentWidth),
+)
+
+// 非线性映射强度参数
+// 值越大，非线性越强（小范围更精细）
+// 值为 1 时为线性映射
+// 值为 2-4 时为中等非线性
+// 值为 5+ 时为强非线性
+const zoomExponent = 4
+
+// 将 zoomLevel 映射到滑块值 (0-100)，使用幂函数映射
+const zoomSliderValue = computed(() => {
+  const min = minZoomLevel.value
+  const max = maxZoomLevel.value
+  const current = zoomLevel.value
+
+  // 使用幂函数映射：sliderValue = 100 * ((current / min - 1) / (max / min - 1))^(1/zoomExponent)
+  if (max <= min) return 50
+  const ratio = current / min
+  const maxRatio = max / min
+  const normalizedRatio = (ratio - 1) / (maxRatio - 1)
+  return 100 * Math.pow(normalizedRatio, 1 / zoomExponent)
+})
+
+// 处理缩放变化，使用幂函数映射将滑块值转换为 zoomLevel
+function handleZoomChange(sliderValue: number) {
+  const min = minZoomLevel.value
+  const max = maxZoomLevel.value
+
+  // 使用幂函数映射：zoomLevel = min * (1 + (max / min - 1) * (sliderValue / 100)^zoomExponent)
+  if (max <= min) return
+  const maxRatio = max / min
+  const normalizedValue = sliderValue / 100
+  const ratio = 1 + (maxRatio - 1) * Math.pow(normalizedValue, zoomExponent)
+  const newZoomLevel = min * ratio
+
+  unifiedStore.setZoomLevel(newZoomLevel)
+}
 
 // 吸附功能状态
 const snapEnabled = computed(() => unifiedStore.snapConfig.enabled)
@@ -147,11 +203,10 @@ async function splitSelectedClip() {
       `📍 裁剪时间位置: ${unifiedStore.currentFrame}帧 (${unifiedStore.formattedCurrentTime})`,
     )
 
-    // 使用带历史记录的分割方法（传入帧数）
-    await unifiedStore.splitTimelineItemAtTimeWithHistory(
-      unifiedStore.selectedTimelineItemId,
+    // 使用带历史记录的分割方法（传入帧数数组）
+    await unifiedStore.splitTimelineItemAtTimeWithHistory(unifiedStore.selectedTimelineItemId, [
       unifiedStore.currentFrame,
-    )
+    ])
     console.log('✅ 时间轴项目分割成功')
   }
 }
@@ -164,15 +219,8 @@ async function deleteSelectedClip() {
       `🗑️ 删除时间轴项目: ${mediaItem?.name || '未知'} (ID: ${unifiedStore.selectedTimelineItemId})`,
     )
 
-    try {
-      // 使用带历史记录的删除方法
-      await unifiedStore.removeTimelineItemWithHistory(unifiedStore.selectedTimelineItemId)
-      console.log('✅ 时间轴项目删除成功')
-    } catch (error) {
-      console.error('❌ 删除时间轴项目失败:', error)
-      // 如果历史记录删除失败，回退到直接删除
-      unifiedStore.removeTimelineItem(unifiedStore.selectedTimelineItemId)
-    }
+    await unifiedStore.removeTimelineItemWithHistory(unifiedStore.selectedTimelineItemId)
+    console.log('✅ 时间轴项目删除成功')
   }
 }
 
@@ -409,6 +457,11 @@ function debugHistory() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.zoom-section {
+  display: flex;
+  align-items: center;
 }
 
 .debug-section {

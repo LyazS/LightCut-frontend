@@ -8,12 +8,3 @@ export { UnifiedProjectManager, unifiedProjectManager } from './project/UnifiedP
 
 // ==================== 文件系统服务 ====================
 export { fileSystemService } from './filesystem/fileSystemService'
-
-// ==================== 媒体管理器 ====================
-
-export {
-  MediaSyncFactory,
-  cleanupCommandMediaSync,
-  cleanupProjectLoadMediaSync,
-  getMediaSyncInfo,
-} from './media'

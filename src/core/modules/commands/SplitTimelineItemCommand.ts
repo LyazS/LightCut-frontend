@@ -7,7 +7,6 @@
 import { generateCommandId, generateTimelineItemId } from '@/core/utils/idGenerator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import { cleanupCommandMediaSync } from '@/core/managers/media'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 新架构类型导入 ====================
@@ -33,14 +32,13 @@ export class SplitTimelineItemCommand implements SimpleCommand {
   public readonly id: string
   public readonly description: string
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> // 保存原始项目的重建数据
-  private firstItemId: string // 分割后第一个项目的ID
-  private secondItemId: string // 分割后第二个项目的ID
+  private splitItemIds: string[] // 分割后所有项目的ID（n个分割点产生n+1个片段）
   private _isDisposed = false
 
   constructor(
     private originalTimelineItemId: string,
     originalTimelineItem: UnifiedTimelineItemData<MediaType>, // 要分割的原始时间轴项目
-    private splitTimeFrames: number, // 分割时间点（帧数）
+    private splitTimeFrames: number[], // 分割时间点数组（帧数），按时间顺序排列
     private timelineModule: {
       addTimelineItem: (item: UnifiedTimelineItemData<MediaType>) => Promise<void>
       removeTimelineItem: (id: string) => void
@@ -54,14 +52,15 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 已知项目处理逻辑
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${framesToTimecode(splitTimeFrames)})`
+    const splitPointsDesc = splitTimeFrames.map(t => framesToTimecode(t)).join(', ')
+    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${splitPointsDesc})`
 
     // 保存原始项目的完整重建元数据
     this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)
 
-    // 生成分割后项目的ID
-    this.firstItemId = generateTimelineItemId()
-    this.secondItemId = generateTimelineItemId()
+    // 生成分割后项目的ID（n个分割点产生n+1个片段）
+    const fragmentCount = splitTimeFrames.length + 1
+    this.splitItemIds = Array.from({ length: fragmentCount }, () => generateTimelineItemId())
 
     console.log('💾 保存分割项目的重建数据:', {
       originalId: this.originalTimelineItemData.id,
@@ -69,181 +68,175 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       mediaType: this.originalTimelineItemData.mediaType,
       splitTimeFrames: this.splitTimeFrames,
       timeRange: this.originalTimelineItemData.timeRange,
-      firstItemId: this.firstItemId,
-      secondItemId: this.secondItemId,
+      splitItemIds: this.splitItemIds,
+      fragmentCount,
     })
   }
 
   /**
-   * 从原始素材重建分割后的两个sprite和timelineItem
+   * 从原始素材重建分割后的多个sprite和timelineItem
    * 遵循"从源头重建"原则，每次都完全重新创建
+   * n个分割点产生n+1个片段
    */
-  private async rebuildSplitItems(): Promise<{
-    firstItem: UnifiedTimelineItemData<MediaType>
-    secondItem: UnifiedTimelineItemData<MediaType>
-  }> {
+  private async rebuildSplitItems(): Promise<UnifiedTimelineItemData<MediaType>[]> {
     console.log('🔄 开始从源头重建分割后的时间轴项目...')
 
-    // 2. 计算分割点的时间信息（直接使用帧数）
     const originalTimeRange = this.originalTimelineItemData.timeRange
     const timelineStartTimeFrames = originalTimeRange.timelineStartTime
     const timelineEndTimeFrames = originalTimeRange.timelineEndTime
-    const splitTimeFrames = this.splitTimeFrames // 分割时间点（帧数）
-
-    // 计算分割点在素材中的相对位置（使用帧数）
     const timelineDurationFrames = timelineEndTimeFrames - timelineStartTimeFrames
-    const relativeTimelineFrames = splitTimeFrames - timelineStartTimeFrames
-    const relativeRatio = relativeTimelineFrames / timelineDurationFrames
 
-    // 统一使用UnifiedTimeRange，所有类型都有clipStartTime和clipEndTime
     const clipStartTimeFrames = originalTimeRange.clipStartTime || 0
     const clipEndTimeFrames = originalTimeRange.clipEndTime || 0
     const clipDurationFrames = clipEndTimeFrames - clipStartTimeFrames
-    const splitClipTimeFrames = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
 
-    // 创建第一个分割片段的时间范围
-    const firstTimeRange: UnifiedTimeRange = {
-      clipStartTime: clipStartTimeFrames,
-      clipEndTime: splitClipTimeFrames,
-      timelineStartTime: timelineStartTimeFrames,
-      timelineEndTime: splitTimeFrames,
-    }
+    // 确保分割点按时间顺序排列
+    const sortedSplitPoints = [...this.splitTimeFrames].sort((a, b) => a - b)
 
-    // 创建第二个分割片段的时间范围
-    const secondTimeRange: UnifiedTimeRange = {
-      clipStartTime: splitClipTimeFrames,
-      clipEndTime: clipEndTimeFrames,
-      timelineStartTime: splitTimeFrames,
-      timelineEndTime: timelineEndTimeFrames,
-    }
+    // 构建所有分割点（包括起点和终点）
+    const allSplitPoints = [timelineStartTimeFrames, ...sortedSplitPoints, timelineEndTimeFrames]
 
-    // ==================== 新增：处理关键帧动画 ====================
-    let firstAnimation: GetAnimation<MediaType> | undefined
-    let secondAnimation: GetAnimation<MediaType> | undefined
+    console.log('🔄 分割点信息:', {
+      originalTimeRange,
+      sortedSplitPoints,
+      allSplitPoints,
+      fragmentCount: this.splitItemIds.length,
+    })
 
+    const splitItems: UnifiedTimelineItemData<MediaType>[] = []
+
+    // 处理关键帧动画
+    let animations: GetAnimation<MediaType>[] = []
     if (
       this.originalTimelineItemData.animation &&
       this.originalTimelineItemData.animation.keyframes.length > 0
     ) {
       console.log('🎬 [Split] 检测到关键帧动画，开始处理...')
 
-      // 计算切割位置的百分比（相对于原始 clip）
-      const splitPositionPercentage = relativeRatio
+      // 为每个片段计算关键帧
+      for (let i = 0; i < allSplitPoints.length - 1; i++) {
+        const fragmentStartTime = allSplitPoints[i]
+        const fragmentEndTime = allSplitPoints[i + 1]
 
-      // 计算新的时长
-      const firstDurationFrames = splitTimeFrames - timelineStartTimeFrames
-      const secondDurationFrames = timelineEndTimeFrames - splitTimeFrames
+        // 计算片段在原始时间轴中的相对位置
+        const relativeTimelineFrames = fragmentStartTime - timelineStartTimeFrames
+        const relativeRatio = relativeTimelineFrames / timelineDurationFrames
 
-      console.log('🎬 [Split] 关键帧切割参数:', {
-        splitPositionPercentage,
-        originalDuration: clipDurationFrames,
-        firstDuration: firstDurationFrames,
-        secondDuration: secondDurationFrames,
-        originalKeyframeCount: this.originalTimelineItemData.animation.keyframes.length,
-      })
+        // 计算片段时长
+        const fragmentDurationFrames = fragmentEndTime - fragmentStartTime
 
-      // 切割关键帧
-      const { firstKeyframes, secondKeyframes, splitKeyframe } = splitKeyframesAtPosition(
-        this.originalTimelineItemData.animation.keyframes,
-        splitPositionPercentage,
-        clipDurationFrames,
-        firstDurationFrames,
-        secondDurationFrames,
+        // 计算片段在素材中的起始和结束时间
+        const fragmentClipStartTime = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
+        const fragmentClipEndTime = clipStartTimeFrames + Math.round(
+          clipDurationFrames * ((fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames)
+        )
+
+        console.log(`🎬 [Split] 片段 ${i + 1} 关键帧切割参数:`, {
+          fragmentStartTime,
+          fragmentEndTime,
+          fragmentDurationFrames,
+          fragmentClipStartTime,
+          fragmentClipEndTime,
+          relativeRatio,
+        })
+
+        // 切割关键帧
+        const { firstKeyframes } = splitKeyframesAtPosition(
+          this.originalTimelineItemData.animation.keyframes,
+          relativeRatio,
+          clipDurationFrames,
+          fragmentDurationFrames,
+          fragmentClipEndTime - fragmentClipStartTime,
+        )
+
+        console.log(`🎬 [Split] 片段 ${i + 1} 关键帧切割结果:`, {
+          keyframeCount: firstKeyframes.length,
+        })
+
+        // 创建动画配置
+        if (firstKeyframes.length > 0) {
+          animations.push({ keyframes: firstKeyframes as any })
+        } else {
+          animations.push(undefined as any)
+        }
+      }
+    }
+
+    // 为每个片段创建时间轴项目
+    for (let i = 0; i < allSplitPoints.length - 1; i++) {
+      const fragmentStartTime = allSplitPoints[i]
+      const fragmentEndTime = allSplitPoints[i + 1]
+
+      // 计算片段在原始时间轴中的相对位置
+      const relativeTimelineFrames = fragmentStartTime - timelineStartTimeFrames
+      const relativeRatio = relativeTimelineFrames / timelineDurationFrames
+
+      // 计算片段在素材中的起始和结束时间
+      const fragmentClipStartTime = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
+      const fragmentClipEndTime = clipStartTimeFrames + Math.round(
+        clipDurationFrames * ((fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames)
       )
 
-      console.log('🎬 [Split] 关键帧切割结果:', {
-        firstKeyframeCount: firstKeyframes.length,
-        secondKeyframeCount: secondKeyframes.length,
-        hasSplitKeyframe: !!splitKeyframe,
+      // 创建片段的时间范围
+      const fragmentTimeRange: UnifiedTimeRange = {
+        clipStartTime: fragmentClipStartTime,
+        clipEndTime: fragmentClipEndTime,
+        timelineStartTime: fragmentStartTime,
+        timelineEndTime: fragmentEndTime,
+      }
+
+      console.log(`🔄 创建片段 ${i + 1}/${this.splitItemIds.length}:`, {
+        id: this.splitItemIds[i],
+        timeRange: fragmentTimeRange,
       })
 
-      // 创建动画配置 - 使用类型断言解决泛型类型问题
-      if (firstKeyframes.length > 0) {
-        firstAnimation = { keyframes: firstKeyframes as any }
+      // 使用 TimelineItemFactory.rebuildForCmd 创建片段
+      const rebuildResult = await TimelineItemFactory.rebuildForCmd({
+        originalTimelineItemData: {
+          ...this.originalTimelineItemData,
+          id: this.splitItemIds[i],
+          timeRange: fragmentTimeRange,
+          animation: animations[i] || undefined,
+        },
+        getMediaItem: this.mediaModule.getMediaItem,
+        logIdentifier: `SplitTimelineItemCommand rebuildSplitItems fragment ${i + 1}`,
+      })
+
+      if (!rebuildResult.success) {
+        throw new Error(`重建片段 ${i + 1} 失败: ${rebuildResult.error}`)
       }
-      if (secondKeyframes.length > 0) {
-        secondAnimation = { keyframes: secondKeyframes as any }
+
+      const fragmentItem = rebuildResult.timelineItem
+
+      // 获取关联的媒体项目
+      const mediaItem = this.mediaModule.getMediaItem(fragmentItem.mediaItemId)
+      if (!mediaItem) {
+        throw new Error(`找不到关联的媒体项目: ${fragmentItem.mediaItemId}`)
       }
+
+      // 使用 setupTimelineItemBunny 创建 bunny 对象
+      await setupTimelineItemBunny(fragmentItem, mediaItem)
+
+      // 修改状态为 ready
+      fragmentItem.timelineStatus = 'ready'
+      
+      // ✅ 分割命令：新创建的片段，已完成初始化
+      fragmentItem.runtime.isInitialized = true
+
+      console.log(
+        `✅ [SplitTimelineItemCommand] 片段 ${i + 1} bunny 对象创建完成，状态已设置为 ready`,
+      )
+
+      splitItems.push(fragmentItem)
     }
-    // ==================== 关键帧处理结束 ====================
-
-    // 使用 TimelineItemFactory.rebuildForCmd 创建第一个分割片段
-    const firstRebuildResult = await TimelineItemFactory.rebuildForCmd({
-      originalTimelineItemData: {
-        ...this.originalTimelineItemData,
-        id: this.firstItemId,
-        timeRange: firstTimeRange,
-        animation: firstAnimation, // 应用处理后的关键帧
-      },
-      getMediaItem: this.mediaModule.getMediaItem,
-      logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems first',
-    })
-
-    if (!firstRebuildResult.success) {
-      throw new Error(`重建第一个分割片段失败: ${firstRebuildResult.error}`)
-    }
-
-    const firstItem = firstRebuildResult.timelineItem
-
-    // 获取关联的媒体项目
-    const firstMediaItem = this.mediaModule.getMediaItem(firstItem.mediaItemId)
-    if (!firstMediaItem) {
-      throw new Error(`找不到关联的媒体项目: ${firstItem.mediaItemId}`)
-    }
-
-    // 使用 setupTimelineItemBunny 创建 bunny 对象
-    await setupTimelineItemBunny(firstItem, firstMediaItem)
-
-    // 修改状态为 ready
-    firstItem.timelineStatus = 'ready'
-
-    console.log(
-      `✅ [SplitTimelineItemCommand] 第一个分割片段 bunny 对象创建完成，状态已设置为 ready`,
-    )
-
-    // 使用 TimelineItemFactory.rebuildForCmd 创建第二个分割片段
-    const secondRebuildResult = await TimelineItemFactory.rebuildForCmd({
-      originalTimelineItemData: {
-        ...this.originalTimelineItemData,
-        id: this.secondItemId,
-        timeRange: secondTimeRange,
-        animation: secondAnimation, // 应用处理后的关键帧
-      },
-      getMediaItem: this.mediaModule.getMediaItem,
-      logIdentifier: 'SplitTimelineItemCommand rebuildSplitItems second',
-    })
-
-    if (!secondRebuildResult.success) {
-      throw new Error(`重建第二个分割片段失败: ${secondRebuildResult.error}`)
-    }
-
-    const secondItem = secondRebuildResult.timelineItem
-
-    // 获取关联的媒体项目
-    const secondMediaItem = this.mediaModule.getMediaItem(secondItem.mediaItemId)
-    if (!secondMediaItem) {
-      throw new Error(`找不到关联的媒体项目: ${secondItem.mediaItemId}`)
-    }
-
-    // 使用 setupTimelineItemBunny 创建 bunny 对象
-    await setupTimelineItemBunny(secondItem, secondMediaItem)
-
-    // 修改状态为 ready
-    secondItem.timelineStatus = 'ready'
-
-    console.log(
-      `✅ [SplitTimelineItemCommand] 第二个分割片段 bunny 对象创建完成，状态已设置为 ready`,
-    )
 
     console.log('🔄 重建分割项目完成:', {
-      firstItemId: firstItem.id,
-      secondItemId: secondItem.id,
+      fragmentCount: splitItems.length,
       splitTimeFrames: this.splitTimeFrames,
-      firstTimeRange: firstItem.timeRange,
-      secondTimeRange: secondItem.timeRange,
+      splitItemIds: this.splitItemIds,
     })
 
-    return { firstItem, secondItem }
+    return splitItems
   }
 
   /**
@@ -287,19 +280,21 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         return
       }
 
-      // 从原始素材重新创建分割后的两个项目
-      const { firstItem, secondItem } = await this.rebuildSplitItems()
+      // 从原始素材重新创建分割后的多个项目
+      const splitItems = await this.rebuildSplitItems()
 
       // 1. 删除原始项目
       await this.timelineModule.removeTimelineItem(this.originalTimelineItemId)
 
-      // 2. 添加分割后的两个项目（已经是 ready 状态，不需要 MediaSync）
-      await this.timelineModule.addTimelineItem(firstItem)
-      await this.timelineModule.addTimelineItem(secondItem)
+      // 2. 添加分割后的所有项目（已经是 ready 状态，不需要 MediaSync）
+      for (const item of splitItems) {
+        await this.timelineModule.addTimelineItem(item)
+      }
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
+      const splitPointsDesc = this.splitTimeFrames.map(t => framesToTimecode(t)).join(', ')
       console.log(
-        `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${framesToTimecode(this.splitTimeFrames)}`,
+        `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${splitPointsDesc}，产生 ${splitItems.length} 个片段`,
       )
     } catch (error) {
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
@@ -330,12 +325,17 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
       // 修改状态为 ready
       originalItem.timelineStatus = 'ready'
+      
+      // ✅ 分割命令的 undo：恢复原有的 isInitialized 标记
+      // 注意：isInitialized 是必选字段，originalTimelineItemData 中一定有值
+      originalItem.runtime.isInitialized = this.originalTimelineItemData.runtime.isInitialized
 
       console.log(`✅ [SplitTimelineItemCommand] 原始项目 bunny 对象创建完成，状态已设置为 ready`)
 
-      // 2. 删除分割后的两个项目
-      await this.timelineModule.removeTimelineItem(this.firstItemId)
-      await this.timelineModule.removeTimelineItem(this.secondItemId)
+      // 2. 删除分割后的所有项目
+      for (const itemId of this.splitItemIds) {
+        await this.timelineModule.removeTimelineItem(itemId)
+      }
 
       // 3. 添加原始项目到时间轴（已经是 ready 状态，不需要 MediaSync）
       await this.timelineModule.addTimelineItem(originalItem)
@@ -365,8 +365,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
     }
 
     this._isDisposed = true
-    // 清理媒体同步
-    cleanupCommandMediaSync(this.id)
+    // 注意：SplitTimelineItemCommand 不使用 MediaSync，因为分割操作总是产生 ready 状态的项目
     console.log(`🗑️ [SplitTimelineItemCommand] 命令资源已清理: ${this.id}`)
   }
 }

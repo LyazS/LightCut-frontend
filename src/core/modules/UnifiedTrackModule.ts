@@ -2,7 +2,9 @@ import { ref, computed } from 'vue'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { isReady } from '@/core/timelineitem/queries'
-
+import { MODULE_NAMES, ModuleRegistry } from './ModuleRegistry'
+import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
+import type { UnifiedTimelineItemData } from '../timelineitem'
 /**
  * 统一轨道管理模块
  * 基于新架构的统一类型系统重构的轨道管理功能
@@ -12,7 +14,7 @@ import { isReady } from '@/core/timelineitem/queries'
  * 2. 支持更丰富的轨道状态和属性管理
  * 3. 保持与原有模块相同的API接口，便于迁移
  */
-export function createUnifiedTrackModule() {
+export function createUnifiedTrackModule(registry: ModuleRegistry) {
   // ==================== 状态定义 ====================
 
   // 轨道列表 - 使用统一轨道类型
@@ -79,17 +81,17 @@ export function createUnifiedTrackModule() {
       return
     }
 
-    // 动态导入 store 以避免循环依赖
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
+    const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
 
     // 找到该轨道上的所有时间轴项目并删除它们
-    const affectedItems = store.timelineItems.filter((item: any) => item.trackId === trackId)
+    const affectedItems = timelineModule.timelineItems.value.filter(
+      (item: UnifiedTimelineItemData) => item.trackId === trackId,
+    )
 
     // 删除该轨道上的所有时间轴项目
-    affectedItems.forEach(async (item: any) => {
-      await store.removeTimelineItem(item.id)
-    })
+    for (const item of affectedItems) {
+      await timelineModule.removeTimelineItem(item.id)
+    }
 
     // 删除轨道
     const index = tracks.value.findIndex((t) => t.id === trackId)
@@ -271,7 +273,7 @@ export function createUnifiedTrackModule() {
   return {
     // 状态
     tracks,
-    trackIndexMap,  // 导出计算属性供其他模块使用
+    trackIndexMap, // 导出计算属性供其他模块使用
 
     // 基础方法
     addTrack,

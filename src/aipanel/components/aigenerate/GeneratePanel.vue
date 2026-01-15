@@ -58,6 +58,12 @@
           <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
           <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }}</span>
         </button>
+
+        <!-- 调试输出按钮 -->
+        <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
+          <component :is="IconComponents.DEBUG" size="16px" class="button-icon" />
+          <span>调试输出</span>
+        </button>
       </div>
     </n-scrollbar>
   </div>
@@ -74,29 +80,19 @@ import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
 import type { UIConfig } from '@/core/datasource/providers/ai-generation'
-
-// 状态管理
 import { useUnifiedStore } from '@/core/unifiedStore'
-
-// API 客户端
 import { fetchClient } from '@/utils/fetchClient'
-
-// 工具函数
 import { generateMediaId } from '@/core/utils/idGenerator'
-
-// AI 生成相关类型和工厂
+import { BizyairFileUploader } from '@/core/utils/bizyairFileUploader'
+import { BltcyFileUploader } from '@/core/utils/bltcyFileUploader'
 import {
   AIGenerationSourceFactory,
   TaskStatus,
   type MediaGenerationRequest,
 } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
 import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
-
-// 任务API类型
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
-
-// 错误处理工具
 import {
   buildTaskErrorMessage,
   shouldShowRechargePrompt,
@@ -170,19 +166,6 @@ const handleConfigChange = (value: ConfigKey) => {
   console.log('AI配置（可修改）:', aiConfig.value)
 }
 
-// aiConfig 通过 v-model 双向绑定，会自动更新
-// 监听变化以便进行其他操作
-watch(
-  aiConfig,
-  (newValue) => {
-    if (newValue) {
-      console.log('AI配置值更新:', newValue)
-      // 这里可以触发其他操作，比如更新预览等
-    }
-  },
-  { deep: true },
-)
-
 /**
  * 提交AI生成任务到后端
  * @param requestParams 请求参数
@@ -194,7 +177,7 @@ async function submitAIGenerationTask(
   try {
     const response = await fetchClient.post<TaskSubmitResponse>(
       '/api/media/generate',
-      requestParams
+      requestParams,
     )
 
     if (response.status !== 200) {
@@ -227,14 +210,49 @@ async function handleGenerate() {
     isGenerating.value = true
     const configData = collection[selectedConfig.value]
 
-    // 1. 准备请求参数
+    // 🆕 1. 根据 uploadServer 配置选择上传处理器
+    const uploadServer = configData.uploadServer
+    let newConfig: Record<string, any> = cloneDeep(aiConfig.value)
+
+    if (uploadServer) {
+      if (uploadServer === 'bizyair') {
+        newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {
+            unifiedStore.messageSuccess('文件上传完成')
+          },
+        )
+      } else if (uploadServer === 'bltcy') {
+        newConfig = await BltcyFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {
+            unifiedStore.messageSuccess('文件上传完成')
+          },
+        )
+      } else {
+        // TODO: 实现其他上传处理器
+        throw new Error(`不支持的上传服务器: ${uploadServer}`)
+      }
+    }
+
+    // 3. 准备请求参数
     const requestParams: MediaGenerationRequest = {
       ai_task_type: configData.aiTaskType, // 使用配置中的 aiTaskType
       content_type: configData.contentType, // image, video, audio
       task_config: {
         id: configData.id, // 添加配置 id
-        ...cloneDeep(aiConfig.value) // AI配置（不包含 web_app_id）
-      }
+        ...newConfig, // AI配置（不包含 web_app_id）
+      },
     }
 
     console.log('🚀 [GeneratePanel] 提交AI生成任务到后端...', requestParams)
@@ -303,7 +321,7 @@ async function handleGenerate() {
     // 根据内容类型确定文件扩展名
     let extension = 'png'
     let mediaType: 'image' | 'video' | 'audio' = 'image'
-    
+
     if (configData.contentType === 'video') {
       extension = 'mp4'
       mediaType = 'video'
@@ -315,12 +333,9 @@ async function handleGenerate() {
     const mediaId = generateMediaId(extension)
     const mediaName = `${configData.name[currentLang.value]}_${Date.now()}`
 
-    const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      mediaId,
-      mediaName,
-      aiSource,
-      { mediaType }
-    )
+    const mediaItem = unifiedStore.createUnifiedMediaItemData(mediaId, mediaName, aiSource, {
+      mediaType,
+    })
 
     // 6. 添加到媒体库
     unifiedStore.addMediaItem(mediaItem)
@@ -352,10 +367,65 @@ async function handleGenerate() {
     unifiedStore.messageError(
       t('aiPanel.submitFailed', {
         error: error instanceof Error ? error.message : '未知错误',
-      })
+      }),
     )
   } finally {
     isGenerating.value = false
+  }
+}
+
+/**
+ * 处理调试输出按钮点击
+ */
+async function handleDebugOutput() {
+  if (!aiConfig.value) {
+    console.warn('⚠️ [GeneratePanel] aiConfig 为空')
+    return
+  }
+  console.log(JSON.stringify(aiConfig.value, null, 2))
+  try {
+    // 根据 uploadServer 配置选择上传处理器（仅用于调试）
+    if (!selectedConfig.value) {
+      console.warn('⚠️ [GeneratePanel] 未选择配置')
+      return
+    }
+    const configData = collection[selectedConfig.value]
+    const uploadServer = configData.uploadServer
+    let newConfig: Record<string, any>
+
+    if (uploadServer) {
+      if (uploadServer === 'bizyair') {
+        newConfig = await BizyairFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+        )
+
+        console.log('🔍 [GeneratePanel] 上传后的配置:')
+        console.log(JSON.stringify(newConfig, null, 2))
+      } else if (uploadServer === 'bltcy') {
+        newConfig = await BltcyFileUploader.processConfigUploads(
+          aiConfig.value,
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+        )
+
+        console.log('🔍 [GeneratePanel] 上传后的配置:')
+        console.log(JSON.stringify(newConfig, null, 2))
+      } else {
+        // TODO: 实现其他上传处理器
+        console.warn(`⚠️ [GeneratePanel] 不支持的上传服务器: ${uploadServer}`)
+      }
+    }
+  } catch (error) {
+    console.error('❌ 调试输出失败:', error)
+    unifiedStore.messageError(`调试失败: ${error instanceof Error ? error.message : '未知错误'}`)
   }
 }
 </script>
@@ -364,7 +434,6 @@ async function handleGenerate() {
 .panel {
   display: flex;
   flex-direction: column;
-  /* gap: var(--spacing-xs); */
   height: 100%;
   overflow: hidden;
 }
@@ -408,7 +477,6 @@ async function handleGenerate() {
 }
 
 .generate-button {
-  width: 100%;
   padding: var(--spacing-md);
   background: var(--color-accent-primary);
   color: white;
@@ -420,6 +488,7 @@ async function handleGenerate() {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--spacing-xs);
   transition: all 0.2s ease;
 }
 

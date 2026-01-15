@@ -97,6 +97,25 @@ export function framesToTimecode(frames: number): string {
 }
 
 /**
+ * 帧数转换为压缩时间码字符串（小时为0时不显示小时）
+ * @param frames 帧数
+ * @returns 时间码字符串 "MM:SS.FF" 或 "HH:MM:SS.FF"
+ */
+export function framesToTimecodeCompact(frames: number): string {
+  const totalSeconds = Math.floor(frames / TimeConstants.FRAME_RATE)
+  const remainingFrames = frames % TimeConstants.FRAME_RATE
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours === 0) {
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${remainingFrames.toString().padStart(2, '0')}`
+  }
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${remainingFrames.toString().padStart(2, '0')}`
+}
+
+/**
  * 时间码字符串转换为帧数
  * @param timecode 时间码字符串 "HH:MM:SS.FF"
  * @returns 帧数

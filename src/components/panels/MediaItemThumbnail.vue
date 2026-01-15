@@ -1,13 +1,19 @@
 <template>
   <n-tooltip
     v-if="showTooltip"
+    :show="tooltipVisible"
     :show-arrow="true"
     placement="right"
     :delay="300"
     trigger="hover"
+    :style="{ maxWidth: '280px' }"
   >
     <template #trigger>
-      <div class="media-thumbnail">
+      <div
+        class="media-thumbnail"
+        @dragstart="handleDragStart"
+        @dragend="handleDragEnd"
+      >
         <!-- 等待状态 -->
         <template v-if="item?.mediaStatus === 'pending'">
           <div class="async-processing-display">
@@ -149,7 +155,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { NTooltip } from 'naive-ui'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
@@ -166,6 +172,19 @@ const { t } = useAppI18n()
 
 // 获取媒体项
 const item = computed(() => unifiedStore.getMediaItem(props.mediaId))
+
+// 控制 tooltip 显示状态
+const tooltipVisible = ref<boolean | undefined>(undefined)
+
+// 拖拽开始时隐藏 tooltip
+function handleDragStart() {
+  tooltipVisible.value = false
+}
+
+// 拖拽结束后恢复 tooltip 自动控制
+function handleDragEnd() {
+  tooltipVisible.value = undefined
+}
 
 // 格式化时长显示（使用时间码格式）
 function formatDuration(frames: number): string {
@@ -479,6 +498,9 @@ const showTooltip = computed(() => {
   margin-bottom: 6px;
   color: var(--n-text-color);
   font-size: 14px;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .tooltip-status {
