@@ -90,6 +90,8 @@
     "deleteMediaMultiRef": "Are you sure you want to delete media {name}? This media is referenced by {count} folders and will be removed from all folders.",
     "deleteMediaSingleRef": "Are you sure you want to delete media {name}? This media is only referenced by the current folder and the media file will be deleted.",
     "deleteMediaNoRef": "Are you sure you want to delete media {name}? This media is not referenced by any folder and the media file will be deleted directly.",
+    "deleteInvalidMedia": "Invalid media reference detected (ID: {id}). Remove it from the directory?",
+    "invalidMediaRemoved": "Invalid media reference has been removed from the directory",
     "mediaDeletedWithFile": "Media {name} has been deleted (including file)",
     "mediaRemovedFromFolder": "Media {name} has been removed from current folder",
     "deleteFolderConfirm": "Are you sure you want to delete folder {name}? This operation will recursively delete all subfolders and delete media files that are no longer referenced by other folders.",

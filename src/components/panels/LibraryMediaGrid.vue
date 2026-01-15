@@ -1331,8 +1331,34 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
 
 // 移除媒体项（考虑引用计数）
 function removeMediaItem(mediaId: string): void {
+  if (!currentDir.value) return
+
   const mediaItem = getMediaItem(mediaId)
-  if (!mediaItem || !currentDir.value) return
+
+  // 如果媒体项不存在，直接移除无效引用
+  if (!mediaItem) {
+    unifiedStore.dialogWarning({
+      title: t('media.deleteMedia'),
+      content: t('media.deleteInvalidMedia', { id: mediaId }),
+      positiveText: t('media.confirm'),
+      negativeText: t('media.cancel'),
+      draggable: true,
+      onPositiveClick: async () => {
+        try {
+          const result = await unifiedStore.deleteMediaItem(mediaId, currentDir.value!.id)
+          if (result.success) {
+            unifiedStore.messageSuccess(t('media.invalidMediaRemoved'))
+          } else {
+            unifiedStore.messageError(t('media.deleteFailed'))
+          }
+        } catch (error) {
+          console.error(`❌ 删除无效媒体失败: ${mediaId}`, error)
+          unifiedStore.messageError(t('media.deleteFailed'))
+        }
+      },
+    })
+    return
+  }
 
   // 检查引用计数
   const refCount = mediaItem.runtime.refCount || 0

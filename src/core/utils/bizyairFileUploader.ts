@@ -3,7 +3,6 @@
  * 封装BizyAir文件上传的完整流程
  */
 
-import OSS from 'ali-oss'
 import { exportMediaItem, exportTimelineItem } from './projectExporter'
 import { fetchClient } from '@/utils/fetchClient'
 import type { FileData } from '@/core/datasource/providers/ai-generation/types'
@@ -124,6 +123,9 @@ export class BizyairFileUploader {
     credentials: UploadCredentials,
     onProgress?: (progress: number) => void,
   ): Promise<void> {
+    // 动态导入 OSS 库以实现懒加载
+    const OSS = (await import('ali-oss')).default
+
     // 规范化region(移除oss-前缀)
     const normalizedRegion = credentials.region.startsWith('oss-')
       ? credentials.region.slice(4)

@@ -940,17 +940,25 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     deletedFile: boolean
     error?: string
   }> {
-    const mediaItem = mediaModule.getMediaItem(mediaId)
-    if (!mediaItem) {
-      return { success: false, deletedFile: false, error: '媒体项不存在' }
-    }
-
     const dir = directories.value.get(dirId)
     if (!dir) {
       return { success: false, deletedFile: false, error: '目录不存在' }
     }
 
+    const mediaItem = mediaModule.getMediaItem(mediaId)
+
     try {
+      // 如果媒体项不存在，直接从目录移除该无效引用（不更新引用计数）
+      if (!mediaItem) {
+        console.warn(`⚠️ [deleteMediaItem] 媒体项不存在，从目录移除无效引用: ${mediaId}`)
+        const removed = removeMediaFromDirectory(mediaId, dirId, false)
+        if (removed) {
+          console.log(`✅ [deleteMediaItem] 已从目录移除无效引用: ${mediaId}`)
+          return { success: true, deletedFile: false }
+        }
+        return { success: false, deletedFile: false, error: '媒体项不在该目录中' }
+      }
+
       // 步骤1: 从目录移除（会自动减少引用计数）
       const removed = removeMediaFromDirectory(mediaId, dirId)
       if (!removed) {
@@ -974,7 +982,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
       return { success: true, deletedFile }
     } catch (error) {
-      console.error(`❌ [deleteMediaItem] 删除媒体项失败: ${mediaItem.name}`, error)
+      console.error(`❌ [deleteMediaItem] 删除媒体项失败: ${mediaItem?.name || mediaId}`, error)
       return {
         success: false,
         deletedFile: false,
