@@ -10,6 +10,12 @@
     "currentDirectory": "当前目录",
     "taskSubmitted": "任务已提交",
     "submitFailed": "任务提交失败：{error}",
+    "back": "返回",
+    "image": "图片",
+    "video": "视频",
+    "audio": "音频",
+    "searchPlaceholder": "搜索配置...",
+    "noResults": "未找到匹配的配置",
     "fileInput": {
       "dragPlaceholder": "拖拽素材或时间轴片段到此处",
       "replace": "替换",

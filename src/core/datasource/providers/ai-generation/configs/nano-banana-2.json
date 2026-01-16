@@ -5,8 +5,8 @@
     "zh": "Nano Banana 2"
   },
   "description": {
-    "en": "Edit images using NanoBananaPro model, supports multiple image inputs",
-    "zh": "使用NanoBananaPro模型进行图片编辑，支持多张图片输入"
+    "en": "Edit images using NanoBananaPro model, supports multiple images (Max 14)",
+    "zh": "使用NanoBananaPro模型进行图片编辑，最多支持14张图片输入"
   },
   "contentType": "image",
   "aiTaskType": "bizyair_generate_media",

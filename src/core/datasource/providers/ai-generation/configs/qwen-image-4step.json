@@ -13,7 +13,7 @@
   "aiConfig": {
     "prompt": "",
     "width": 1024,
-    "height": 960,
+    "height": 1024,
     "seed": -1
   },
   "uiConfig": [

@@ -10,6 +10,12 @@
     "currentDirectory": "Current Directory",
     "taskSubmitted": "Task submitted",
     "submitFailed": "Task submission failed: {error}",
+    "back": "Back",
+    "image": "Image",
+    "video": "Video",
+    "audio": "Audio",
+    "searchPlaceholder": "Search configs...",
+    "noResults": "No matching configs found",
     "fileInput": {
       "dragPlaceholder": "Drag media or timeline clip here",
       "replace": "Replace",

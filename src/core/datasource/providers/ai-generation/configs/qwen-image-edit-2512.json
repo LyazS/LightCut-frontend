@@ -1,8 +1,8 @@
 {
   "id": "qwen-image-edit-2512",
   "name": {
-    "en": "Qwen Image Edit (Max 3 Images)",
-    "zh": "Qwen 图片编辑（最多3图）"
+    "en": "Qwen Image Edit 2511",
+    "zh": "Qwen 图片编辑 2511 版本"
   },
   "description": {
     "en": "Edit 1/2/3 images based on prompt words",
