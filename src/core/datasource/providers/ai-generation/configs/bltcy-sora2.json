@@ -11,6 +11,7 @@
   "contentType": "video",
   "aiTaskType": "bltcy_sora2",
   "uploadServer": "bltcy",
+  "cost": 0.2,
   "aiConfig": {
     "images": [],
     "prompt": "",

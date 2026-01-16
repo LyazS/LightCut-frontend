@@ -11,6 +11,7 @@
   "contentType": "image",
   "aiTaskType": "bizyair_generate_media",
   "uploadServer": "bizyair",
+  "cost": 0.2,
   "aiConfig": {
     "ref_images": [],
     "prompt": "",
