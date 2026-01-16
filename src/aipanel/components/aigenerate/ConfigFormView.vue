@@ -40,7 +40,7 @@
           @click="handleGenerate"
         >
           <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
-          <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ selectedConfigData?.cost }}$)</span>
+          <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ calculatedCost }}$)</span>
         </button>
 
         <!-- 调试输出按钮 -->
@@ -62,6 +62,7 @@ import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
 import type { UIConfig } from '@/core/datasource/providers/ai-generation'
+import { calculateTotalCost } from '@/aipanel/components/aigenerate/utils/costCalculator'
 
 interface Props {
   selectedConfig: ConfigKey | ''
@@ -88,6 +89,13 @@ const { t } = useAppI18n()
 const selectedConfigData = computed(() => {
   if (!props.selectedConfig) return null
   return collection[props.selectedConfig]
+})
+
+// 计算动态成本
+const calculatedCost = computed(() => {
+  if (!props.selectedConfig || !props.aiConfig) return 0
+  const config = collection[props.selectedConfig]
+  return calculateTotalCost(config, props.aiConfig)
 })
 
 // 根据 contentType 获取对应的图标组件

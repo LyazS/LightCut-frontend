@@ -112,14 +112,16 @@
             "en": "2K",
             "zh": "2K"
           },
-          "value": "2K"
+          "value": "2K",
+          "add_cost": 0.05
         },
         {
           "label": {
             "en": "4K",
             "zh": "4K"
           },
-          "value": "4K"
+          "value": "4K",
+          "add_cost": 0.1
         }
       ]
     },
