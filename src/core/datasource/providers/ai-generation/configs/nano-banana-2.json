@@ -14,6 +14,7 @@
   "aiConfig": {
     "ref_images": [],
     "prompt": "",
+    "seed": -1,
     "aspect_ratio": "1:1",
     "resolution": "1K"
   },
@@ -120,6 +121,22 @@
           "value": "4K"
         }
       ]
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Seed",
+        "zh": "随机种子"
+      },
+      "path": "aiConfig.seed",
+      "min": -1,
+      "max": 999999999999999,
+      "step": 1,
+      "precision": 0,
+      "placeholder": {
+        "en": "-1 for random seed",
+        "zh": "-1 表示随机生成"
+      }
     }
   ]
 }
