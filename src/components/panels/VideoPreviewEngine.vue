@@ -78,9 +78,7 @@ import UnifiedTimeline from '@/components/timeline/UnifiedTimeline.vue'
 import UnifiedClipManagementToolbar from '@/components/timeline/UnifiedClipManagementToolbar.vue'
 import UnifiedPropertiesPanel from '@/components/panels/UnifiedPropertiesPanel.vue'
 import AIPanel from '@/aipanel/components/AIPanel.vue'
-import { useUnifiedStore } from '@/core/unifiedStore'
 import { useKeyboardShortcuts } from '@/core/composables'
-import { useAppI18n } from '@/core/composables/useI18n'
 
 // 定义props和emit
 const props = defineProps<{
@@ -95,9 +93,6 @@ const emit = defineEmits<{
 const handleCloseChatPanel = () => {
   emit('update:isAIChatPanelVisible', false)
 }
-
-const unifiedStore = useUnifiedStore()
-const { t } = useAppI18n()
 
 // 分割条宽度常量（像素）
 const SPLITTER_WIDTH = 8
@@ -136,26 +131,17 @@ const initializePanelPercentages = () => {
   nextTick(() => {
     const previewSection = document.querySelector('.preview-section')
     if (previewSection) {
+      // 直接设置为40-40-20的比例
+      leftPanelPercent.value = 40
+      centerPanelPercent.value = 40
+      rightPanelPercent.value = 20
+
+      // 更新像素宽度以便后续调整使用
       const containerWidth = previewSection.clientWidth
-      const availableWidth = containerWidth - SPLITTER_WIDTH * 2 // 减去两个分割条占用的宽度
-
+      const availableWidth = containerWidth - SPLITTER_WIDTH * 2
       if (availableWidth > 0) {
-        // 将当前像素宽度转换为可用宽度的百分比
-        const leftPercent = Math.round((leftPanelWidth.value / availableWidth) * 100)
-        const rightPercent = Math.round((rightPanelWidth.value / availableWidth) * 100)
-
-        // 确保百分比在合理范围内
-        leftPanelPercent.value = Math.max(15, Math.min(35, leftPercent)) // 15%-35%
-        rightPanelPercent.value = Math.max(15, Math.min(35, rightPercent)) // 15%-35%
-        centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
-
-        // 如果中间区域太小，调整左右区域
-        if (centerPanelPercent.value < 30) {
-          const adjust = (30 - centerPanelPercent.value) / 2
-          leftPanelPercent.value = Math.max(15, leftPanelPercent.value - adjust)
-          rightPanelPercent.value = Math.max(15, rightPanelPercent.value - adjust)
-          centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
-        }
+        leftPanelWidth.value = (availableWidth * 40) / 100
+        rightPanelWidth.value = (availableWidth * 20) / 100
       }
     }
   })
@@ -167,10 +153,10 @@ const timelineHeight = ref(34)
 const isDragging = ref(false)
 
 // 垂直分割器相关
-const leftPanelWidth = ref(400)
-const rightPanelWidth = ref(400)
-const leftPanelPercent = ref(20)
-const centerPanelPercent = ref(60)
+const leftPanelWidth = ref(600)   // 增加到600px以接近40%
+const rightPanelWidth = ref(300)  // 减少到300px以接近20%
+const leftPanelPercent = ref(40)
+const centerPanelPercent = ref(40)
 const rightPanelPercent = ref(20)
 const isLeftDragging = ref(false)
 const isRightDragging = ref(false)
@@ -192,11 +178,11 @@ const computedRightPanelWidthPercent = computed(() => {
 // 监听百分比变化，自动调整
 watch([leftPanelPercent, rightPanelPercent], ([newLeft, newRight]) => {
   const total = newLeft + newRight
-  if (total > 70) {
-    // 给中间区域至少留30%
+  if (total > 80) {
+    // 给中间区域至少留20%
     centerPanelPercent.value = 100 - total
   } else {
-    centerPanelPercent.value = Math.max(30, 100 - total)
+    centerPanelPercent.value = Math.max(20, 100 - total)
   }
 })
 
@@ -271,20 +257,20 @@ const handleLeftResize = (event: MouseEvent) => {
   let newLeftPercent = startLeftWidth + deltaPercent
 
   // 限制最小和最大百分比
-  newLeftPercent = Math.max(15, Math.min(35, newLeftPercent))
+  newLeftPercent = Math.max(15, Math.min(40, newLeftPercent))
 
   // 按比例调整其他列
   const oldLeftPercent = leftPanelPercent.value
   const percentChange = newLeftPercent - oldLeftPercent
 
-  // 确保中间区域最小30%
+  // 确保中间区域最小20%
   const newCenterPercent = centerPanelPercent.value - percentChange
-  if (newCenterPercent >= 30) {
+  if (newCenterPercent >= 20) {
     centerPanelPercent.value = newCenterPercent
     leftPanelPercent.value = newLeftPercent
   } else {
     // 如果中间区域会太小，限制左侧扩展
-    const maxLeftPercent = 100 - rightPanelPercent.value - 30
+    const maxLeftPercent = 100 - rightPanelPercent.value - 20
     leftPanelPercent.value = Math.min(maxLeftPercent, newLeftPercent)
     centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
   }
@@ -322,20 +308,20 @@ const handleRightResize = (event: MouseEvent) => {
   let newRightPercent = startRightWidth - deltaPercent // 注意：右侧是反向的
 
   // 限制最小和最大百分比
-  newRightPercent = Math.max(15, Math.min(35, newRightPercent))
+  newRightPercent = Math.max(15, Math.min(40, newRightPercent))
 
   // 按比例调整其他列
   const oldRightPercent = rightPanelPercent.value
   const percentChange = newRightPercent - oldRightPercent
 
-  // 确保中间区域最小30%
+  // 确保中间区域最小20%
   const newCenterPercent = centerPanelPercent.value - percentChange
-  if (newCenterPercent >= 30) {
+  if (newCenterPercent >= 20) {
     centerPanelPercent.value = newCenterPercent
     rightPanelPercent.value = newRightPercent
   } else {
     // 如果中间区域会太小，限制右侧扩展
-    const maxRightPercent = 100 - leftPanelPercent.value - 30
+    const maxRightPercent = 100 - leftPanelPercent.value - 20
     rightPanelPercent.value = Math.min(maxRightPercent, newRightPercent)
     centerPanelPercent.value = 100 - leftPanelPercent.value - rightPanelPercent.value
   }
