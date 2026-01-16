@@ -40,7 +40,7 @@
           @click="handleGenerate"
         >
           <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
-          <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }}</span>
+          <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ selectedConfigData?.cost }}$)</span>
         </button>
 
         <!-- 调试输出按钮 -->

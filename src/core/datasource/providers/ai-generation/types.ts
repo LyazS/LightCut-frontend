@@ -289,6 +289,7 @@ export interface AIGenerateConfig {
   contentType: ContentType
   aiTaskType: AITaskType
   uploadServer?: UploadServerType // 上传服务器类型，默认为 'default'
+  cost: number // 生成成本
   aiConfig: Record<string, any> // 不再包含 web_app_id
   uiConfig: UIConfig[]
 }
