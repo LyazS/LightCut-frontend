@@ -395,6 +395,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 统一选择模块状态和方法 ====================
     selectedMediaItemIds: unifiedSelectionModule.selectedMediaItemIds,
+    selectedMediaItemId: unifiedSelectionModule.selectedMediaItemId,
     hasMediaSelection: unifiedSelectionModule.hasMediaSelection,
     isMediaMultiSelectMode: unifiedSelectionModule.isMediaMultiSelectMode,
     selectMediaItems: unifiedSelectionModule.selectMediaItems,
@@ -412,6 +413,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 兼容性选择方法
     selectTimelineItem: unifiedSelectionModule.selectTimelineItem,
+    clearTimelineSelection: unifiedSelectionModule.clearTimelineSelection,
     clearAllSelections: unifiedSelectionModule.clearAllSelections,
     toggleTimelineItemSelection: unifiedSelectionModule.toggleTimelineItemSelection,
     isTimelineItemSelected: unifiedSelectionModule.isTimelineItemSelected,

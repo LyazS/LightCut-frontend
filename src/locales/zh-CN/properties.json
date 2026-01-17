@@ -167,6 +167,22 @@
       "hint": "多选属性暂不支持",
       "unknownMedia": "未知媒体"
     },
+    "mediaItem": {
+      "basicInfo": "基本信息",
+      "name": "名称",
+      "type": "类型",
+      "createdAt": "创建时间",
+      "statusInfo": "状态信息",
+      "techInfo": "技术信息",
+      "duration": "时长",
+      "resolution": "分辨率",
+      "fileSize": "文件大小",
+      "filePath": "文件路径",
+      "actions": "操作",
+      "retry": "重试",
+      "cancel": "取消",
+      "errorDetails": "错误详情"
+    },
     "mediaTypes": {
       "video": "视频",
       "image": "图片",
