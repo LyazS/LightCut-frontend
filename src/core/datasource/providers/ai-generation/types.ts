@@ -278,7 +278,7 @@ export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConf
 /**
  * 上传服务器类型
  */
-export type UploadServerType = 'bizyair' | 'bltcy'
+export type UploadServerType = 'bizyair' | 'bltcy' | 'runninghub'
 
 /**
  * AI 生成配置结构

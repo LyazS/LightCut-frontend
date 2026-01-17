@@ -1,0 +1,49 @@
+{
+  "id": "qwen-image-edit-simple",
+  "name": {
+    "en": "Qwen Image Edit Simple",
+    "zh": "Qwen 图片编辑（简化版）"
+  },
+  "description": {
+    "en": "Simple image editing using Qwen model (single image)",
+    "zh": "使用 Qwen 模型进行图片编辑（单图，简化版）"
+  },
+  "contentType": "image",
+  "aiTaskType": "runninghub_generate_media",
+  "uploadServer": "runninghub",
+  "cost": 0.1,
+  "aiConfig": {
+    "image": [],
+    "value": ""
+  },
+  "uiConfig": [
+    {
+      "type": "file-input",
+      "label": {
+        "en": "Image",
+        "zh": "图片"
+      },
+      "path": "aiConfig.image",
+      "accept": ["image"],
+      "maxFiles": 1,
+      "minFiles": 1,
+      "placeholder": {
+        "en": "Drag image here or from timeline",
+        "zh": "拖拽图片素材或时间轴片段到此处"
+      }
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.value",
+      "placeholder": {
+        "en": "Enter prompt to edit the image",
+        "zh": "输入提示词来编辑图片"
+      },
+      "required": true
+    }
+  ]
+}

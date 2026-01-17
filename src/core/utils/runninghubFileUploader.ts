@@ -1,6 +1,6 @@
 /**
- * BLTCY文件上传工具
- * 封装BLTCY文件上传的流程
+ * RunningHub 文件上传工具
+ * 封装 RunningHub 文件上传的流程
  */
 
 import { cloneDeep } from 'lodash'
@@ -12,22 +12,22 @@ import type { MediaType } from '@/core/mediaitem'
 
 // API 配置
 // 无额度的key
-const API_KEY = 'sk-VtfYTW3bkuY6F4gUwlDvZzjWFnnXXh9XQZUhzpHqDeWJlXkP'
-const BASE_URL = 'https://api.bltcy.ai'
+const API_KEY = 'a4a73686214f4e80bbfd11926ae99d0a'
+const BASE_URL = 'https://www.runninghub.cn'
 
 // 上传响应数据
 interface UploadResponseData {
-  id: string
-  url?: string
-  [key: string]: any
+  code: number
+  msg: string
+  data: {
+    fileName: string
+  }
 }
 
 // 上传结果接口
 interface UploadResult {
   success: boolean
-  id?: string
-  url?: string
-  data?: UploadResponseData
+  fileName?: string
   error?: string
 }
 
@@ -36,15 +36,17 @@ interface UploadOptions {
   onProgress?: (progress: number) => void
 }
 
-export class BltcyFileUploader {
+export class RunningHubFileUploader {
   /**
-   * 上传文件到BLTCY
+   * 上传文件到 RunningHub
    */
-  private static async uploadToBltcy(
+  private static async uploadToRunningHub(
     file: File,
     onProgress?: (progress: number) => void,
   ): Promise<UploadResponseData> {
     const formData = new FormData()
+    formData.append('apiKey', API_KEY)
+    formData.append('fileType', 'input')
     formData.append('file', file)
 
     // 模拟进度（因为 fetch 不支持进度回调）
@@ -52,11 +54,8 @@ export class BltcyFileUploader {
       onProgress(0)
     }
 
-    const response = await fetch(`${BASE_URL}/v1/files`, {
+    const response = await fetch(`${BASE_URL}/task/openapi/upload`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-      },
       body: formData,
     })
 
@@ -68,7 +67,14 @@ export class BltcyFileUploader {
       throw new Error(`上传失败: ${response.status} ${response.statusText}`)
     }
 
-    return await response.json()
+    const data = await response.json()
+
+    // 检查响应状态
+    if (data.msg !== 'success') {
+      throw new Error(`上传失败: ${data.msg}`)
+    }
+
+    return data
   }
 
   /**
@@ -76,13 +82,11 @@ export class BltcyFileUploader {
    */
   static async uploadFile(file: File, options?: UploadOptions): Promise<UploadResult> {
     try {
-      const data = await this.uploadToBltcy(file, options?.onProgress)
+      const data = await this.uploadToRunningHub(file, options?.onProgress)
 
       return {
         success: true,
-        id: data.id,
-        url: data.url,
-        data,
+        fileName: data.data.fileName,
       }
     } catch (error) {
       console.error('文件上传失败:', error)
@@ -145,36 +149,7 @@ export class BltcyFileUploader {
   }
 
   /**
-   * 从URL上传文件
-   */
-  static async uploadFromUrl(
-    url: string,
-    fileName?: string,
-    options?: UploadOptions,
-  ): Promise<UploadResult> {
-    try {
-      // 获取文件内容
-      const response = await fetch(url)
-      if (!response.ok) {
-        throw new Error(`获取文件失败: ${response.status}`)
-      }
-
-      const blob = await response.blob()
-      const name = fileName || url.split('/').pop() || 'file'
-      const file = new File([blob], name, { type: blob.type })
-
-      return this.uploadFile(file, options)
-    } catch (error) {
-      console.error('从URL上传失败:', error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '从URL上传失败',
-      }
-    }
-  }
-
-  /**
-   * 从FileData导出Blob
+   * 从 FileData 导出 Blob
    */
   private static async exportFileDataToBlob(
     fileData: FileData,
@@ -201,7 +176,7 @@ export class BltcyFileUploader {
   }
 
   /**
-   * 上传FileData
+   * 上传 FileData
    */
   static async uploadFileData(
     fileData: FileData,
@@ -219,6 +194,63 @@ export class BltcyFileUploader {
         success: false,
         error: error instanceof Error ? error.message : 'FileData上传失败',
       }
+    }
+  }
+
+  /**
+   * 批量上传 FileData
+   */
+  static async uploadFileDatas(
+    fileDatas: FileData[],
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
+    onProgress?: (fileIndex: number, stage: string, progress: number) => void,
+  ): Promise<Map<number, UploadResult>> {
+    const results = new Map<number, UploadResult>()
+
+    for (let i = 0; i < fileDatas.length; i++) {
+      const result = await this.uploadFileDataWithRetry(
+        fileDatas[i],
+        getMediaItem,
+        getTimelineItem,
+        3, // 最多重试3次
+        (progress) => onProgress?.(i, '上传中', progress),
+      )
+      results.set(i, result)
+    }
+
+    return results
+  }
+
+  /**
+   * 带重试的 FileData 上传方法
+   */
+  static async uploadFileDataWithRetry(
+    fileData: FileData,
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
+    maxRetries: number = 3,
+    onProgress?: (progress: number) => void,
+  ): Promise<UploadResult> {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.uploadFileData(fileData, getMediaItem, getTimelineItem, onProgress)
+      } catch (error) {
+        lastError = error as Error
+        console.warn(`上传失败(尝试 ${attempt}/${maxRetries}):`, error)
+
+        if (attempt < maxRetries) {
+          // 等待后重试(指数退避)
+          await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)))
+        }
+      }
+    }
+
+    return {
+      success: false,
+      error: `上传失败(已重试${maxRetries}次): ${lastError?.message}`,
     }
   }
 
@@ -279,15 +311,15 @@ export class BltcyFileUploader {
       onSuccess()
     }
 
-    // 6. 更新新配置中的URL
+    // 6. 更新新配置中的文件名
     let fileIndex = 0
     for (const [key, value] of Object.entries(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
         if (value[0] && typeof value[0] === 'object' && value[0].__type__ === 'FileData') {
-          // 这是FileData数组,替换为URL数组
+          // 这是FileData数组,替换为文件名数组
           newConfig[key] = value.map((_, index) => {
             const result = uploadResults.get(fileIndex + index)
-            return result?.url || ''
+            return result?.fileName || ''
           })
           fileIndex += value.length
         }
@@ -295,62 +327,5 @@ export class BltcyFileUploader {
     }
 
     return newConfig
-  }
-
-  /**
-   * 批量上传FileData
-   */
-  static async uploadFileDatas(
-    fileDatas: FileData[],
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
-    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
-    onProgress?: (fileIndex: number, stage: string, progress: number) => void,
-  ): Promise<Map<number, UploadResult>> {
-    const results = new Map<number, UploadResult>()
-
-    for (let i = 0; i < fileDatas.length; i++) {
-      const result = await this.uploadFileDataWithRetry(
-        fileDatas[i],
-        getMediaItem,
-        getTimelineItem,
-        3, // 最多重试3次
-        (progress) => onProgress?.(i, '上传中', progress),
-      )
-      results.set(i, result)
-    }
-
-    return results
-  }
-
-  /**
-   * 带重试的FileData上传方法
-   */
-  static async uploadFileDataWithRetry(
-    fileData: FileData,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
-    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
-    maxRetries: number = 3,
-    onProgress?: (progress: number) => void,
-  ): Promise<UploadResult> {
-    let lastError: Error | null = null
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        return await this.uploadFileData(fileData, getMediaItem, getTimelineItem, onProgress)
-      } catch (error) {
-        lastError = error as Error
-        console.warn(`上传失败(尝试 ${attempt}/${maxRetries}):`, error)
-
-        if (attempt < maxRetries) {
-          // 等待后重试(指数退避)
-          await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)))
-        }
-      }
-    }
-
-    return {
-      success: false,
-      error: `上传失败(已重试${maxRetries}次): ${lastError?.message}`,
-    }
   }
 }
