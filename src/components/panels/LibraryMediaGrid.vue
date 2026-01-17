@@ -275,8 +275,6 @@ function isFileDrag(event: DragEvent): boolean {
 
 // 组件状态
 const isDragOver = ref(false)
-const selectedItems = ref<DisplayItem[]>([])
-const lastSelectedItem = ref<DisplayItem | null>(null)
 const fileInput = ref<HTMLInputElement>()
 const showCreateDirModal = ref(false)
 
@@ -552,7 +550,7 @@ const currentMenuItems = computed((): MenuItem[] => {
   }
 
   // 检查是否为多选状态
-  if (selectedItems.value.length > 1) {
+  if (unifiedStore.selectedMediaItemIds.size > 1) {
     // 多选状态菜单
     return [
       {
@@ -735,7 +733,7 @@ function isDraggable(item: DisplayItem): boolean {
 
 // 检查项目是否被选中
 function isItemSelected(item: DisplayItem): boolean {
-  return selectedItems.value.some((selected) => selected.id === item.id)
+  return unifiedStore.isMediaItemSelected(item.id)
 }
 
 // ==================== 交互处理 ====================
@@ -752,36 +750,15 @@ function onItemDoubleClick(item: DisplayItem): void {
 
 // 单击项目处理
 function onItemClick(item: DisplayItem, event: MouseEvent): void {
-  // 更新选中状态
   if (event.ctrlKey || event.metaKey) {
     // Ctrl+点击：切换选择状态
-    const index = selectedItems.value.findIndex((selected) => selected.id === item.id)
-    if (index > -1) {
-      selectedItems.value.splice(index, 1)
-    } else {
-      selectedItems.value.push(item)
-    }
-    lastSelectedItem.value = item
-  } else if (event.shiftKey && lastSelectedItem.value) {
+    unifiedStore.selectMediaItems([item.id], 'toggle')
+  } else if (event.shiftKey) {
     // Shift+点击：范围选择
-    handleRangeSelection(lastSelectedItem.value, item)
+    unifiedStore.selectMediaItems([item.id], 'range')
   } else {
     // 普通点击：单选
-    selectedItems.value = [item]
-    lastSelectedItem.value = item
-  }
-}
-
-// 范围选择处理
-function handleRangeSelection(startItem: DisplayItem, endItem: DisplayItem): void {
-  const allItems = displayItems.value
-  const startIndex = allItems.findIndex((item: DisplayItem) => item.id === startItem.id)
-  const endIndex = allItems.findIndex((item: DisplayItem) => item.id === endItem.id)
-
-  if (startIndex !== -1 && endIndex !== -1) {
-    const [minIndex, maxIndex] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)]
-    const rangeItems = allItems.slice(minIndex, maxIndex + 1)
-    selectedItems.value = rangeItems
+    unifiedStore.selectMediaItems([item.id], 'replace')
   }
 }
 
@@ -792,7 +769,7 @@ function onItemContextMenu(item: DisplayItem, event: MouseEvent): void {
 
   // 如果右键的项目不在选中列表中，则将其设为唯一选中项
   if (!isItemSelected(item)) {
-    selectedItems.value = [item]
+    unifiedStore.selectMediaItems([item.id], 'replace')
   }
 
   contextMenuOptions.value.x = event.clientX
@@ -814,7 +791,7 @@ function handleContextMenu(event: MouseEvent): void {
 // 点击空白区域
 function handleContainerClick(event: MouseEvent): void {
   if (!event.target || !(event.target as Element).closest('.content-item')) {
-    selectedItems.value = []
+    unifiedStore.clearMediaSelection()
   }
 }
 
@@ -1458,17 +1435,25 @@ async function deleteFolder(folderId: string): Promise<void> {
 
 // ==================== 剪贴板操作 ====================
 
+// 获取选中的显示项列表
+function getSelectedDisplayItems(): DisplayItem[] {
+  const selectedIds = Array.from(unifiedStore.selectedMediaItemIds)
+  return displayItems.value.filter(item => selectedIds.includes(item.id))
+}
+
 // 剪切操作
 function handleCut(): void {
-  if (selectedItems.value.length === 0) return
-  unifiedStore.cut(selectedItems.value)
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
+  unifiedStore.cut(selectedItems)
   showContextMenu.value = false
 }
 
 // 复制操作
 function handleCopy(): void {
-  if (selectedItems.value.length === 0) return
-  unifiedStore.copy(selectedItems.value)
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
+  unifiedStore.copy(selectedItems)
   showContextMenu.value = false
 }
 
@@ -1489,7 +1474,7 @@ async function handlePaste(): Promise<void> {
   }
 
   // 清空选择
-  selectedItems.value = []
+  unifiedStore.clearMediaSelection()
 }
 
 // 粘贴到指定文件夹
@@ -1519,9 +1504,10 @@ function handleClearClipboard(): void {
 // 批量删除处理
 async function handleBatchDelete(): Promise<void> {
   showContextMenu.value = false
-  if (selectedItems.value.length === 0) return
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
 
-  const itemCount = selectedItems.value.length
+  const itemCount = selectedItems.length
 
   unifiedStore.dialogWarning({
     title: t('media.batchDelete'),
@@ -1534,8 +1520,8 @@ async function handleBatchDelete(): Promise<void> {
       let failedCount = 0
       let hasDirectoryDeleted = false
 
-      // 复制选中项列表，因为删除过程中会修改 selectedItems
-      const itemsToDelete = [...selectedItems.value]
+      // 复制选中项列表
+      const itemsToDelete = [...selectedItems]
 
       for (const item of itemsToDelete) {
         try {
@@ -1571,7 +1557,7 @@ async function handleBatchDelete(): Promise<void> {
       }
 
       // 清空选择
-      selectedItems.value = []
+      unifiedStore.clearMediaSelection()
 
       // 显示结果消息
       if (failedCount === 0) {

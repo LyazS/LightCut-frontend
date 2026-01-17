@@ -252,14 +252,6 @@ const detailInfo = computed<string[]>(() => {
     }
   }
   
-  // asyncprocessing 状态：显示当前阶段（仅AI生成任务有此字段）
-  if (status === 'asyncprocessing') {
-    // 类型守卫：检查是否为AI生成数据源
-    if ('currentStage' in source && source.currentStage) {
-      info.push(`${t('media.tooltip.currentStage')}: ${source.currentStage}`)
-    }
-  }
-  
   // decoding 状态：显示鼓励信息
   if (status === 'decoding') {
     info.push(t('media.tooltip.almostDone'))
