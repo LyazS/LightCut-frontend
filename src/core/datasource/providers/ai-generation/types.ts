@@ -206,7 +206,7 @@ export interface SelectInputConfig extends BaseUIConfig {
   type: 'select-input'
   options: Array<{
     label: I18nText
-    value: string
+    value: string | number
     add_cost?: number  // 可选的额外成本字段
   }>
 }

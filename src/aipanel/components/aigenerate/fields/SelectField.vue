@@ -24,20 +24,27 @@ import type { SelectInputConfig } from '@/core/datasource/providers/ai-generatio
 
 interface Props {
   config: SelectInputConfig
-  modelValue: string
+  modelValue: string | number
   locale: 'zh' | 'en'
 }
 
 interface Emits {
-  (e: 'update:modelValue', value: string): void
+  (e: 'update:modelValue', value: string | number): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const handleChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
-  emit('update:modelValue', target.value)
+  const selectedOption = props.config.options.find(opt => opt.value === target.value)
+  
+  // 如果找到的选项值是数字类型，则转换为数字，否则保持字符串
+  if (selectedOption !== undefined && typeof selectedOption.value === 'number') {
+    emit('update:modelValue', Number(target.value))
+  } else {
+    emit('update:modelValue', target.value)
+  }
 }
 </script>
 
