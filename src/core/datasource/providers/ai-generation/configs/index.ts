@@ -8,6 +8,7 @@ import QwenImageEdit2512Config from './qwen-image-edit-2512.json'
 import BLTCYSora2Config from './bltcy-sora2.json'
 import NanoBanana2Config from './nano-banana-2.json'
 import RunningHubSora2Config from './runninghub-sora2.json'
+import RunningHubRhTestConfig from './runninghub-rh-test.json'
 import type { AIGenerateConfig } from '../types'
 
 /**
@@ -20,6 +21,7 @@ export const collection = {
   'bltcy-sora2': BLTCYSora2Config as AIGenerateConfig,
   'nano-banana-2': NanoBanana2Config as AIGenerateConfig,
   'sora2-hd': RunningHubSora2Config as AIGenerateConfig,
+  'rh-test': RunningHubRhTestConfig as AIGenerateConfig,
 } as const
 
 /**

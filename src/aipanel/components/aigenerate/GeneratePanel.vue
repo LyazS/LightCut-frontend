@@ -208,6 +208,7 @@ async function handleGenerate() {
         id: configData.id, // 添加配置 id
         ...newConfig, // AI配置（不包含 web_app_id）
       },
+      sub_ai_task_type: configData.subAiTaskType, // 子任务类型（可选）
     }
 
     console.log('🚀 [GeneratePanel] 提交AI生成任务到后端...', requestParams)

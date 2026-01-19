@@ -11,6 +11,7 @@
   "contentType": "video",
   "aiTaskType": "runninghub_generate_media",
   "uploadServer": "runninghub",
+  "subAiTaskType": "comfyui",
   "cost": 1.0,
   "aiConfig": {
     "image": [],

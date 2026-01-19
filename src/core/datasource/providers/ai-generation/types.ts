@@ -55,6 +55,7 @@ export interface MediaGenerationRequest {
   ai_task_type: AITaskType
   content_type: ContentType
   task_config: Record<string, any>
+  sub_ai_task_type?: string // 子任务类型（可选），用于区分同一服务提供商的不同API类型
 }
 
 /**
@@ -290,6 +291,7 @@ export interface AIGenerateConfig {
   contentType: ContentType
   aiTaskType: AITaskType
   uploadServer?: UploadServerType // 上传服务器类型，默认为 'default'
+  subAiTaskType?: string // 子任务类型（可选），用于区分同一服务提供商的不同API类型
   cost: number // 生成成本
   aiConfig: Record<string, any> // 不再包含 web_app_id
   uiConfig: UIConfig[]
