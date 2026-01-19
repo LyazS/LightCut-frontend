@@ -15,9 +15,9 @@ import { ref, nextTick, watch, provide, computed } from 'vue'
 import MarkdownIt from 'markdown-it'
 import UserChatMessage from './UserChatMessage.vue'
 import AIChatMessage from './AIChatMessage.vue'
-import { SESSION_MANAGER } from '@/aipanel/services'
-import { ChatMessageType, ChatMessageAssistantContentType } from '../../types'
-import type { ChatMessageAssistant } from '../../types'
+import { SESSION_MANAGER } from '@/aipanel/agent/services'
+import { ChatMessageType, ChatMessageAssistantContentType } from '@/aipanel/agent/types'
+import type { ChatMessageAssistant } from '@/aipanel/agent/types'
 import { useAppI18n } from '@/core/composables/useI18n'
 
 // 根据消息类型返回对应的组件

@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatMessage } from '../../types'
+import type { ChatMessage } from '@/aipanel/agent/types'
 
 const props = defineProps<{
   message: ChatMessage

@@ -1,12 +1,12 @@
 import { ref } from 'vue'
 import { fetchClient } from '@/utils/fetchClient'
 import { generateChatMessageId } from '@/core/utils/idGenerator'
-import { API_ENDPOINTS } from '@/aipanel/services/apiTypes'
+import { API_ENDPOINTS } from '@/aipanel/agent/services/apiTypes'
 import type {
   CreateSessionResponse,
   AllSessionsResponse,
   SessionSummary,
-} from '@/aipanel/services/apiTypes'
+} from '@/aipanel/agent/services/apiTypes'
 import { StreamChunkType, type StreamChunk } from '@/utils/streamTypes'
 import type {
   ChatMessage,
@@ -14,13 +14,13 @@ import type {
   ChatMessageAssistant,
   ChatMessageUserContent,
   ChatMessageAssistantContent,
-} from '@/aipanel/types'
+} from '@/aipanel/agent/types'
 import {
   ChatMessageType,
   ChatMessageUserContentType,
   ChatMessageAssistantContentType,
   isAssistantMessage,
-} from '@/aipanel/types'
+} from '@/aipanel/agent/types'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
 export interface SessionInfo {

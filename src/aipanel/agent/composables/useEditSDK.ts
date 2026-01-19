@@ -1,6 +1,6 @@
-import { ScriptExecutor } from '@/aipanel/executors/ScriptExecutor'
-import { useBatchCommandBuilder } from '@/aipanel/composables/useBatchCommandBuilder'
-import { ConfigValidator } from '@/aipanel/core/ConfigValidator'
+import { ScriptExecutor } from '@/aipanel/agent/executors/ScriptExecutor'
+import { useBatchCommandBuilder } from '@/aipanel/agent/composables/useBatchCommandBuilder'
+import { ConfigValidator } from '@/aipanel/agent/core/ConfigValidator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import { calculateVisibleFrameRange } from '@/core/utils/coordinateUtils'
 import { useUnifiedStore } from '@/core/unifiedStore'
@@ -14,7 +14,7 @@ import type {
   LogMessage,
   ValidationError,
   ScriptExecutionResult,
-} from '@/aipanel/core/types'
+} from '@/aipanel/agent/core/types'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,

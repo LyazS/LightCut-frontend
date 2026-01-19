@@ -62,7 +62,7 @@ import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
 import type { UIConfig } from '@/core/datasource/providers/ai-generation'
-import { calculateTotalCost } from '@/aipanel/components/aigenerate/utils/costCalculator'
+import { calculateTotalCost } from '@/aipanel/aigenerate/utils/costCalculator'
 
 interface Props {
   selectedConfig: ConfigKey | ''

@@ -89,8 +89,8 @@ import { ref, computed, onMounted } from 'vue'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
-import { SESSION_MANAGER } from '@/aipanel/services'
-import type { ChatHistory, ChatMessage, SessionSummary } from '@/aipanel/types'
+import { SESSION_MANAGER } from '@/aipanel/agent/services'
+import type { ChatHistory, ChatMessage, SessionSummary } from '@/aipanel/agent/types'
 
 const { t } = useAppI18n()
 

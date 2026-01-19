@@ -1,5 +1,5 @@
 // 聊天API相关的类型定义
-import type { ChatMessageUser, ChatMessage } from '@/aipanel/types'
+import type { ChatMessageUser, ChatMessage } from '@/aipanel/agent/types'
 
 // API端点配置
 export const API_ENDPOINTS = {

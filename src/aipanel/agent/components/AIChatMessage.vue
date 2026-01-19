@@ -27,7 +27,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import 'github-markdown-css'
-import type { ChatMessage } from '../../types'
+import type { ChatMessage } from '../types'
 import { IconComponents } from '@/constants/iconComponents'
 
 // 注入markdown渲染函数

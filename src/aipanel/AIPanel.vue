@@ -42,10 +42,10 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { NTab, NTabs } from 'naive-ui'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
-import AgentPanel from './agent/AgentPanel.vue'
+import AgentPanel from './agent/components/AgentPanel.vue'
 import GeneratePanel from './aigenerate/GeneratePanel.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
-import { SESSION_MANAGER } from '@/aipanel/services'
+import { SESSION_MANAGER } from '@/aipanel/agent/services'
 
 const { t } = useAppI18n()
 

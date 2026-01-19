@@ -31,7 +31,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
-import { SESSION_MANAGER } from '@/aipanel/services'
+import { SESSION_MANAGER } from '@/aipanel/agent/services'
 import { useAppI18n } from '@/core/composables/useI18n'
 
 const { t } = useAppI18n()
