@@ -93,9 +93,10 @@ const selectedConfigData = computed(() => {
 
 // 计算动态成本
 const calculatedCost = computed(() => {
-  if (!props.selectedConfig || !props.aiConfig) return 0
+  if (!props.selectedConfig || !props.aiConfig) return '0.00'
   const config = collection[props.selectedConfig]
-  return calculateTotalCost(config, props.aiConfig)
+  const cost = calculateTotalCost(config, props.aiConfig)
+  return cost.toFixed(2)
 })
 
 // 根据 contentType 获取对应的图标组件

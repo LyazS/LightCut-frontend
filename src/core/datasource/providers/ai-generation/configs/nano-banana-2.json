@@ -11,7 +11,7 @@
   "contentType": "image",
   "aiTaskType": "bizyair_generate_media",
   "uploadServer": "bizyair",
-  "cost": 0.25,
+  "cost": 0.2,
   "aiConfig": {
     "ref_images": [],
     "prompt": "",
@@ -57,10 +57,17 @@
       "options": [
         {
           "label": {
-            "en": "1:1",
-            "zh": "1:1"
+            "en": "4:3",
+            "zh": "4:3"
           },
-          "value": "1:1"
+          "value": "4:3"
+        },
+        {
+          "label": {
+            "en": "3:4",
+            "zh": "3:4"
+          },
+          "value": "3:4"
         },
         {
           "label": {
@@ -78,17 +85,45 @@
         },
         {
           "label": {
-            "en": "4:3",
-            "zh": "4:3"
+            "en": "2:3",
+            "zh": "2:3"
           },
-          "value": "4:3"
+          "value": "2:3"
         },
         {
           "label": {
-            "en": "3:4",
-            "zh": "3:4"
+            "en": "3:2",
+            "zh": "3:2"
           },
-          "value": "3:4"
+          "value": "3:2"
+        },
+        {
+          "label": {
+            "en": "1:1",
+            "zh": "1:1"
+          },
+          "value": "1:1"
+        },
+        {
+          "label": {
+            "en": "4:5",
+            "zh": "4:5"
+          },
+          "value": "4:5"
+        },
+        {
+          "label": {
+            "en": "5:4",
+            "zh": "5:4"
+          },
+          "value": "5:4"
+        },
+        {
+          "label": {
+            "en": "21:9",
+            "zh": "21:9"
+          },
+          "value": "21:9"
         }
       ]
     },

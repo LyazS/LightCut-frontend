@@ -16,7 +16,7 @@ export function calculateTotalCost(
   // 遍历所有 UI 配置项，查找 select-input 类型的 add_cost
   for (const fieldConfig of config.uiConfig) {
     if (fieldConfig.type === 'select-input') {
-      const selectConfig = fieldConfig as any // 类型断言以访问 add_cost
+      const selectConfig = fieldConfig
       
       // 处理路径：如果 path 以 "aiConfig." 开头，则去掉该前缀
       const path = selectConfig.path.startsWith('aiConfig.')
