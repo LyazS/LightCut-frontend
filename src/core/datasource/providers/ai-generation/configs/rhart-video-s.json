@@ -1,0 +1,112 @@
+{
+  "id": "rhart-video-s",
+  "name": {
+    "en": "RunningHub Video S",
+    "zh": "RunningHub 文生视频 S"
+  },
+  "description": {
+    "en": "RunningHub text-to-video generation",
+    "zh": "RunningHub 全能视频S-文生视频"
+  },
+  "contentType": "video",
+  "aiTaskType": "runninghub_generate_media",
+  "subAiTaskType": "standard_api",
+  "cost": 2.0,
+  "aiConfig": {
+    "id": "rhart-video-s",
+    "prompt": "",
+    "resolution": "small",
+    "aspectRatio": "16:9",
+    "duration": "10"
+  },
+  "uiConfig": [
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Describe the video you want to generate...",
+        "zh": "描述你想要生成的视频..."
+      },
+      "required": true
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Resolution",
+        "zh": "分辨率"
+      },
+      "path": "aiConfig.resolution",
+      "options": [
+        {
+          "label": {
+            "en": "Small",
+            "zh": "小"
+          },
+          "value": "small"
+        },
+        {
+          "label": {
+            "en": "Large",
+            "zh": "大"
+          },
+          "value": "large"
+        }
+      ],
+      "defaultValue": "small"
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Aspect Ratio",
+        "zh": "宽高比"
+      },
+      "path": "aiConfig.aspectRatio",
+      "options": [
+        {
+          "label": {
+            "en": "16:9",
+            "zh": "16:9"
+          },
+          "value": "16:9"
+        },
+        {
+          "label": {
+            "en": "9:16",
+            "zh": "9:16"
+          },
+          "value": "9:16"
+        }
+      ],
+      "defaultValue": "16:9"
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Duration",
+        "zh": "时长（秒）"
+      },
+      "path": "aiConfig.duration",
+      "options": [
+        {
+          "label": {
+            "en": "10s",
+            "zh": "10秒"
+          },
+          "value": "10"
+        },
+        {
+          "label": {
+            "en": "15s",
+            "zh": "15秒"
+          },
+          "value": "15"
+        }
+      ],
+      "defaultValue": "10"
+    }
+  ]
+}

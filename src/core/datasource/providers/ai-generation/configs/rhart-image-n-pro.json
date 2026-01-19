@@ -1,0 +1,142 @@
+{
+  "id": "rhart-image-n-pro",
+  "name": {
+    "en": "RunningHub Image Pro",
+    "zh": "RunningHub 文生图 PRO"
+  },
+  "description": {
+    "en": "RunningHub text-to-image generation with Pro quality",
+    "zh": "RunningHub 全能图片PRO-文生图"
+  },
+  "contentType": "image",
+  "aiTaskType": "runninghub_generate_media",
+  "subAiTaskType": "standard_api",
+  "cost": 1.0,
+  "aiConfig": {
+    "id": "rhart-image-n-pro",
+    "prompt": "",
+    "resolution": "2K",
+    "aspectRatio": "16:9"
+  },
+  "uiConfig": [
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Describe the image you want to generate...",
+        "zh": "描述你想要生成的图片..."
+      },
+      "required": true
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Resolution",
+        "zh": "分辨率"
+      },
+      "path": "aiConfig.resolution",
+      "options": [
+        {
+          "label": {
+            "en": "1K",
+            "zh": "1K"
+          },
+          "value": "1K"
+        },
+        {
+          "label": {
+            "en": "2K",
+            "zh": "2K"
+          },
+          "value": "2K"
+        },
+        {
+          "label": {
+            "en": "4K",
+            "zh": "4K"
+          },
+          "value": "4K"
+        }
+      ],
+      "defaultValue": "2K"
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Aspect Ratio",
+        "zh": "宽高比"
+      },
+      "path": "aiConfig.aspectRatio",
+      "options": [
+        {
+          "label": {
+            "en": "1:1",
+            "zh": "1:1"
+          },
+          "value": "1:1"
+        },
+        {
+          "label": {
+            "en": "16:9",
+            "zh": "16:9"
+          },
+          "value": "16:9"
+        },
+        {
+          "label": {
+            "en": "9:16",
+            "zh": "9:16"
+          },
+          "value": "9:16"
+        },
+        {
+          "label": {
+            "en": "3:2",
+            "zh": "3:2"
+          },
+          "value": "3:2"
+        },
+        {
+          "label": {
+            "en": "2:3",
+            "zh": "2:3"
+          },
+          "value": "2:3"
+        },
+        {
+          "label": {
+            "en": "3:4",
+            "zh": "3:4"
+          },
+          "value": "3:4"
+        },
+        {
+          "label": {
+            "en": "4:3",
+            "zh": "4:3"
+          },
+          "value": "4:3"
+        },
+        {
+          "label": {
+            "en": "4:5",
+            "zh": "4:5"
+          },
+          "value": "4:5"
+        },
+        {
+          "label": {
+            "en": "5:4",
+            "zh": "5:4"
+          },
+          "value": "5:4"
+        }
+      ],
+      "defaultValue": "16:9"
+    }
+  ]
+}

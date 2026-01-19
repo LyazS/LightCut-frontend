@@ -9,6 +9,8 @@ import BLTCYSora2Config from './bltcy-sora2.json'
 import NanoBanana2Config from './nano-banana-2.json'
 import RunningHubSora2Config from './runninghub-sora2.json'
 import RunningHubRhTestConfig from './runninghub-rh-test.json'
+import RunningHubImageNProConfig from './rhart-image-n-pro.json'
+import RunningHubVideoSConfig from './rhart-video-s.json'
 import type { AIGenerateConfig } from '../types'
 
 /**
@@ -22,6 +24,8 @@ export const collection = {
   'nano-banana-2': NanoBanana2Config as AIGenerateConfig,
   'sora2-hd': RunningHubSora2Config as AIGenerateConfig,
   'rh-test': RunningHubRhTestConfig as AIGenerateConfig,
+  'rhart-image-n-pro': RunningHubImageNProConfig as AIGenerateConfig,
+  'rhart-video-s': RunningHubVideoSConfig as AIGenerateConfig,
 } as const
 
 /**
