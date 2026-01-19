@@ -1,24 +1,40 @@
 {
-  "id": "rhart-image-n-pro",
+  "id": "rh-nano-banana-2",
   "name": {
-    "en": "RunningHub Image Pro",
-    "zh": "RunningHub 文生图 PRO"
+    "en": "RunningHub NanoBananan Pro",
+    "zh": "RunningHub NanoBananan PRO"
   },
   "description": {
-    "en": "RunningHub text-to-image generation with Pro quality",
-    "zh": "RunningHub 全能图片PRO-文生图"
+    "en": "RunningHub image generation with Pro quality",
+    "zh": "RunningHub 全能图片PRO"
   },
   "contentType": "image",
   "aiTaskType": "runninghub_generate_media",
   "subAiTaskType": "standard_api",
+  "uploadServer": "runninghub2",
   "cost": 1.0,
   "aiConfig": {
-    "id": "rhart-image-n-pro",
     "prompt": "",
-    "resolution": "2K",
-    "aspectRatio": "16:9"
+    "imageUrls": [],
+    "resolution": "1K",
+    "aspectRatio": "1:1"
   },
   "uiConfig": [
+    {
+      "type": "file-input",
+      "label": {
+        "en": "Image",
+        "zh": "图片"
+      },
+      "path": "aiConfig.imageUrls",
+      "accept": ["image"],
+      "maxFiles": 1,
+      "minFiles": 0,
+      "placeholder": {
+        "en": "Drag image here or from timeline",
+        "zh": "拖拽图片素材或时间轴片段到此处"
+      }
+    },
     {
       "type": "textarea-input",
       "label": {
@@ -27,8 +43,8 @@
       },
       "path": "aiConfig.prompt",
       "placeholder": {
-        "en": "Describe the image you want to generate...",
-        "zh": "描述你想要生成的图片..."
+        "en": "Describe how to edit image...",
+        "zh": "描述如何编辑图片"
       },
       "required": true
     },
@@ -52,17 +68,18 @@
             "en": "2K",
             "zh": "2K"
           },
-          "value": "2K"
+          "value": "2K",
+          "add_cost": 0.05
         },
         {
           "label": {
             "en": "4K",
             "zh": "4K"
           },
-          "value": "4K"
+          "value": "4K",
+          "add_cost": 0.1
         }
-      ],
-      "defaultValue": "2K"
+      ]
     },
     {
       "type": "select-input",
@@ -102,13 +119,6 @@
         },
         {
           "label": {
-            "en": "2:3",
-            "zh": "2:3"
-          },
-          "value": "2:3"
-        },
-        {
-          "label": {
             "en": "3:4",
             "zh": "3:4"
           },
@@ -134,9 +144,29 @@
             "zh": "5:4"
           },
           "value": "5:4"
+        },
+        {
+          "label": {
+            "en": "16:9",
+            "zh": "16:9"
+          },
+          "value": "16:9"
+        },
+        {
+          "label": {
+            "en": "9:16",
+            "zh": "9:16"
+          },
+          "value": "9:16"
+        },
+        {
+          "label": {
+            "en": "21:9",
+            "zh": "21:9"
+          },
+          "value": "21:9"
         }
-      ],
-      "defaultValue": "16:9"
+      ]
     }
   ]
 }
