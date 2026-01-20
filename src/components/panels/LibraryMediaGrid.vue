@@ -198,6 +198,14 @@
         @confirm="handleRenameConfirm"
       />
 
+      <!-- 媒体预览模态框 -->
+      <MediaPreviewModal
+        :show="showMediaPreviewModal"
+        :media-item-id="previewMediaItemId"
+        @update:show="showMediaPreviewModal = $event"
+        @close="showMediaPreviewModal = false"
+      />
+
       <!-- 隐藏的文件输入 -->
       <input
         ref="fileInput"
@@ -249,6 +257,7 @@ import {
 import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
 import RenameModal from '@/components/modals/RenameModal.vue'
 import MediaItemThumbnail from '@/components/panels/MediaItemThumbnail.vue'
+import MediaPreviewModal from '@/components/modals/MediaPreviewModal.vue'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
 import {
@@ -282,6 +291,10 @@ const showCreateDirModal = ref(false)
 const showRenameModal = ref(false)
 const renameCurrentName = ref('')
 const renameTarget = ref<DisplayItem | null>(null)
+
+// 预览模态框状态
+const showMediaPreviewModal = ref(false)
+const previewMediaItemId = ref<string>('')
 
 
 // 文件夹拖拽状态（每个文件夹独立状态）
@@ -743,8 +756,9 @@ function onItemDoubleClick(item: DisplayItem): void {
   if (item.type === 'directory') {
     unifiedStore.navigateToDir(item.id)
   } else {
-    // TODO: 实现媒体项双击处理（如预览）
-    console.log('双击媒体项:', item.id)
+    // 打开媒体预览
+    previewMediaItemId.value = item.id
+    showMediaPreviewModal.value = true
   }
 }
 
