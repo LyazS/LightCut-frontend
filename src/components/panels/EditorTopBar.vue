@@ -9,7 +9,7 @@
         <div class="status-left">
           <HoverButton @click="goBack" :title="t('editor.backToProject')">
             <template #icon>
-              <component :is="IconComponents.FOLDER_3" size="18px" />
+              <img src="/icon/favicon.ico" alt="back" style="width: 18px; height: 18px;" />
             </template>
             {{ t('editor.back') }}
           </HoverButton>
