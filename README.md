@@ -1,11 +1,11 @@
 
-# 光影绘梦 (LightCut)
+# 本菌梦 (VibeDream)
 ![alt text](docs/image.png)
 一个基于Web技术的AI视频编辑器，支持本地文件和远程网络素材的处理与编辑。
 
 ## 项目简介
 
-光影绘梦是一个现代化的视频编辑平台，采用前后端分离架构，前端使用Vue 3和TypeScript构建，后端使用Python FastAPI提供API服务。项目实现了统一异步源架构，支持多种媒体格式的处理和编辑。
+本菌梦是一个现代化的视频编辑平台，采用前后端分离架构，前端使用Vue 3和TypeScript构建，后端使用Python FastAPI提供API服务。项目实现了统一异步源架构，支持多种媒体格式的处理和编辑。
 
 ### 核心特性
 
@@ -222,7 +222,7 @@ start.bat
 
 ## 联系方式
 
-项目名称：光影绘梦 (LightDream)  
+项目名称：本菌梦 (VibeDream)  
 项目类型：AI视频编辑器  
 技术栈：Vue 3 + TypeScript + FastAPI
 

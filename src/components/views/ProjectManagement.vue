@@ -4,6 +4,7 @@
     <header class="header">
       <div class="header-content">
         <div class="logo-section">
+          <img src="/icon/favicon.svg" alt="LightCut Logo" class="app-logo" />
           <h1 class="app-title">{{ t('app.title') }}</h1>
           <span class="app-subtitle">{{ t('app.subtitle') }}</span>
         </div>
@@ -571,7 +572,7 @@ onMounted(async () => {
 
 .header {
   background-color: var(--color-bg-secondary);
-  padding: 1rem 0;
+  padding: 3px 0;
 }
 
 .header-content {
@@ -591,8 +592,14 @@ onMounted(async () => {
 
 .logo-section {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-logo {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
 }
 
 .app-title {
