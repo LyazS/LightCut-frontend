@@ -107,8 +107,8 @@ import type {
   FileData,
   MultiFileData,
   FileSlot,
-} from '@/core/datasource/providers/ai-generation/types'
-import { FileItemStatus } from '@/core/datasource/providers/ai-generation/types'
+} from '@/aipanel/aigenerate/types'
+import { FileItemStatus } from '@/aipanel/aigenerate/types'
 import { IconComponents } from '@/constants/iconComponents'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { DropTargetType, type AIGenerationPanelDropTargetInfo } from '@/core/types/drag'

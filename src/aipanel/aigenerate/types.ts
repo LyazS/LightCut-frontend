@@ -221,6 +221,7 @@ export interface FileInputConfig extends BaseUIConfig {
   accept?: string[] // 接受的文件类型，如 ['image', 'video']
   placeholder?: I18nText // 占位符文本
   maxFiles?: number // 最大文件数量，默认为 1
+  minFiles?: number // 最小文件数量，默认为 0
 }
 
 /**
@@ -280,7 +281,7 @@ export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConf
 /**
  * 上传服务器类型
  */
-export type UploadServerType = 'bizyair' | 'bltcy' | 'runninghub'
+export type UploadServerType = 'bizyair' | 'bltcy' | 'runninghub' | 'runninghub2'
 
 /**
  * AI 生成配置结构

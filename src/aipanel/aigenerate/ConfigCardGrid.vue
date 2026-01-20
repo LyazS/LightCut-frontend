@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { collection, type ConfigKey } from '@/core/datasource/providers/ai-generation/configs'
+import { collection, type ConfigKey } from '@/aipanel/aigenerate/configs'
 import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'

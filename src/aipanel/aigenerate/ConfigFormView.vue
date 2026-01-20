@@ -57,12 +57,12 @@
 import { computed } from 'vue'
 import { NScrollbar } from 'naive-ui'
 import DynamicConfigForm from './DynamicConfigForm.vue'
-import { collection, type ConfigKey } from '@/core/datasource/providers/ai-generation/configs'
+import { collection, type ConfigKey } from '@/aipanel/aigenerate/configs'
 import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
-import type { UIConfig } from '@/core/datasource/providers/ai-generation'
-import { calculateTotalCost } from '@/aipanel/aigenerate/utils/costCalculator'
+import type { UIConfig } from '@/aipanel/aigenerate/types'
+import { calculateTotalCost } from './utils/costCalculator'
 
 interface Props {
   selectedConfig: ConfigKey | ''

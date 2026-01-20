@@ -1,5 +1,5 @@
-import type { AIGenerateConfig } from '@/core/datasource/providers/ai-generation/types'
-import { getValueByPath } from '@/aipanel/aigenerate/utils/pathUtils'
+import type { AIGenerateConfig } from '@/aipanel/aigenerate/types'
+import { getValueByPath } from './pathUtils'
 
 /**
  * 计算动态成本

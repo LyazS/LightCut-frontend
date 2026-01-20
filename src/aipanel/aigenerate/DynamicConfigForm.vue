@@ -23,7 +23,7 @@
 <script setup lang="ts">
 import { cloneDeep } from 'lodash'
 import { FIELD_COMPONENT_MAP, type FieldType } from './fields'
-import type { UIConfig } from '@/core/datasource/providers/ai-generation'
+import type { UIConfig } from '@/aipanel/aigenerate/types'
 import { getValueByPath, setValueByPath } from './utils/pathUtils'
 
 interface Props {
