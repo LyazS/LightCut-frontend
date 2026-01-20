@@ -167,9 +167,7 @@ async function handleGenerate() {
           (fileIndex, stage, progress) => {
             console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
           },
-          () => {
-            unifiedStore.messageSuccess('文件上传完成')
-          },
+          () => {},
         )
       } else if (uploadServer === 'bltcy') {
         newConfig = await BltcyFileUploader.processConfigUploads(
@@ -179,9 +177,7 @@ async function handleGenerate() {
           (fileIndex, stage, progress) => {
             console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
           },
-          () => {
-            unifiedStore.messageSuccess('文件上传完成')
-          },
+          () => {},
         )
       } else if (uploadServer === 'runninghub') {
         newConfig = await RunningHubFileUploader.processConfigUploads(
@@ -191,9 +187,7 @@ async function handleGenerate() {
           (fileIndex, stage, progress) => {
             console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
           },
-          () => {
-            unifiedStore.messageSuccess('文件上传完成')
-          },
+          () => {},
         )
       } else if (uploadServer === 'runninghub2') {
         newConfig = await RunningHubFileUploaderStd.processConfigUploads(
@@ -203,9 +197,7 @@ async function handleGenerate() {
           (fileIndex, stage, progress) => {
             console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
           },
-          () => {
-            unifiedStore.messageSuccess('文件上传完成')
-          },
+          () => {},
         )
       } else {
         // TODO: 实现其他上传处理器
