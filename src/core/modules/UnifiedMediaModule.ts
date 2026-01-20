@@ -109,16 +109,23 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
     if (index > -1) {
       const mediaItem = mediaItems.value[index]
 
-      // 1. 清理缩略图URL
+      // 1. 清理相关的时间轴项目（先清理使用该素材的时间轴项目）
+      await cleanupRelatedTimelineItems(mediaItemId)
+
+      // 2. 清理 bunnyMedia
+      if (mediaItem.runtime.bunny?.bunnyMedia) {
+        await mediaItem.runtime.bunny.bunnyMedia.dispose()
+        mediaItem.runtime.bunny.bunnyMedia = undefined
+        console.log(`🧹 [UnifiedMediaModule] bunnyMedia已清理: ${mediaItem.name}`)
+      }
+
+      // 3. 清理缩略图URL
       if (mediaItem.runtime.bunny?.thumbnailUrl) {
         URL.revokeObjectURL(mediaItem.runtime.bunny.thumbnailUrl)
         console.log(`🧹 [UnifiedMediaModule] bunny缩略图URL已清理: ${mediaItem.name}`)
       }
 
-      // 2. 清理相关的时间轴项目
-      await cleanupRelatedTimelineItems(mediaItemId)
-
-      // 3. 删除硬盘文件（媒体文件 + Meta文件）
+      // 4. 删除硬盘文件（媒体文件 + Meta文件）
       try {
         const deleteResult = await globalMetaFileManager.deleteMediaFiles(mediaItemId)
 
