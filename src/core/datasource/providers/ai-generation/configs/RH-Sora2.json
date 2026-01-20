@@ -1,12 +1,12 @@
 {
   "id": "rh-sora2",
   "name": {
-    "en": "RunningHub Video S",
-    "zh": "RunningHub 全能视频 S"
+    "en": "Super Openai Rendering Algorithm :)",
+    "zh": "CloseAI-S2 视频生成模型"
   },
   "description": {
-    "en": "RunningHub All-in-One Video S - Text to Video / Image to Video",
-    "zh": "全能视频S - 支持文生视频和图生视频"
+    "en": "All-in-One Video from CloseAI - Text to Video / Image to Video",
+    "zh": "来自 CloseAI 的全能视频 - 支持文生视频和图生视频"
   },
   "contentType": "video",
   "aiTaskType": "runninghub_generate_media",

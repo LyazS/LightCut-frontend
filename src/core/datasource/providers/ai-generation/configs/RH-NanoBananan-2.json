@@ -1,12 +1,12 @@
 {
   "id": "rh-nano-banana-2",
   "name": {
-    "en": "RunningHub NanoBananan Pro",
-    "zh": "RunningHub NanoBananan PRO"
+    "en": "Gemini Bananan Pro",
+    "zh": "哈基米香蕉PRO"
   },
   "description": {
-    "en": "RunningHub image generation with Pro quality",
-    "zh": "RunningHub 全能图片PRO"
+    "en": "Banana image generation with Pro quality",
+    "zh": "哈基米超强全能图片生成PRO"
   },
   "contentType": "image",
   "aiTaskType": "runninghub_generate_media",
@@ -28,7 +28,7 @@
       },
       "path": "aiConfig.imageUrls",
       "accept": ["image"],
-      "maxFiles": 1,
+      "maxFiles": 14,
       "minFiles": 0,
       "placeholder": {
         "en": "Drag image here or from timeline",

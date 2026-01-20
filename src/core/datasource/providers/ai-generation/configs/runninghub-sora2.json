@@ -1,12 +1,12 @@
 {
   "id": "sora2-hd",
   "name": {
-    "en": "Sora2 video + FlashVSR Upscaling",
-    "zh": "Sora2 视频 + FlashVSR 超分"
+    "en": "CloseAI-S2 video + FlashVSR Upscaling",
+    "zh": "CloseAI-S2 视频 + FlashVSR 超分"
   },
   "description": {
-    "en": "Sora2 video + FlashVSR Upscaling",
-    "zh": "使用 Sora2 模型生成视频，并通过 FlashVSR 模型进行超分辨率处理，提升视频质量。"
+    "en": "CloseAI-S2 video generations with FlashVSR Upscaling",
+    "zh": "使用 CloseAI-S2 模型生成视频，并通过 FlashVSR 模型进行超分辨率处理，提升视频质量。"
   },
   "contentType": "video",
   "aiTaskType": "runninghub_generate_media",
