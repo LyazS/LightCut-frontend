@@ -10,16 +10,12 @@
       >
         <div class="modal-container" :class="containerClass" :style="containerStyle" @click.stop>
           <!-- 头部区域 -->
-          <div v-if="showHeader" class="modal-header" :class="headerClass">
+          <div v-if="showHeader" class="modal-header">
             <slot name="header">
               <h3 v-if="title" class="modal-title">{{ title }}</h3>
               <div v-if="showClose" class="modal-header-actions">
                 <slot name="closeIcon">
-                  <button
-                    class="modal-close-btn"
-                    :class="closeBtnClass"
-                    @click="handleClose"
-                  >
+                  <button class="modal-close-btn" @click="handleClose">
                     <component :is="IconComponents.CLOSE" size="16px" />
                   </button>
                 </slot>
@@ -28,7 +24,7 @@
           </div>
 
           <!-- 内容区域 -->
-          <div class="modal-content" :class="contentClass">
+          <div class="modal-content">
             <slot>
               <div class="modal-body">
                 <slot name="body"></slot>
@@ -37,7 +33,7 @@
           </div>
 
           <!-- 底部区域 -->
-          <div v-if="showFooter" class="modal-footer" :class="footerClass">
+          <div v-if="showFooter" class="modal-footer">
             <slot name="footer">
               <div class="modal-actions">
                 <slot name="actions">
@@ -77,6 +73,7 @@ interface Props {
   show: boolean
   title?: string
   width?: string | number
+  height?: string | number
   maxWidth?: string | number
   maxHeight?: string | number
   closable?: boolean
@@ -150,13 +147,11 @@ const containerStyle = computed(() => {
     maxHeight: typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight,
     ...props.customStyle,
   }
+  if (props.height) {
+    style.height = typeof props.height === 'number' ? `${props.height}px` : props.height
+  }
   return style
 })
-
-const headerClass = computed(() => 'modal-header')
-const contentClass = computed(() => 'modal-content')
-const footerClass = computed(() => 'modal-footer')
-const closeBtnClass = computed(() => 'modal-close-btn')
 
 // 键盘事件处理
 const handleKeydown = (event: KeyboardEvent) => {

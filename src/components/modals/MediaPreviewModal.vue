@@ -1,10 +1,9 @@
 <template>
   <UniversalModal
     :show="show"
-    :title="mediaItem?.name || t('media.preview')"
-    width="90%"
-    max-width="90%"
-    max-height="90vh"
+    :showHeader="false"
+    width="75vw"
+    height="75vh"
     :closable="true"
     :mask-closable="true"
     :esc-closable="true"
@@ -152,6 +151,7 @@ function getStatusText() {
 .media-preview-content {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
   min-height: 400px;
 }
