@@ -110,6 +110,16 @@ import { useAppI18n } from '@/core/composables/useI18n'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import { IconComponents } from '@/constants/iconComponents'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
+import {
+  AIGenerationSourceFactory,
+  TaskStatus,
+  type MediaGenerationRequest,
+  type AIGenerationSourceData,
+} from '@/core/datasource/providers/ai-generation/AIGenerationSource'
+import { fetchClient } from '@/utils/fetchClient'
+import type { TaskSubmitResponse } from '@/types/taskApi'
+import { TaskSubmitErrorCode } from '@/types/taskApi'
+import { buildTaskErrorMessage } from '@/utils/errorMessageBuilder'
 
 interface Props {
   mediaItem: UnifiedMediaItemData
@@ -242,16 +252,116 @@ function getMediaTypeLabel(mediaType: string): string {
   }
 }
 
+// 提交AI生成任务到后端
+async function submitAIGenerationTask(
+  requestParams: MediaGenerationRequest,
+): Promise<TaskSubmitResponse> {
+  try {
+    const response = await fetchClient.post<TaskSubmitResponse>(
+      '/api/media/generate',
+      requestParams,
+    )
+
+    if (response.status !== 200) {
+      throw new Error(`提交任务失败: ${response.statusText}`)
+    }
+
+    return response.data
+  } catch (error) {
+    // 网络错误时返回失败响应
+    return {
+      success: false,
+      error_code: TaskSubmitErrorCode.UNKNOWN_ERROR,
+      error_details: {
+        error: error instanceof Error ? error.message : '网络请求失败',
+      },
+    }
+  }
+}
+
+// 重试AI生成素材
+async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void> {
+  const aiSource = mediaItem.source as AIGenerationSourceData
+
+  // 1. 重新提交任务到后端
+  const submitResult = await submitAIGenerationTask(aiSource.requestParams)
+
+  if (!submitResult.success) {
+    const errorMessage = buildTaskErrorMessage(
+      submitResult.error_code,
+      submitResult.error_details,
+      t,
+    )
+    throw new Error(errorMessage)
+  }
+
+  // 2. 更新任务ID和状态
+  aiSource.aiTaskId = submitResult.task_id
+  aiSource.taskStatus = TaskStatus.PENDING
+  aiSource.actualCost = undefined
+  aiSource.resultPath = undefined
+
+  // 3. 重置数据源状态
+  aiSource.progress = 0
+  aiSource.errorMessage = undefined
+  aiSource.streamConnected = false
+
+  // 4. 重置媒体状态
+  mediaItem.mediaStatus = 'pending'
+
+  // 5. 重新启动处理流程
+  unifiedStore.startMediaProcessing(mediaItem)
+
+  unifiedStore.messageSuccess(t('media.retryStarted', { name: mediaItem.name }))
+}
+
 // 重试操作
-function handleRetry() {
-  // TODO: 实现重试逻辑
-  console.log('重试素材:', props.mediaItem.id)
+async function handleRetry(): Promise<void> {
+  const mediaItem = props.mediaItem
+  if (!mediaItem) return
+
+  try {
+    // 🌟 只支持 AI 生成类型的重试
+    if (mediaItem.source.type === 'ai-generation') {
+      await retryAIGeneration(mediaItem)
+    } else {
+      // 其他类型不支持重试
+      unifiedStore.messageWarning(t('media.retryNotSupported'))
+      return
+    }
+  } catch (error) {
+    console.error('重试失败:', error)
+    unifiedStore.messageError(
+      t('media.retryFailed', {
+        error: error instanceof Error ? error.message : '未知错误',
+      }),
+    )
+  }
 }
 
 // 取消操作
-function handleCancel() {
-  // TODO: 实现取消逻辑
-  console.log('取消素材:', props.mediaItem.id)
+async function handleCancel(): Promise<void> {
+  const mediaItem = props.mediaItem
+  if (!mediaItem) return
+
+  try {
+    console.log(`🛑 [MediaItemProperties] 尝试取消任务: ${mediaItem.name}`)
+
+    const success = await unifiedStore.cancelMediaProcessing(mediaItem.id)
+
+    if (success) {
+      unifiedStore.messageSuccess(t('media.cancelSuccess', { name: mediaItem.name }))
+    } else {
+      unifiedStore.messageWarning(t('media.cancelFailed', { name: mediaItem.name }))
+    }
+  } catch (error) {
+    console.error('取消任务失败:', error)
+    unifiedStore.messageError(
+      t('media.cancelFailed', {
+        name: mediaItem.name,
+      }),
+    )
+  }
 }
 </script>
 

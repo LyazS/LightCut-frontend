@@ -128,7 +128,7 @@ const emit = defineEmits<{
 }>()
 
 // 响应式数据
-const isChatPanelVisible = ref(false)
+const isChatPanelVisible = ref(true)
 const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
