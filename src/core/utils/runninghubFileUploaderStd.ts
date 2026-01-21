@@ -78,7 +78,7 @@ export class RunningHubFileUploaderStd {
     const data = await response.json()
 
     // 检查响应状态
-    if (data.code !== 200) {
+    if (data.code !== 0) {
       throw new Error(`上传失败: ${data.message}`)
     }
 
