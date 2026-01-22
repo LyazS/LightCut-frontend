@@ -54,7 +54,7 @@ import { computed, ref } from 'vue'
 import { NScrollbar } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import type { VirtualDirectory } from '@/core/types/directory'
+import type { VirtualDirectory } from '@/core/directory/types'
 import { DropTargetType, type DropTargetInfo } from '@/core/types/drag'
 import { IconComponents } from '@/constants/iconComponents'
 

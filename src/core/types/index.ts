@@ -56,24 +56,6 @@ export {
   type ContentTemplateProps,
 } from './clipRenderer'
 
-// ==================== 目录和剪贴板相关类型 ====================
-export {
-  // 目录数据结构
-  type VirtualDirectory,
-  type DisplayTab,
-  type DisplayItem,
-  type DirectoryNavigationState,
-
-  // 剪贴板数据结构
-  type ClipboardState,
-  type ClipboardItem,
-  type PasteResult,
-  type PasteError,
-
-  // 剪贴板操作枚举
-  ClipboardOperation,
-} from './directory'
-
 /**
  * 视频分辨率接口
  */

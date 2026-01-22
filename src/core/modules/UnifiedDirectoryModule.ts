@@ -9,9 +9,12 @@ import type {
   ClipboardItem,
   ClipboardOperation,
   PasteResult,
-} from '@/core/types/directory'
-import { ClipboardOperation as ClipboardOp } from '@/core/types/directory'
-import type { ViewMode, SortBy, SortOrder, UnifiedDirectoryConfig } from '@/core/directory/types'
+  ViewMode,
+  SortBy,
+  SortOrder,
+  UnifiedDirectoryConfig,
+} from '@/core/directory/types'
+import { ClipboardOperation as ClipboardOp } from '@/core/directory/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 
@@ -1061,10 +1064,14 @@ export type {
   ClipboardItem,
   PasteResult,
   PasteError,
-} from '@/core/types/directory'
+  ViewMode,
+  SortBy,
+  SortOrder,
+  UnifiedDirectoryConfig,
+} from '@/core/directory/types'
 
 // 导出枚举（不使用 type）
-export { ClipboardOperation } from '@/core/types/directory'
+export { ClipboardOperation } from '@/core/directory/types'
 
 /**
  * 导出模块类型

@@ -225,8 +225,7 @@ import { ref, computed } from 'vue'
 import { NScrollbar } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import type { DisplayItem, VirtualDirectory, ClipboardItem } from '@/core/types/directory'
-import type { ViewMode, SortBy, SortOrder } from '@/core/directory/types'
+import type { DisplayItem, VirtualDirectory, ClipboardItem, ViewMode, SortBy, SortOrder } from '@/core/directory/types'
 import {
   DragSourceType,
   DropTargetType,
