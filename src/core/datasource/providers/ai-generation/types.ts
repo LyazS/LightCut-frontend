@@ -89,7 +89,6 @@ export interface ProgressUpdateEvent extends BaseTaskStreamEvent {
   status: TaskStatus
   progress: number
   message: string
-  metadata?: Record<string, any>
 }
 
 /**

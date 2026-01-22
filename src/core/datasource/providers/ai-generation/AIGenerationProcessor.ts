@@ -282,26 +282,6 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       source.taskStatus = streamEvent.status
     }
 
-    // 只在消息真正变化时更新
-    if (source.currentStage !== streamEvent.message) {
-      source.currentStage = streamEvent.message
-    }
-
-    // 只在元数据真正变化时更新
-    if (streamEvent.metadata) {
-      const oldMetadata = source.metadata || {}
-      const newMetadata = { ...oldMetadata, ...streamEvent.metadata }
-
-      // 检查元数据是否有实际变化
-      const metadataChanged = Object.keys(streamEvent.metadata).some(
-        (key) => oldMetadata[key] !== streamEvent.metadata![key],
-      )
-
-      if (metadataChanged) {
-        source.metadata = newMetadata
-      }
-    }
-
     // 判断是否需要转换媒体状态：只在从 PENDING 转换到 PROCESSING 时返回 true
     return oldStatus === TaskStatus.PENDING && streamEvent.status === TaskStatus.PROCESSING
   }
