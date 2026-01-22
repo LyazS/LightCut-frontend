@@ -27,9 +27,7 @@ export interface BaseAIGenerationSourceData extends BaseDataSourceData {
   type: 'ai-generation'
   aiTaskId: string
   requestParams: MediaGenerationRequest
-  estimatedCost?: number
-  actualCost?: number
-  resultPath?: string // 远程任务完成后的结果路径
+  resultData?: Record<string, any> // 远程任务完成后的结果数据字典
   taskStatus: TaskStatus // 🌟 新增：持久化任务状态（必填）
 }
 
@@ -99,20 +97,6 @@ export const AIGenerationQueries = {
   getRequestParams(source: AIGenerationSourceData): MediaGenerationRequest {
     return source.requestParams
   },
-
-  /**
-   * 获取预估成本
-   */
-  getEstimatedCost(source: AIGenerationSourceData): number | undefined {
-    return source.estimatedCost
-  },
-
-  /**
-   * 获取实际成本
-   */
-  getActualCost(source: AIGenerationSourceData): number | undefined {
-    return source.actualCost
-  },
 }
 
 // ==================== 数据源提取函数 ====================
@@ -131,9 +115,7 @@ export function extractAIGenerationSourceData(
     // 特定字段
     aiTaskId: source.aiTaskId,
     requestParams: source.requestParams,
-    estimatedCost: source.estimatedCost,
-    actualCost: source.actualCost,
-    resultPath: source.resultPath, // 保存结果路径
+    resultData: source.resultData, // 保存结果数据
     taskStatus: source.taskStatus, // 🌟 新增：保存任务状态
 
     // 不需要保存运行时状态

@@ -272,7 +272,6 @@ async function handleGenerate() {
         type: 'ai-generation',
         aiTaskId: submitResult.task_id, // 使用真实的后端任务ID
         requestParams: requestParams,
-        estimatedCost: submitResult.cost, // 使用后端返回的实际成本
         taskStatus: TaskStatus.PENDING, // 初始状态为 PENDING
       },
       SourceOrigin.USER_CREATE,
