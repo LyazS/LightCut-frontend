@@ -1302,7 +1302,7 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
   // 2. 更新任务ID和状态
   aiSource.aiTaskId = submitResult.task_id
   aiSource.taskStatus = TaskStatus.PENDING
-  aiSource.resultPath = undefined
+  aiSource.resultData = undefined
 
   // 3. 重置数据源状态
   aiSource.progress = 0
