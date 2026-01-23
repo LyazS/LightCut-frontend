@@ -206,15 +206,15 @@ export class AIGenerationProcessor extends DataSourceProcessor {
                     return true
                   }
 
-                  // ✅ 直接从 FINAL 事件中获取 result_path（无需额外 API 调用）
-                  if (!streamEvent.result_path) {
-                    console.error(`❌ [AIGenerationProcessor] FINAL 事件中缺少 result_path`)
-                    reject(new Error('FINAL 事件中缺少 result_path'))
+                  // ✅ 直接从 FINAL 事件中获取 result_data（无需额外 API 调用）
+                  if (!streamEvent.result_data) {
+                    console.error(`❌ [AIGenerationProcessor] FINAL 事件中缺少 result_data`)
+                    reject(new Error('FINAL 事件中缺少 result_data'))
                     needReconnect = false
                     return true
                   }
 
-                  this.handleFinalResult(aiTaskId, streamEvent.result_path, source)
+                  this.handleFinalResult(aiTaskId, streamEvent.result_data, source)
                     .then(resolve)
                     .catch(reject)
                   needReconnect = false
@@ -292,19 +292,25 @@ export class AIGenerationProcessor extends DataSourceProcessor {
    */
   private async handleFinalResult(
     taskId: string,
-    resultPath: string,
+    resultData: Record<string, any>,
     source: AIGenerationSourceData,
   ): Promise<File> {
-    // 保存 resultPath 到 source（持久化字段）
-    source.resultPath = resultPath
+    // 保存 resultData 到 source（持久化字段）
+    source.resultData = resultData
 
-    // 🌟 获取到 resultPath 表示远程任务已完成，设置 COMPLETED 状态
+    // 🌟 获取到 resultData 表示远程任务已完成，设置 COMPLETED 状态
     source.taskStatus = TaskStatus.COMPLETED
-    console.log(`✅ [AIGenerationProcessor] 远程任务完成，获取到 resultPath，状态: COMPLETED`)
+    console.log(`✅ [AIGenerationProcessor] 远程任务完成，获取到 resultData，状态: COMPLETED`)
 
-    if (this.isRemotePath(resultPath)) {
+    // 从 resultData 中提取 URL
+    const resultUrl = resultData.url
+    if (!resultUrl) {
+      throw new Error('resultData 中缺少 url 字段')
+    }
+
+    if (this.isRemotePath(resultUrl)) {
       // 远程文件：直接下载
-      return await this.downloadRemoteFile(taskId, resultPath, source)
+      return await this.downloadRemoteFile(taskId, resultUrl, source)
     } else {
       // 本地文件：调用 /tasks/{id}/file
       return await this.fetchLocalFile(taskId, source)
@@ -450,13 +456,13 @@ export class AIGenerationProcessor extends DataSourceProcessor {
         file = await globalMetaFileManager.loadMediaFile(mediaItem.id)
         needSaveMeta = false // meta 文件已存在
         needSaveMedia = false // 媒体文件已存在
-      } else if (source.resultPath) {
+      } else if (source.resultData) {
         // 场景 B: 远程任务已完成，重新获取文件
         this.transitionMediaStatus(mediaItem, 'asyncprocessing')
-        console.log(`🎯 [场景B] 远程任务已完成，直接从 resultPath 获取: ${source.resultPath}`)
+        console.log(`🎯 [场景B] 远程任务已完成，直接从 resultData 获取:`, source.resultData)
         RuntimeStateActions.startAcquisition(source)
 
-        file = await this.handleFinalResult(source.aiTaskId, source.resultPath, source)
+        file = await this.handleFinalResult(source.aiTaskId, source.resultData, source)
         mediaType = mapContentTypeToMediaType(source.requestParams.content_type)
 
         await RuntimeStateActions.completeAcquisition(source)

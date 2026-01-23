@@ -99,7 +99,7 @@ export interface FinalEvent extends BaseTaskStreamEvent {
   status: TaskStatus
   progress: number
   message: string
-  result_path?: string // 任务结果路径（仅完成时有值）
+  result_data?: Record<string, any> // 任务结果数据字典（仅完成时有值）
 }
 
 /**
