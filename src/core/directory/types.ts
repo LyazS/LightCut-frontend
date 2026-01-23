@@ -10,6 +10,7 @@
  * 包含子文件夹和媒体项的完整信息
  */
 export interface VirtualDirectory {
+  readonly type: string // 目录类型，用于区分不同类型的特殊文件夹（默认：'base'）
   // 核心字段
   id: string // 唯一标识符，格式：dir_{nanoid}
   name: string // 目录名称

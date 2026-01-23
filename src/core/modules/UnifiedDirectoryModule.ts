@@ -73,6 +73,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function createDirectory(name: string, parentId: string | null = null): VirtualDirectory {
     const newDir: VirtualDirectory = {
+      type: 'base',
       id: generateDirectoryId(),
       name,
       parentId,
