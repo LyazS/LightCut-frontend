@@ -275,7 +275,7 @@ export function createUnifiedUIModule(
         // 添加媒体到角色文件夹
         directoryModule.addMediaToDirectory(mediaId, characterDir.id)
         // 更新角色文件夹的图片引用
-        characterDir.character.imageMediaId = mediaId
+        characterDir.character.portraitMediaId = mediaId
         // 切换到编辑模式
         characterEditorState.value.mode = 'edit'
         characterEditorState.value.characterId = characterDir.id
@@ -285,7 +285,7 @@ export function createUnifiedUIModule(
         // 编辑模式：添加到现有角色文件夹
         directoryModule.addMediaToDirectory(mediaId, characterDir.id)
         // 更新角色文件夹的图片引用
-        characterDir.character.imageMediaId = mediaId
+        characterDir.character.portraitMediaId = mediaId
       }
 
       console.log('✅ 角色肖像生成任务已提交:', mediaId)

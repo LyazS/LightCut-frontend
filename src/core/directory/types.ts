@@ -6,12 +6,21 @@
 // ==================== 目录相关类型 ====================
 
 /**
+ * 文件夹类型枚举
+ * 用于区分不同类型的特殊文件夹
+ */
+export enum DirectoryType {
+  BASE = 'base',
+  CHARACTER = 'character',
+}
+
+/**
  * 角色信息接口
  */
 export interface CharacterInfo {
   description: string // 角色描述文本
   createdAt: string // 创建时间（ISO 8601）
-  imageMediaId?: string // 关联的角色图片 MediaItem ID（可选）
+  portraitMediaId?: string // 关联的角色图片 MediaItem ID（可选）
 }
 
 /**
@@ -19,7 +28,7 @@ export interface CharacterInfo {
  * 包含子文件夹和媒体项的完整信息
  */
 export interface VirtualDirectory {
-  readonly type: string // 目录类型，用于区分不同类型的特殊文件夹（默认：'base'）
+  readonly type: DirectoryType // 目录类型，用于区分不同类型的特殊文件夹（默认：'base'）
   // 核心字段
   id: string // 唯一标识符，格式：dir_{nanoid}
   name: string // 目录名称
@@ -36,7 +45,7 @@ export interface VirtualDirectory {
  * 继承自 VirtualDirectory，type 为 'character'
  */
 export interface CharacterDirectory extends VirtualDirectory {
-  readonly type: 'character' // 固定为 'character'
+  readonly type: DirectoryType.CHARACTER // 固定为 'character'
   character: CharacterInfo // 角色信息
 }
 

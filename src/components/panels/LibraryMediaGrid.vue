@@ -55,7 +55,7 @@
             <!-- 文件夹项目 -->
             <template v-if="item.type === 'directory'">
               <div class="item-icon directory-icon">
-                <component :is="IconComponents.FOLDER" :size="getIconSize()" />
+                <FolderIcon :folder-id="item.id" :size="getIconSize()" :is-list-view="false" />
               </div>
             </template>
 
@@ -111,11 +111,7 @@
           <!-- 图标列 -->
           <div class="list-item-icon">
             <template v-if="item.type === 'directory'">
-              <component
-                :is="IconComponents.FOLDER"
-                size="20px"
-                style="color: var(--color-accent-primary)"
-              />
+              <FolderIcon :folder-id="item.id" size="20px" :is-list-view="true" />
             </template>
             <template v-else>
               <MediaItemThumbnail :media-id="item.id" />
@@ -257,6 +253,7 @@ import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
 import RenameModal from '@/components/modals/RenameModal.vue'
 import MediaItemThumbnail from '@/components/panels/MediaItemThumbnail.vue'
 import MediaPreviewModal from '@/components/modals/MediaPreviewModal.vue'
+import FolderIcon from '@/components/panels/FolderIcon.vue'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
 import {
@@ -1107,11 +1104,6 @@ async function handleCreateFolder(folderName: string): Promise<void> {
 }
 
 // ==================== 文件导入 ====================
-
-// 显示导入菜单
-function showImportMenu(): void {
-  triggerFileInput()
-}
 
 // 触发文件选择
 function triggerFileInput(): void {

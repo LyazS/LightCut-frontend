@@ -16,6 +16,7 @@ import type {
   CharacterInfo,
   CharacterDirectory,
 } from '@/core/directory/types'
+import { DirectoryType } from '@/core/directory/types'
 import { ClipboardOperation as ClipboardOp } from '@/core/directory/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
@@ -75,7 +76,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function createDirectory(name: string, parentId: string | null = null): VirtualDirectory {
     const newDir: VirtualDirectory = {
-      type: 'base',
+      type: DirectoryType.BASE,
       id: generateDirectoryId(),
       name,
       parentId,
@@ -106,7 +107,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     parentId: string | null = null,
   ): CharacterDirectory {
     const characterDir: CharacterDirectory = {
-      type: 'character',
+      type: DirectoryType.CHARACTER,
       id: generateDirectoryId(),
       name,
       parentId,
@@ -137,7 +138,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    * 类型守卫：判断是否为角色文件夹
    */
   function isCharacterDirectory(dir: VirtualDirectory): dir is CharacterDirectory {
-    return dir.type === 'character'
+    return dir.type === DirectoryType.CHARACTER
   }
 
   /**
@@ -340,6 +341,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
   /**
    * 启动目录中 pending 状态的媒体
+   * 包括当前目录的媒体项和角色类型子文件夹中的媒体项
    */
   function startPendingMediaInDirectory(dirId: string): void {
     const dir = directories.value.get(dirId)
@@ -347,11 +349,26 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     let startedCount = 0
 
+    // 处理当前目录的媒体项
     dir.mediaItemIds.forEach((mediaId) => {
       const mediaItem = mediaModule.getMediaItem(mediaId)
       if (mediaItem?.mediaStatus === 'pending') {
         mediaModule.startMediaProcessing(mediaItem)
         startedCount++
+      }
+    })
+
+    // 处理角色类型子文件夹中的媒体项
+    dir.childDirIds.forEach((childDirId) => {
+      const childDir = directories.value.get(childDirId)
+      if (childDir && isCharacterDirectory(childDir)) {
+        childDir.mediaItemIds.forEach((mediaId) => {
+          const mediaItem = mediaModule.getMediaItem(mediaId)
+          if (mediaItem?.mediaStatus === 'pending') {
+            mediaModule.startMediaProcessing(mediaItem)
+            startedCount++
+          }
+        })
       }
     })
 
@@ -1121,6 +1138,7 @@ export type {
   SortBy,
   SortOrder,
   UnifiedDirectoryConfig,
+  DirectoryType,
 } from '@/core/directory/types'
 
 // 导出枚举（不使用 type）
