@@ -2,6 +2,7 @@
   "aiPanel": {
     "aiGenerate": "AI Generate",
     "agent": "Agent",
+    "characterEditor": "Character Editor",
     "selectConfig": "Select a configuration",
     "generate": "Generate",
     "generating": "Generating...",

@@ -15,6 +15,7 @@ import { createUnifiedSnapModule } from '@/core/modules/UnifiedSnapModule'
 import { createUnifiedUserModule } from '@/core/modules/UnifiedUserModule'
 import { createUnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
 import { createUnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
+import { createUnifiedUIModule } from '@/core/modules/UnifiedUIModule'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
@@ -100,6 +101,9 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, unifiedViewportModule.contentEndTimeFrames)
   registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
+
+  const unifiedUIModule = createUnifiedUIModule(registry)
+  registry.register(MODULE_NAMES.UI, unifiedUIModule)
 
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(
@@ -535,10 +539,13 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 目录管理方法
     createDirectory: unifiedDirectoryModule.createDirectory,
+    createCharacterDirectory: unifiedDirectoryModule.createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory: unifiedDirectoryModule.renameDirectory,
     deleteDirectory: unifiedDirectoryModule.deleteDirectory, // 🆕 新增删除文件夹方法
     deleteMediaItem: unifiedDirectoryModule.deleteMediaItem, // 🆕 新增删除媒体项方法
     getDirectory: unifiedDirectoryModule.getDirectory,
+    getCharacterDirectory: unifiedDirectoryModule.getCharacterDirectory, // 🆕 新增获取角色文件夹方法
+    isCharacterDirectory: unifiedDirectoryModule.isCharacterDirectory, // 🆕 新增类型守卫方法
     addMediaToDirectory: unifiedDirectoryModule.addMediaToDirectory,
     removeMediaFromDirectory: unifiedDirectoryModule.removeMediaFromDirectory,
     getDirectoryContent: unifiedDirectoryModule.getDirectoryContent,
@@ -591,6 +598,23 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 拖拽查询方法
     getSourceHandler: dragManager.getSourceHandler,
     getTargetHandler: dragManager.getTargetHandler,
+
+    // ==================== UI 模块状态和方法 ====================
+
+    // AI 面板状态
+    isChatPanelVisible: unifiedUIModule.isChatPanelVisible,
+
+    // 角色编辑器状态
+    characterEditorState: unifiedUIModule.characterEditorState,
+
+    // AI 面板状态管理方法
+    setChatPanelVisible: unifiedUIModule.setChatPanelVisible,
+
+    // 角色编辑器方法
+    openCharacterEditor: unifiedUIModule.openCharacterEditor,
+    closeCharacterEditor: unifiedUIModule.closeCharacterEditor,
+    updateCharacterEditorTempData: unifiedUIModule.updateCharacterEditorTempData,
+    generateCharacterPortrait: unifiedUIModule.generateCharacterPortrait,
 
     // ==================== 执行系统集成 ====================
     executeUserScript,

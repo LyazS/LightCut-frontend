@@ -6,6 +6,7 @@
       </template>
       <n-tab name="ai-generate" :tab="t('aiPanel.aiGenerate')"> </n-tab>
       <n-tab name="agent" :tab="t('aiPanel.agent')"> </n-tab>
+      <n-tab v-if="unifiedStore.characterEditorState.isOpen" name="character-editor" :tab="t('aiPanel.characterEditor')"> </n-tab>
       <template #suffix>
         <div class="header-buttons">
           <template v-if="activeTab === 'agent'">
@@ -34,20 +35,26 @@
     <div v-show="activeTab === 'agent'" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
       <AgentPanel :showHistory="showHistory" />
     </div>
+    <div v-show="activeTab === 'character-editor'" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+      <CharacterEditor />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { NTab, NTabs } from 'naive-ui'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
 import AgentPanel from './agent/components/AgentPanel.vue'
 import GeneratePanel from './aigenerate/GeneratePanel.vue'
+import CharacterEditor from './character/CharacterEditor.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { useUnifiedStore } from '@/core/unifiedStore'
 import { SESSION_MANAGER } from '@/aipanel/agent/services'
 
 const { t } = useAppI18n()
+const unifiedStore = useUnifiedStore()
 
 // 定义事件
 const emit = defineEmits<{
@@ -58,7 +65,22 @@ const emit = defineEmits<{
 const showHistory = ref(false)
 
 // 当前激活的标签页
-const activeTab = ref<'ai-generate' | 'agent'>('ai-generate')
+const activeTab = ref<'ai-generate' | 'agent' | 'character-editor'>('ai-generate')
+
+// 监听角色编辑器状态，自动切换到角色编辑器 Tab
+watch(
+  () => unifiedStore.characterEditorState.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      activeTab.value = 'character-editor'
+    } else {
+      // 关闭时切换回 AI 生成 Tab
+      if (activeTab.value === 'character-editor') {
+        activeTab.value = 'ai-generate'
+      }
+    }
+  },
+)
 
 // 组件挂载时不需要额外初始化，SessionManager 构造函数已显示欢迎消息
 onMounted(() => {

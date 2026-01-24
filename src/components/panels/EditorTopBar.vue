@@ -39,7 +39,7 @@
             <HoverButton
               @click="toggleChatPanel"
               :title="t('editor.toggleChatPanel')"
-              :active="isChatPanelVisible"
+              :active="unifiedStore.isChatPanelVisible"
             >
               <template #icon>
                 <component :is="IconComponents.CHAT_AI" size="16px" />
@@ -123,12 +123,10 @@ const { t } = useAppI18n()
 
 // 定义事件
 const emit = defineEmits<{
-  toggleChatPanel: []
   showEditProjectDialog: []
 }>()
 
 // 响应式数据
-const isChatPanelVisible = ref(true)
 const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
@@ -163,8 +161,7 @@ const currentProject = computed(() => {
 
 // 方法
 function toggleChatPanel() {
-  isChatPanelVisible.value = !isChatPanelVisible.value
-  emit('toggleChatPanel')
+  unifiedStore.setChatPanelVisible(!unifiedStore.isChatPanelVisible)
 }
 
 function goBack() {

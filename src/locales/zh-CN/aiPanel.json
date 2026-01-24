@@ -2,6 +2,7 @@
   "aiPanel": {
     "aiGenerate": "AI生成",
     "agent": "智能助手",
+    "characterEditor": "角色编辑器",
     "selectConfig": "选择一个配置",
     "generate": "生成",
     "generating": "生成中...",

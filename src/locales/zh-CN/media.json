@@ -149,6 +149,27 @@
       "parsing": "解析中",
       "failed": "失败",
       "cancelled": "已取消"
+    },
+    "character": {
+      "create": "创建",
+      "createCharacter": "创建角色",
+      "character": "角色",
+      "name": "角色名称",
+      "namePlaceholder": "请输入角色名称（1-50字符）",
+      "description": "角色描述",
+      "descriptionPlaceholder": "请输入角色描述（10-500字符）",
+      "createSuccess": "角色创建成功",
+      "createFailed": "角色创建失败",
+      "imageGenerating": "正在生成角色图片...",
+      "editor": "角色编辑器",
+      "generatePortrait": "生成角色肖像",
+      "generateSuccess": "生成成功",
+      "generateFailed": "生成失败",
+      "newCharacter": "新角色",
+      "nameRequired": "角色名称不能为空",
+      "descriptionTooShort": "角色描述至少需要10个字符",
+      "noCharacterSelected": "未选择角色",
+      "exitEdit": "退出编辑"
     }
   }
 }

@@ -13,6 +13,8 @@ import type {
   SortBy,
   SortOrder,
   UnifiedDirectoryConfig,
+  CharacterInfo,
+  CharacterDirectory,
 } from '@/core/directory/types'
 import { ClipboardOperation as ClipboardOp } from '@/core/directory/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
@@ -80,10 +82,6 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
       createdAt: new Date().toISOString(),
       childDirIds: [],
       mediaItemIds: [],
-      extra: {
-        icon: 'folder-fill',
-        order: Date.now(),
-      },
     }
 
     directories.value.set(newDir.id, newDir)
@@ -97,6 +95,60 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     }
 
     return newDir
+  }
+
+  /**
+   * 创建角色文件夹
+   */
+  function createCharacterDirectory(
+    name: string,
+    description: string,
+    parentId: string | null = null,
+  ): CharacterDirectory {
+    const characterDir: CharacterDirectory = {
+      type: 'character',
+      id: generateDirectoryId(),
+      name,
+      parentId,
+      createdAt: new Date().toISOString(),
+      childDirIds: [],
+      mediaItemIds: [],
+      character: {
+        description,
+        createdAt: new Date().toISOString(),
+      },
+    }
+
+    directories.value.set(characterDir.id, characterDir)
+
+    // 如果有父目录，更新父目录的子目录列表
+    if (parentId) {
+      const parentDir = directories.value.get(parentId)
+      if (parentDir) {
+        parentDir.childDirIds.push(characterDir.id)
+      }
+    }
+
+    console.log('✅ 角色文件夹创建成功:', characterDir.name)
+    return characterDir
+  }
+
+  /**
+   * 类型守卫：判断是否为角色文件夹
+   */
+  function isCharacterDirectory(dir: VirtualDirectory): dir is CharacterDirectory {
+    return dir.type === 'character'
+  }
+
+  /**
+   * 获取角色文件夹
+   */
+  function getCharacterDirectory(dirId: string): CharacterDirectory | undefined {
+    const dir = directories.value.get(dirId)
+    if (dir && isCharacterDirectory(dir)) {
+      return dir
+    }
+    return undefined
   }
 
   /**
@@ -249,9 +301,6 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     const newTab: DisplayTab = {
       id: generateTabId(),
       dirId,
-      extra: {
-        viewMode: 'grid',
-      },
     }
 
     openTabs.value.push(newTab)
@@ -1009,8 +1058,11 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     // 核心方法
     createDirectory,
+    createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory,
     getDirectory,
+    getCharacterDirectory, // 🆕 新增获取角色文件夹方法
+    isCharacterDirectory, // 🆕 新增类型守卫方法
     addMediaToDirectory,
     removeMediaFromDirectory,
     getDirectoryContent,

@@ -149,6 +149,27 @@
       "parsing": "Parsing",
       "failed": "Failed",
       "cancelled": "Cancelled"
+    },
+    "character": {
+      "create": "Create",
+      "createCharacter": "Create Character",
+      "character": "Character",
+      "name": "Character Name",
+      "namePlaceholder": "Enter character name (1-50 characters)",
+      "description": "Character Description",
+      "descriptionPlaceholder": "Enter character description (10-500 characters)",
+      "createSuccess": "Character created successfully",
+      "createFailed": "Failed to create character",
+      "imageGenerating": "Generating character image...",
+      "editor": "Character Editor",
+      "generatePortrait": "Generate Portrait",
+      "generateSuccess": "Generated successfully",
+      "generateFailed": "Generation failed",
+      "newCharacter": "New Character",
+      "nameRequired": "Character name is required",
+      "descriptionTooShort": "Character description must be at least 10 characters",
+      "noCharacterSelected": "No character selected",
+      "exitEdit": "Exit Edit"
     }
   }
 }

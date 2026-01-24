@@ -6,6 +6,15 @@
 // ==================== 目录相关类型 ====================
 
 /**
+ * 角色信息接口
+ */
+export interface CharacterInfo {
+  description: string // 角色描述文本
+  createdAt: string // 创建时间（ISO 8601）
+  imageMediaId?: string // 关联的角色图片 MediaItem ID（可选）
+}
+
+/**
  * 虚拟目录数据结构
  * 包含子文件夹和媒体项的完整信息
  */
@@ -20,14 +29,15 @@ export interface VirtualDirectory {
   // 内容引用
   childDirIds: string[] // 子目录ID列表
   mediaItemIds: string[] // 媒体项ID列表
+}
 
-  // 扩展字段（可选）
-  extra?: {
-    icon?: string // 目录图标（RemixIcon名称，默认：folder-line）
-    order?: number // 显示顺序（默认：按创建时间）
-    color?: string // 目录颜色（未来扩展）
-    tags?: string[] // 目录标签（未来扩展）
-  }
+/**
+ * 角色文件夹接口
+ * 继承自 VirtualDirectory，type 为 'character'
+ */
+export interface CharacterDirectory extends VirtualDirectory {
+  readonly type: 'character' // 固定为 'character'
+  character: CharacterInfo // 角色信息
 }
 
 /**
@@ -37,10 +47,6 @@ export interface VirtualDirectory {
 export interface DisplayTab {
   id: string // 标签页唯一ID，格式：tab_{nanoid}
   dirId: string // 当前显示的目录ID（指向 VirtualDirectory.id）
-  extra?: {
-    scrollPosition?: number // 滚动位置（未来扩展）
-    viewMode?: 'grid' | 'list' // 视图模式（未来扩展）
-  }
 }
 
 /**
