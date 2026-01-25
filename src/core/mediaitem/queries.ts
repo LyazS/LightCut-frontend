@@ -23,7 +23,7 @@ import type {
 /**
  * 统一媒体项目查询函数 - 无状态查询函数
  */
-export const UnifiedMediaItemQueries = {
+export const MediaItemQueries = {
   // 状态检查
   isPending(item: UnifiedMediaItemData): item is PendingMediaItem {
     return item.mediaStatus === 'pending'
@@ -50,7 +50,7 @@ export const UnifiedMediaItemQueries = {
   },
 
   isParsing(item: UnifiedMediaItemData): boolean {
-    return UnifiedMediaItemQueries.isPending(item) || UnifiedMediaItemQueries.isProcessing(item)
+    return MediaItemQueries.isPending(item) || MediaItemQueries.isProcessing(item)
   },
 
   // 状态转换验证

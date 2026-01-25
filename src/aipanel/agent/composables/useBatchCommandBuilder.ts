@@ -18,7 +18,7 @@ import { useTimelineItemOperations } from '@/core/composables/useTimelineItemOpe
 import { AddTimelineItemCommand } from '@/core/modules/commands/AddTimelineItemCommand'
 import { timecodeToFrames } from '@/core/utils/timeUtils'
 import { generateTimelineItemId } from '@/core/utils/idGenerator'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
+import { MediaItemQueries } from '@/core/mediaitem/queries'
 
 // 导入共享类型定义
 import type {
@@ -100,13 +100,13 @@ export function useBatchCommandBuilder(
     }
 
     // 检查素材状态和错误条件
-    const hasError = UnifiedMediaItemQueries.hasAnyError(mediaItem)
+    const hasError = MediaItemQueries.hasAnyError(mediaItem)
     if (hasError) {
       throw new Error('素材解析失败，无法添加到时间轴')
     }
 
     // 检查媒体类型是否已知 - 阻止未知类型素材创建时间轴项目
-    if (UnifiedMediaItemQueries.isUnknownType(mediaItem)) {
+    if (MediaItemQueries.isUnknownType(mediaItem)) {
       throw new Error('素材类型未确定，请等待检测完成')
     }
 
@@ -121,14 +121,14 @@ export function useBatchCommandBuilder(
     if (knownMediaType === 'text') throw new Error('TODO')
 
     // 根据素材状态确定时间轴项目状态
-    const isReady = UnifiedMediaItemQueries.isReady(mediaItem)
+    const isReady = MediaItemQueries.isReady(mediaItem)
     const timelineStatus: 'ready' | 'loading' = isReady ? 'ready' : 'loading'
 
     // 获取媒体的原始分辨率（仅对视觉媒体有效）- 使用 unifiedStore 的方法
     let originalResolution: { width: number; height: number } | null = null
-    if (UnifiedMediaItemQueries.isVideo(mediaItem)) {
+    if (MediaItemQueries.isVideo(mediaItem)) {
       originalResolution = unifiedStore.getVideoOriginalResolution(params.mediaItemId) || null
-    } else if (UnifiedMediaItemQueries.isImage(mediaItem)) {
+    } else if (MediaItemQueries.isImage(mediaItem)) {
       originalResolution = unifiedStore.getImageOriginalResolution(params.mediaItemId) || null
     }
 

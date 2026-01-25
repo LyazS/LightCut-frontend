@@ -201,7 +201,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData: unifiedMediaModule.createUnifiedMediaItemData,
-    UnifiedMediaItemQueries: unifiedMediaModule.UnifiedMediaItemQueries,
+    MediaItemQueries: unifiedMediaModule.MediaItemQueries,
     UnifiedMediaItemActions: unifiedMediaModule.UnifiedMediaItemActions,
 
     // ==================== 统一轨道模块状态和方法 ====================

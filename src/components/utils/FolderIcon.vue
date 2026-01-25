@@ -14,7 +14,7 @@ import { computed } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { IconComponents } from '@/constants/iconComponents'
 import { DirectoryType, type CharacterDirectory } from '@/core/directory/types'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
+import { MediaItemQueries } from '@/core/mediaitem/queries'
 
 interface Props {
   folderId: string
@@ -42,7 +42,7 @@ const characterThumbnailUrl = computed(() => {
   if (!portraitMediaId) return undefined
 
   const mediaItem = unifiedStore.getMediaItem(portraitMediaId)
-  if (!mediaItem || !UnifiedMediaItemQueries.isReady(mediaItem)) {
+  if (!mediaItem || !MediaItemQueries.isReady(mediaItem)) {
     return undefined
   }
 

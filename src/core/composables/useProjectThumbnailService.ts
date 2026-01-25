@@ -3,7 +3,7 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { fileSystemService } from '@/core/managers/filesystem/fileSystemService'
 import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thumbGenerator'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 
 /**
  * 项目缩略图服务
@@ -44,7 +44,7 @@ export function useProjectThumbnailService() {
         const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
         return (
           mediaItem &&
-          (UnifiedMediaItemQueries.isVideo(mediaItem) || UnifiedMediaItemQueries.isImage(mediaItem))
+          (MediaItemQueries.isVideo(mediaItem) || MediaItemQueries.isImage(mediaItem))
         )
       })
       .sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)

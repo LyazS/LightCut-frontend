@@ -9,12 +9,12 @@ import type {
   MediaType,
   MediaTypeOrUnknown,
 } from './types'
-import { UnifiedMediaItemQueries } from './queries'
+import { MediaItemQueries } from './queries'
 
 // ==================== 行为函数模块 ====================
 
 // 重新导出查询函数以保持向后兼容性
-export { UnifiedMediaItemQueries } from './queries'
+export { MediaItemQueries as MediaItemQueries } from './queries'
 
 /**
  * 统一媒体项目行为函数 - 无状态操作函数
@@ -22,7 +22,7 @@ export { UnifiedMediaItemQueries } from './queries'
 export const UnifiedMediaItemActions = {
   // 状态转换
   transitionTo(item: UnifiedMediaItemData, newStatus: MediaStatus, context?: any): boolean {
-    if (!UnifiedMediaItemQueries.canTransitionTo(item, newStatus)) {
+    if (!MediaItemQueries.canTransitionTo(item, newStatus)) {
       console.warn(`无效状态转换: ${item.mediaStatus} → ${newStatus}`)
       return false
     }
@@ -45,7 +45,7 @@ export const UnifiedMediaItemActions = {
 
   // 重试
   retry(item: UnifiedMediaItemData): void {
-    if (UnifiedMediaItemQueries.hasAnyError(item)) {
+    if (MediaItemQueries.hasAnyError(item)) {
       UnifiedMediaItemActions.transitionTo(item, 'pending')
       // 重置数据源状态
       if (item.source.errorMessage) {

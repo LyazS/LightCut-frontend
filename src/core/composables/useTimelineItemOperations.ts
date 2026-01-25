@@ -1,5 +1,5 @@
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/type'
@@ -40,7 +40,7 @@ export function useTimelineItemOperations() {
       }
 
       // 检查素材状态和拖拽条件
-      const hasError = UnifiedMediaItemQueries.hasError(storeMediaItem)
+      const hasError = MediaItemQueries.hasError(storeMediaItem)
 
       // 只阻止错误状态的素材
       if (hasError) {
@@ -66,15 +66,15 @@ export function useTimelineItemOperations() {
 
       // 获取媒体的原始分辨率（仅对视觉媒体有效）
       let originalResolution: { width: number; height: number } | null = null
-      if (UnifiedMediaItemQueries.isVideo(storeMediaItem)) {
+      if (MediaItemQueries.isVideo(storeMediaItem)) {
         originalResolution = unifiedStore.getVideoOriginalResolution(storeMediaItem.id) || null
         console.log('📐 [UnifiedTimeline] 视频原始分辨率:', originalResolution)
-      } else if (UnifiedMediaItemQueries.isImage(storeMediaItem)) {
+      } else if (MediaItemQueries.isImage(storeMediaItem)) {
         originalResolution = unifiedStore.getImageOriginalResolution(storeMediaItem.id) || null
         console.log('📐 [UnifiedTimeline] 图片原始分辨率:', originalResolution)
-      } else if (UnifiedMediaItemQueries.isAudio(storeMediaItem)) {
+      } else if (MediaItemQueries.isAudio(storeMediaItem)) {
         console.log('🎵 [UnifiedTimeline] 音频类型，无需设置分辨率')
-      } else if (UnifiedMediaItemQueries.isText(storeMediaItem)) {
+      } else if (MediaItemQueries.isText(storeMediaItem)) {
         console.log('🎵 [UnifiedTimeline] 文本类型，不应该出现在这里')
         throw new Error('文本类型不应该出现在这里')
       }

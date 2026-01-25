@@ -170,7 +170,8 @@
       "descriptionTooShort": "角色描述至少需要10个字符",
       "noCharacterSelected": "未选择角色",
       "exitEdit": "退出编辑",
-      "aspectRatio": "图像比例"
+      "aspectRatio": "图像比例",
+      "untitled": "未命名角色"
     }
   }
 }

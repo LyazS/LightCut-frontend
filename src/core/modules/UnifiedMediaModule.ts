@@ -4,7 +4,7 @@ import {
   type MediaStatus,
   type MediaType,
   createUnifiedMediaItemData,
-  UnifiedMediaItemQueries,
+  MediaItemQueries,
   UnifiedMediaItemActions,
 } from '@/core'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
@@ -221,7 +221,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
   function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
     if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.bunny) {
-      const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
+      const size = MediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size
       }
@@ -238,7 +238,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
   function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
     if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.bunny) {
-      const size = UnifiedMediaItemQueries.getOriginalSize(mediaItem)
+      const size = MediaItemQueries.getOriginalSize(mediaItem)
       if (size) {
         return size
       }
@@ -370,21 +370,21 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
    * 获取就绪的媒体项目
    */
   function getReadyMediaItems(): UnifiedMediaItemData[] {
-    return mediaItems.value.filter(UnifiedMediaItemQueries.isReady)
+    return mediaItems.value.filter(MediaItemQueries.isReady)
   }
 
   /**
    * 获取正在处理的媒体项目
    */
   function getProcessingMediaItems(): UnifiedMediaItemData[] {
-    return mediaItems.value.filter(UnifiedMediaItemQueries.isProcessing)
+    return mediaItems.value.filter(MediaItemQueries.isProcessing)
   }
 
   /**
    * 获取有错误的媒体项目
    */
   function getErrorMediaItems(): UnifiedMediaItemData[] {
-    return mediaItems.value.filter(UnifiedMediaItemQueries.hasAnyError)
+    return mediaItems.value.filter(MediaItemQueries.hasAnyError)
   }
 
   /**
@@ -409,7 +409,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
     const ready = getReadyMediaItems().length
     const processing = getProcessingMediaItems().length
     const error = getErrorMediaItems().length
-    const pending = mediaItems.value.filter(UnifiedMediaItemQueries.isPending).length
+    const pending = mediaItems.value.filter(MediaItemQueries.isPending).length
 
     return {
       total,
@@ -495,7 +495,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData,
-    UnifiedMediaItemQueries,
+    MediaItemQueries,
     UnifiedMediaItemActions,
   }
 }

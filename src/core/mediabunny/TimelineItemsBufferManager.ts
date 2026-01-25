@@ -238,7 +238,7 @@ export class TimelineItemsBufferManager {
     }
     
     // 3. 缓冲无效或不在窗口内，降级为全量遍历
-    console.warn(`⚠️ 缓冲无效，使用全量遍历 (frame: ${currentFrame})`)
+    // console.warn(`⚠️ 缓冲无效，使用全量遍历 (frame: ${currentFrame})`)
     return allItems
   }
   

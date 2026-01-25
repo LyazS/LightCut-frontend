@@ -1,5 +1,5 @@
 import type { UnifiedMediaItemData } from '@/core/mediaitem'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'
 import {
   calculateThumbnailSize,
@@ -221,7 +221,7 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
   try {
     let canvas: HTMLCanvasElement
 
-    if (UnifiedMediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
+    if (MediaItemQueries.isVideo(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       console.log('🎬 生成视频缩略图...')
       const cover = await tryGetMediaCover(
         mediaItem.runtime.bunny.bunnyMedia,
@@ -250,7 +250,7 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
         mode,
       )
       console.log('✅ 视频缩略图生成成功')
-    } else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
+    } else if (MediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
       console.log('🖼️ 生成图片缩略图...')
       canvas = await generateImageThumbnail(
         mediaItem.runtime.bunny.imageClip,
@@ -259,7 +259,7 @@ export async function generateThumbnailForUnifiedMediaItemBunny(
         mode,
       )
       console.log('✅ 图片缩略图生成成功')
-    } else if (UnifiedMediaItemQueries.isAudio(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
+    } else if (MediaItemQueries.isAudio(mediaItem) && mediaItem.runtime.bunny?.bunnyMedia) {
       // 如果是音频，可以尝试获取封面图
       return await tryGetMediaCover(
         mediaItem.runtime.bunny.bunnyMedia,
