@@ -1,5 +1,18 @@
 <template>
   <div class="character-editor">
+    <!-- 标题栏 -->
+    <div class="editor-header">
+      <h1 class="character-name-title">{{ characterName || tFunc('media.character.untitled') }}</h1>
+      <HoverButton
+        variant="small"
+        class="close-button"
+        @click="handleClose"
+        :title="tFunc('media.character.exitEdit')"
+      >
+        {{ tFunc('media.character.exitEdit') }}
+      </HoverButton>
+    </div>
+
     <!-- 角色名称 -->
     <div class="form-group">
       <label>{{ tFunc('media.character.name') }}</label>
@@ -22,21 +35,27 @@
       />
     </div>
 
+    <!-- 图像比例 -->
+    <div class="form-group">
+      <label>{{ tFunc('media.character.aspectRatio') }}</label>
+      <select v-model="aspectRatio" class="form-select">
+        <option value="1:1">1:1</option>
+        <option value="16:9">16:9</option>
+        <option value="9:16">9:16</option>
+        <option value="3:2">3:2</option>
+        <option value="3:4">3:4</option>
+        <option value="4:3">4:3</option>
+        <option value="4:5">4:5</option>
+        <option value="5:4">5:4</option>
+        <option value="21:9">21:9</option>
+      </select>
+    </div>
+
     <!-- 生成按钮 -->
     <div class="form-actions">
       <HoverButton
         variant="large"
-        class="close-button"
-        @click="handleClose"
-        :title="tFunc('media.character.exitEdit')"
-      >
-        <template #icon>
-          <component :is="IconComponents.CLOSE" size="16px" />
-        </template>
-        {{ tFunc('media.character.exitEdit') }}
-      </HoverButton>
-      <HoverButton
-        variant="large"
+        class="generate-button"
         :disabled="!canGenerate || isGenerating"
         @click="handleGenerate"
       >
@@ -74,6 +93,9 @@ const { t: tFunc } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 const isGenerating = ref(false)
+
+// 图像比例
+const aspectRatio = ref('1:1')
 
 // 角色名称（支持创建和编辑模式）
 const characterName = computed({
@@ -241,7 +263,7 @@ async function generateCharacterPortrait(
       id: 'rh-nano-banana-2',
       prompt: characterDescription,
       resolution: '1K',
-      aspectRatio: '1:1',
+      aspectRatio: aspectRatio.value,
     }
 
     // 2. 创建 AI 生成数据源
@@ -336,6 +358,36 @@ async function generateCharacterPortrait(
   padding: var(--spacing-md) var(--spacing-xl);
 }
 
+/* 标题栏 */
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* 角色名称标题 */
+.character-name-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* 关闭按钮 */
+.close-button {
+  color: #ff4d4f;
+  flex-shrink: 0;
+  margin-left: var(--spacing-md);
+}
+
+.close-button:hover:not(:disabled) {
+  background-color: rgba(255, 77, 79, 0.1);
+  color: #ff4d4f;
+}
+
 /* 表单组 */
 .form-group {
   display: flex;
@@ -356,7 +408,8 @@ async function generateCharacterPortrait(
 
 /* 表单输入框 */
 .form-input,
-.form-textarea {
+.form-textarea,
+.form-select {
   width: 100%;
   padding: var(--spacing-sm);
   background: var(--color-bg-quaternary);
@@ -368,8 +421,18 @@ async function generateCharacterPortrait(
   resize: vertical;
 }
 
+.form-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
 .form-input:focus,
-.form-textarea:focus {
+.form-textarea:focus,
+.form-select:focus {
   outline: none;
   border-color: var(--color-accent-primary);
 }
@@ -382,18 +445,27 @@ async function generateCharacterPortrait(
 .form-actions {
   margin-top: var(--spacing-lg);
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: var(--spacing-sm);
 }
 
-/* 关闭按钮 */
-.close-button {
-  color: #ff4d4f;
+.form-actions :deep(.hover-button) {
+  width: 100%;
 }
 
-.close-button:hover:not(:disabled) {
-  background-color: rgba(255, 77, 79, 0.1);
-  color: #ff4d4f;
+/* 生成按钮 */
+.form-actions :deep(.generate-button) {
+  background-color: #52c41a;
+  color: #fff;
+}
+
+.form-actions :deep(.generate-button:hover:not(:disabled)) {
+  background-color: #73d13d;
+}
+
+.form-actions :deep(.generate-button:disabled) {
+  background-color: #d9f7be;
+  color: #b7eb8f;
 }
 
 /* 空状态 */

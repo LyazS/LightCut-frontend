@@ -169,7 +169,8 @@
       "nameRequired": "Character name is required",
       "descriptionTooShort": "Character description must be at least 10 characters",
       "noCharacterSelected": "No character selected",
-      "exitEdit": "Exit Edit"
+      "exitEdit": "Exit Edit",
+      "aspectRatio": "Aspect Ratio"
     }
   }
 }
