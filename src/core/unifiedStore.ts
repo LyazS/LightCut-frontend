@@ -603,9 +603,14 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // AI 面板状态
     isChatPanelVisible: unifiedUIModule.isChatPanelVisible,
+    aiPanelActiveTab: unifiedUIModule.aiPanelActiveTab,
 
     // 角色编辑器状态
     characterEditorState: unifiedUIModule.characterEditorState,
+
+    // 角色编辑器计算属性
+    curCharacterDir: unifiedUIModule.curCharacterDir,
+    canShowCharacterEditor: unifiedUIModule.canShowCharacterEditor,
 
     // AI 面板状态管理方法
     setChatPanelVisible: unifiedUIModule.setChatPanelVisible,
@@ -613,8 +618,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 角色编辑器方法
     openCharacterEditor: unifiedUIModule.openCharacterEditor,
     closeCharacterEditor: unifiedUIModule.closeCharacterEditor,
-    updateCharacterEditorTempData: unifiedUIModule.updateCharacterEditorTempData,
-    generateCharacterPortrait: unifiedUIModule.generateCharacterPortrait,
 
     // ==================== 执行系统集成 ====================
     executeUserScript,
