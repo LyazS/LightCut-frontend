@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, type Ref, type ComputedRef } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { DirectoryType, type CharacterDirectory, type VirtualDirectory } from '@/core/directory/types'
 import { MediaItemQueries } from '@/core/mediaitem/queries'
@@ -12,18 +12,21 @@ export type CharacterMediaStatus = 'loading' | 'ready' | 'error' | 'unknown'
  * 角色相关操作的 Composable
  * 提供角色文件夹的媒体状态查询和缩略图获取功能
  *
- * @param directoryId 目录ID
+ * @param directoryId 目录ID（响应式引用）
  * @returns 角色相关的计算属性和方法
  */
-export function useCharacter(directoryId: string | null | undefined) {
+export function useCharacter(
+  directoryId: Ref<string | null | undefined> | ComputedRef<string | null | undefined>
+) {
   const unifiedStore = useUnifiedStore()
 
   /**
    * 获取目录对象
    */
   const directory = computed(() => {
-    if (!directoryId) return null
-    return unifiedStore.getDirectory(directoryId)
+    const id = directoryId.value
+    if (!id) return null
+    return unifiedStore.getDirectory(id)
   })
 
   /**

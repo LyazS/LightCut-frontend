@@ -117,7 +117,7 @@ const currentCharacterDirId = computed(() => {
 })
 
 // 使用 useCharacter composable
-const characterComposable = useCharacter(currentCharacterDirId.value)
+const { characterMediaStatus } = useCharacter(currentCharacterDirId)
 
 // 判断媒体是否正在加载
 const isMediaLoading = computed(() => {
@@ -127,7 +127,7 @@ const isMediaLoading = computed(() => {
   }
 
   // 编辑模式下，检查 characterMediaStatus
-  return characterComposable.characterMediaStatus.value === 'loading'
+  return characterMediaStatus.value === 'loading'
 })
 
 // 字段语言环境

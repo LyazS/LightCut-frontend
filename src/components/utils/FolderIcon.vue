@@ -64,7 +64,7 @@ const {
   isCharacterFolder,
   characterMediaStatus,
   characterThumbnailUrl,
-} = useCharacter(props.folderId)
+} = useCharacter(computed(() => props.folderId))
 
 // 根据文件夹类型获取对应的图标
 const currentIcon = computed(() => {
