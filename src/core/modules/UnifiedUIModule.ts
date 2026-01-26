@@ -3,6 +3,7 @@ import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 import type { CharacterDirectory } from '@/core/directory/types'
+import type { FileData } from '@/aipanel/aigenerate/types'
 
 /**
  * 角色编辑器状态接口
@@ -13,6 +14,8 @@ export interface CharacterEditorState {
   // 创建模式的临时数据
   tempName: string // 临时角色名称
   tempDescription: string // 临时角色描述
+  tempRefImages: FileData[] // 临时参考图 FileData 数组
+  tempAspectRatio: string // 临时图像比例（必选，初始值为 '1:1'）
 }
 
 /**
@@ -55,6 +58,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
     characterId: null,
     tempName: '',
     tempDescription: '',
+    tempRefImages: [],
+    tempAspectRatio: '1:1',
   })
 
   // 角色文件夹引用（计算属性）
@@ -126,6 +131,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         characterId: null,
         tempName: '',
         tempDescription: '',
+        tempRefImages: [],
+        tempAspectRatio: '1:1',
       }
     } else {
       // 编辑模式：设置角色ID
@@ -134,6 +141,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         characterId: characterId || null,
         tempName: '',
         tempDescription: '',
+        tempRefImages: [],
+        tempAspectRatio: '1:1',
       }
     }
     console.log('✅ 角色编辑器已打开:', mode, characterId)
@@ -148,6 +157,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
       characterId: null,
       tempName: '',
       tempDescription: '',
+      tempRefImages: [],
+      tempAspectRatio: '1:1',
     }
     console.log('✅ 角色编辑器已关闭')
   }

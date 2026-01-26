@@ -117,6 +117,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
       character: {
         description,
         createdAt: new Date().toISOString(),
+        refImages: [],
+        aspectRatio: '1:1',
       },
     }
 

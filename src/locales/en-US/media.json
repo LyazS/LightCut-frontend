@@ -163,6 +163,7 @@
       "imageGenerating": "Generating character image...",
       "editor": "Character Editor",
       "generatePortrait": "Generate Portrait",
+      "regeneratePortrait": "Regenerate Portrait",
       "generateSuccess": "Generated successfully",
       "generateFailed": "Generation failed",
       "newCharacter": "New Character",
@@ -171,7 +172,9 @@
       "noCharacterSelected": "No character selected",
       "exitEdit": "Exit Edit",
       "aspectRatio": "Aspect Ratio",
-      "untitled": "Untitled Character"
+      "untitled": "Untitled Character",
+      "refImages": "Reference Images",
+      "refImagesPlaceholder": "Drag images here or click to upload reference images"
     }
   }
 }

@@ -163,6 +163,7 @@
       "imageGenerating": "正在生成角色图片...",
       "editor": "角色编辑器",
       "generatePortrait": "生成角色肖像",
+      "regeneratePortrait": "重新生成角色肖像",
       "generateSuccess": "生成成功",
       "generateFailed": "生成失败",
       "newCharacter": "新角色",
@@ -171,7 +172,9 @@
       "noCharacterSelected": "未选择角色",
       "exitEdit": "退出编辑",
       "aspectRatio": "图像比例",
-      "untitled": "未命名角色"
+      "untitled": "未命名角色",
+      "refImages": "参考图",
+      "refImagesPlaceholder": "拖拽图片到此处或点击上传参考图"
     }
   }
 }

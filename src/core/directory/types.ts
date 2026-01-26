@@ -3,6 +3,8 @@
  * 包含虚拟目录、标签页、显示项、剪贴板等相关接口
  */
 
+import type { FileData } from '@/aipanel/aigenerate/types'
+
 // ==================== 目录相关类型 ====================
 
 /**
@@ -21,6 +23,11 @@ export interface CharacterInfo {
   description: string // 角色描述文本
   createdAt: string // 创建时间（ISO 8601）
   portraitMediaId?: string // 关联的角色图片 MediaItem ID（可选）
+  sketchMediaId?: string // 素描媒体 MediaItem ID（可选）
+  introMediaId?: string // 自我介绍媒体 MediaItem ID（可选）
+  characterCode?: string // 角色编码（可选）
+  refImages: FileData[] // 参考图 FileData 数组（必选）
+  aspectRatio: string // 图像比例（必选），如 '1:1', '16:9' 等
 }
 
 /**

@@ -6,6 +6,7 @@ import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
+import type { DisplayItem } from '@/core/directory/types'
 
 /**
  * 统一的选择项类型
@@ -150,8 +151,8 @@ export function createUnifiedSelectionModule(registry: ModuleRegistry) {
    * @param endItemId 结束项ID
    */
   function handleMediaRangeSelection(endItemId: string) {
-    // 获取所有可选项的有序列表
-    const allItems = getOrderedMediaItems()
+    // 获取所有可选项的有序列表（包含文件夹和媒体项）
+    const allItems = getOrderedDisplayItems()
 
     if (!allItems || allItems.length === 0) return
 
@@ -185,60 +186,75 @@ export function createUnifiedSelectionModule(registry: ModuleRegistry) {
   }
 
   /**
-   * 获取有序的媒体项目列表
-   * @returns 按当前目录排序的媒体项目数组
+   * 排序显示项（支持文件夹和媒体项）
+   * 排序规则与 LibraryMediaGrid.vue 中的 sortItems 函数保持一致
    */
-  function getOrderedMediaItems(): UnifiedMediaItemData[] {
-    // 从 UnifiedDirectoryModule 获取当前目录的媒体项目
-    const currentDir = directoryModule.currentDir.value
-    if (!currentDir) return []
-
-    // 获取当前目录的内容
-    const content = directoryModule.getDirectoryContent(currentDir.id)
-    const mediaItems = content
-      .filter(item => item.type === 'media')
-      .map(item => mediaModule.getMediaItem(item.id))
-      .filter((item): item is UnifiedMediaItemData => item !== undefined)
-
-    // 按当前排序方式排序
-    const sortBy = directoryModule.sortBy.value
-    const sortOrder = directoryModule.sortOrder.value
-
-    return sortMediaItems(mediaItems, sortBy, sortOrder)
-  }
-
-  /**
-   * 排序媒体项目
-   */
-  function sortMediaItems(
-    items: UnifiedMediaItemData[],
+  function sortDisplayItems(
+    items: DisplayItem[],
     sortBy: 'name' | 'date' | 'type',
     sortOrder: 'asc' | 'desc'
-  ): UnifiedMediaItemData[] {
+  ): DisplayItem[] {
     const sorted = [...items]
 
     sorted.sort((a, b) => {
+      // 文件夹始终排在前面
+      if (a.type === 'directory' && b.type !== 'directory') return -1
+      if (a.type !== 'directory' && b.type === 'directory') return 1
+
       let comparison = 0
 
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name, 'zh-CN')
-          break
-        case 'date':
-          comparison = (a.createdAt || '').localeCompare(b.createdAt || '')
-          break
-        case 'type':
-          comparison = a.mediaType.localeCompare(b.mediaType)
-          if (comparison === 0) {
-            comparison = a.name.localeCompare(b.name, 'zh-CN')
-          }
-          break
+      if (a.type === 'directory' && b.type === 'directory') {
+        // 两个都是文件夹，按名称排序
+        const dirA = directoryModule.getDirectory(a.id)
+        const dirB = directoryModule.getDirectory(b.id)
+        const nameA = (dirA?.name || '').toLowerCase()
+        const nameB = (dirB?.name || '').toLowerCase()
+        comparison = nameA.localeCompare(nameB, 'zh-CN')
+      } else if (a.type === 'media' && b.type === 'media') {
+        // 两个都是媒体，按媒体类型排序
+        const mediaA = mediaModule.getMediaItem(a.id)
+        const mediaB = mediaModule.getMediaItem(b.id)
+
+        if (!mediaA || !mediaB) return 0
+
+        switch (sortBy) {
+          case 'name':
+            comparison = mediaA.name.localeCompare(mediaB.name, 'zh-CN')
+            break
+          case 'date':
+            comparison = (mediaA.createdAt || '').localeCompare(mediaB.createdAt || '')
+            break
+          case 'type':
+            comparison = mediaA.mediaType.localeCompare(mediaB.mediaType)
+            if (comparison === 0) {
+              comparison = mediaA.name.localeCompare(mediaB.name, 'zh-CN')
+            }
+            break
+        }
       }
 
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
     return sorted
+  }
+
+  /**
+   * 获取有序的显示项列表（包含文件夹和媒体项）
+   * @returns 按当前目录排序的显示项数组
+   */
+  function getOrderedDisplayItems(): DisplayItem[] {
+    const currentDir = directoryModule.currentDir.value
+    if (!currentDir) return []
+
+    // 获取当前目录的内容（包含文件夹和媒体项）
+    const content = directoryModule.getDirectoryContent(currentDir.id)
+
+    // 按当前排序方式排序
+    const sortBy = directoryModule.sortBy.value
+    const sortOrder = directoryModule.sortOrder.value
+
+    return sortDisplayItems(content, sortBy, sortOrder)
   }
 
   /**
