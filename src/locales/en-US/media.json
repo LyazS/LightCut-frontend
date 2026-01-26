@@ -174,7 +174,16 @@
       "aspectRatio": "Aspect Ratio",
       "untitled": "Untitled Character",
       "refImages": "Reference Images",
-      "refImagesPlaceholder": "Drag images here or click to upload reference images"
+      "refImagesPlaceholder": "Drag images here or click to upload reference images",
+      "introSectionTitle": "Introduction Generation",
+      "introPrompt": "Introduction Prompt",
+      "introPromptPlaceholder": "Describe the character introduction, e.g., The character smiles and introduces themselves...",
+      "generateIntro": "Generate Introduction (9:16, 10s)",
+      "generateIntroSuccess": "Introduction generation task submitted",
+      "generateIntroFailed": "Failed to generate introduction",
+      "noPortrait": "Please generate character portrait first",
+      "portraitNotReady": "Character portrait is not ready yet, please try again later",
+      "promptTooShort": "Prompt must be at least 10 characters"
     }
   }
 }

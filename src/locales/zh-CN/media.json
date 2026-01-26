@@ -174,7 +174,16 @@
       "aspectRatio": "图像比例",
       "untitled": "未命名角色",
       "refImages": "参考图",
-      "refImagesPlaceholder": "拖拽图片到此处或点击上传参考图"
+      "refImagesPlaceholder": "拖拽图片到此处或点击上传参考图",
+      "introSectionTitle": "自我介绍生成",
+      "introPrompt": "自我介绍提示词",
+      "introPromptPlaceholder": "描述角色的自我介绍内容，例如：角色在镜头前微笑着介绍自己...",
+      "generateIntro": "生成自我介绍（9:16竖屏，10秒）",
+      "generateIntroSuccess": "自我介绍生成任务已提交",
+      "generateIntroFailed": "生成自我介绍失败",
+      "noPortrait": "请先生成角色肖像",
+      "portraitNotReady": "角色肖像尚未生成完成，请稍后再试",
+      "promptTooShort": "提示词至少需要10个字符"
     }
   }
 }

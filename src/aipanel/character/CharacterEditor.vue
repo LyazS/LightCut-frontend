@@ -78,6 +78,49 @@
         <span class="loading-text">{{ tFunc('aiPanel.generating') }}</span>
       </div>
     </div>
+
+    <!-- 分隔线 - 只有肖像就绪时才显示 -->
+    <div v-if="showIntroSection" class="section-divider">
+      <div class="divider-line"></div>
+      <span class="divider-text">{{ tFunc('media.character.introSectionTitle') }}</span>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- 自我介绍生成区域 - 只有肖像就绪时才显示 -->
+    <div v-if="showIntroSection">
+      <!-- 提示词输入框 -->
+      <div class="form-group">
+        <label>{{ tFunc('media.character.introPrompt') }}</label>
+        <textarea
+          v-model="introPrompt"
+          class="form-textarea"
+          :placeholder="tFunc('media.character.introPromptPlaceholder')"
+          rows="6"
+        />
+      </div>
+
+      <!-- 生成自我介绍按钮 -->
+      <div class="form-actions">
+        <HoverButton
+          v-if="!isGeneratingIntro && !isMediaLoading"
+          variant="large"
+          class="generate-intro-button"
+          :disabled="!canGenerateIntro"
+          @click="handleGenerateIntro"
+        >
+          <template #icon>
+            <component :is="IconComponents.SPARKLING" size="16px" />
+          </template>
+          {{ tFunc('media.character.generateIntro') }}
+        </HoverButton>
+
+        <!-- 加载提示框 -->
+        <div v-else-if="isGeneratingIntro" class="loading-indicator">
+          <component :is="IconComponents.LOADING" size="24px" class="loading-icon" />
+          <span class="loading-text">{{ tFunc('aiPanel.generating') }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -102,11 +145,21 @@ import { fetchClient } from '@/utils/fetchClient'
 import { buildTaskErrorMessage } from '@/utils/errorMessageBuilder'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { RunningHubFileUploaderStd } from '@/core/utils/runninghubFileUploaderStd'
+import { BltcyFileUploader } from '@/core/utils/bltcyFileUploader'
+import { exportMediaItem } from '@/core/utils/projectExporter'
+import { MediaItemQueries } from '@/core/mediaitem/queries'
 
 const { t: tFunc, locale } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 const isGenerating = ref(false)
+
+// 自我介绍生成相关状态
+const isGeneratingIntro = ref(false)
+const introPrompt = ref('')
+// 固定参数：9:16竖屏，10秒时长
+const VIDEO_ASPECT_RATIO = '9:16'
+const VIDEO_DURATION = '10'
 
 // 获取当前角色目录ID
 const currentCharacterDirId = computed(() => {
@@ -244,6 +297,24 @@ const canGenerate = computed(() => {
   const name = characterName.value || ''
   const description = characterDescription.value || ''
   return name.trim().length >= 1 && description.trim().length >= 10
+})
+
+// 是否显示自我介绍生成区域
+// 只有当肖像媒体处于就绪状态时才显示
+const showIntroSection = computed(() => {
+  return characterMediaStatus.value === 'ready'
+})
+
+// 是否可以生成自我介绍
+const canGenerateIntro = computed(() => {
+  // 1. 肖像必须就绪（通过 showIntroSection 已经验证）
+  if (!showIntroSection.value) {
+    return false
+  }
+
+  // 2. 提示词不能为空且长度至少10个字符
+  const prompt = introPrompt.value.trim()
+  return prompt.length >= 10
 })
 
 // 按钮文本（根据模式不同显示不同文本）
@@ -483,6 +554,151 @@ async function generateCharacterPortrait(
     throw error
   }
 }
+
+// 生成自我介绍
+async function handleGenerateIntro() {
+  if (!canGenerateIntro.value) return
+
+  isGeneratingIntro.value = true
+  try {
+    const character = unifiedStore.curCharacterDir
+    if (!character) {
+      throw new Error('角色文件夹不存在')
+    }
+
+    await generateCharacterIntro(character.id)
+    unifiedStore.messageSuccess(tFunc('media.character.generateIntroSuccess'))
+  } catch (error) {
+    console.error('生成自我介绍失败:', error)
+    const errorMessage =
+      error instanceof Error ? error.message : tFunc('media.character.generateIntroFailed')
+    unifiedStore.messageError(errorMessage)
+  } finally {
+    isGeneratingIntro.value = false
+  }
+}
+
+/**
+ * 生成角色自我介绍
+ * @param characterId 角色ID
+ */
+async function generateCharacterIntro(characterId: string): Promise<void> {
+  // 1. 获取角色文件夹
+  const characterDir = unifiedStore.curCharacterDir
+  if (!characterDir) {
+    throw new Error('角色文件夹不存在')
+  }
+
+  // 2. 获取肖像媒体项
+  const portraitMediaId = characterDir.character.portraitMediaId
+  if (!portraitMediaId) {
+    throw new Error(tFunc('media.character.noPortrait'))
+  }
+
+  const mediaItem = unifiedStore.getMediaItem(portraitMediaId)
+  if (!mediaItem) {
+    throw new Error('找不到肖像媒体项')
+  }
+
+  // 3. 验证媒体项状态
+  if (!MediaItemQueries.isReady(mediaItem)) {
+    throw new Error(tFunc('media.character.portraitNotReady'))
+  }
+
+  // 4. 导出 imageClip 为 Blob
+  console.log('📤 [CharacterEditor] 导出肖像图片...')
+  const imageBlob = await exportMediaItem({ mediaItem })
+
+  // 5. 创建 File 对象
+  const imageFile = new File([imageBlob], `${characterDir.name}_portrait.png`, {
+    type: 'image/png',
+  })
+
+  // 6. 上传到 BLTCY
+  console.log('☁️ [CharacterEditor] 上传图片到 BLTCY...')
+  const uploadResult = await BltcyFileUploader.uploadFile(imageFile, {
+    onProgress: (progress) => {
+      console.log(`上传进度: ${progress}%`)
+    },
+  })
+
+  if (!uploadResult.success || !uploadResult.id) {
+    throw new Error(`图片上传失败: ${uploadResult.error}`)
+  }
+
+  console.log('✅ [CharacterEditor] 图片上传成功:', uploadResult.id)
+
+  // 7. 构建任务配置（参考 bltcy-sora2.json）
+  // 固定使用 9:16 竖屏，10秒时长
+  const taskConfig = {
+    id: 'bltcy-sora2', // 必须包含 id 字段
+    images: [uploadResult.url], // 使用上传后的文件 URL
+    prompt: introPrompt.value.trim(),
+    aspect_ratio: VIDEO_ASPECT_RATIO,
+    duration: VIDEO_DURATION,
+  }
+
+  // 8. 准备请求参数
+  const requestParams = {
+    ai_task_type: AITaskType.BLTCY_SORA2,
+    content_type: ContentType.VIDEO,
+    task_config: taskConfig,
+  }
+
+  console.log('🚀 [CharacterEditor] 提交自我介绍生成任务...', requestParams)
+
+  // 9. 提交任务到后端
+  const submitResult = await submitAIGenerationTask(requestParams)
+
+  // 10. 错误处理
+  if (!submitResult.success) {
+    const errorMessage = buildTaskErrorMessage(
+      submitResult.error_code,
+      submitResult.error_details,
+      tFunc,
+    )
+    throw new Error(errorMessage)
+  }
+
+  console.log(
+    `✅ [CharacterEditor] 任务提交成功: ${submitResult.task_id}, 成本: ${submitResult.cost}`,
+  )
+
+  // 11. 创建 AI 生成数据源
+  const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
+    {
+      type: 'ai-generation',
+      aiTaskId: submitResult.task_id,
+      requestParams: requestParams,
+      taskStatus: TaskStatus.PENDING,
+    },
+    SourceOrigin.USER_CREATE,
+  )
+
+  // 12. 生成媒体ID
+  const mediaId = generateMediaId('mp4')
+
+  // 13. 创建媒体项
+  const mediaItemData = unifiedStore.createUnifiedMediaItemData(
+    mediaId,
+    `${characterDir.name}_intro`,
+    aiSource,
+  )
+
+  // 14. 启动媒体处理流程
+  unifiedStore.startMediaProcessing(mediaItemData)
+
+  // 15. 添加到媒体库
+  unifiedStore.addMediaItem(mediaItemData)
+
+  // 16. 添加到角色文件夹
+  unifiedStore.addMediaToDirectory(mediaId, characterDir.id)
+
+  // 17. 保存自我介绍视频的引用（可选）
+  // characterDir.character.introMediaId = mediaId
+
+  console.log('✅ 自我介绍生成任务已提交:', mediaId)
+}
 </script>
 
 <style scoped>
@@ -603,6 +819,42 @@ async function generateCharacterPortrait(
 .form-actions :deep(.generate-button:disabled) {
   background-color: #d9f7be;
   color: #b7eb8f;
+}
+
+/* 分隔区域 */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin: var(--spacing-xl) 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-border-secondary);
+}
+
+.divider-text {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* 生成自我介绍按钮 */
+.form-actions :deep(.generate-intro-button) {
+  background-color: #1890ff;
+  color: #fff;
+}
+
+.form-actions :deep(.generate-intro-button:hover:not(:disabled)) {
+  background-color: #40a9ff;
+}
+
+.form-actions :deep(.generate-intro-button:disabled) {
+  background-color: #d9d9d9;
+  color: #8c8c8c;
 }
 
 /* 加载提示框 */
