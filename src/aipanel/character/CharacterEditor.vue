@@ -74,6 +74,23 @@ import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
 import FileInputField from '@/aipanel/aigenerate/fields/FileInputField.vue'
 import type { MultiFileData } from '@/aipanel/aigenerate/types'
+import {
+  AIGenerationSourceFactory,
+  TaskStatus,
+  type MediaGenerationRequest,
+  AITaskType,
+  ContentType,
+} from '@/core/datasource/providers/ai-generation/AIGenerationSource'
+import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
+import { generateMediaId } from '@/core/utils/idGenerator'
+import { fetchClient } from '@/utils/fetchClient'
+import type { TaskSubmitResponse } from '@/types/taskApi'
+import { TaskSubmitErrorCode } from '@/types/taskApi'
+import {
+  buildTaskErrorMessage,
+  shouldShowRechargePrompt,
+  isRetryableError,
+} from '@/utils/errorMessageBuilder'
 
 const { t: tFunc, locale } = useAppI18n()
 const unifiedStore = useUnifiedStore()
@@ -99,6 +116,7 @@ const isMediaLoading = computed(() => {
   }
 
   // 编辑模式下，检查 characterMediaStatus
+  // loading 状态包括：pending, asyncprocessing, decoding
   return characterMediaStatus.value === 'loading'
 })
 
@@ -117,7 +135,7 @@ const refVideoConfig = computed(() => ({
   path: 'refVideo',
   accept: ['video'], // 只接受视频
   placeholder: {
-    zh: '拖拽视频到此处或点击上传',
+    zh: '拖拽视频到此处',
     en: 'Drag video here or click to upload',
   },
   maxFiles: 1,
@@ -189,11 +207,11 @@ const characterRemark = computed({
   },
 })
 
-// 验证逻辑
+// 验证逻辑：只需要验证角色名称和参考视频
 const canGenerate = computed(() => {
   const name = characterName.value || ''
-  const remark = characterRemark.value || ''
-  return name.trim().length >= 1 && remark.trim().length >= 10
+  const hasRefVideo = refVideo.value && refVideo.value.length > 0
+  return name.trim().length >= 1 && hasRefVideo
 })
 
 // 按钮文本（根据模式不同显示不同文本）
@@ -205,9 +223,217 @@ const generateButtonText = computed(() => {
   }
 })
 
-// 生成角色肖像（占位函数）
-function handleGenerate() {
-  console.log('生成按钮被点击')
+/**
+ * 提交角色创建任务到后端
+ */
+async function submitCharacterCreationTask(
+  requestParams: MediaGenerationRequest,
+): Promise<TaskSubmitResponse> {
+  try {
+    const response = await fetchClient.post<TaskSubmitResponse>(
+      '/api/media/generate',
+      requestParams,
+    )
+
+    if (response.status !== 200) {
+      throw new Error(`提交任务失败: ${response.statusText}`)
+    }
+
+    return response.data
+  } catch (error) {
+    return {
+      success: false,
+      error_code: TaskSubmitErrorCode.UNKNOWN_ERROR,
+      error_details: {
+        error: error instanceof Error ? error.message : '网络请求失败',
+      },
+    }
+  }
+}
+
+/**
+ * 处理角色头像生成
+ */
+async function handleGenerate() {
+  if (!canGenerate.value) {
+    return
+  }
+
+  try {
+    isGenerating.value = true
+
+    // 1. 验证参考视频
+    const refVideoFile = refVideo.value[0]
+    if (!refVideoFile) {
+      throw new Error('请上传参考视频')
+    }
+
+    // 获取视频 URL
+    let videoUrl = ''
+    if (refVideoFile.source === 'media-item' && refVideoFile.mediaItemId) {
+      const mediaItem = unifiedStore.getMediaItem(refVideoFile.mediaItemId)
+      // 从 MediaItem 的 source 中获取 URL
+      if (mediaItem && mediaItem.source.type === 'ai-generation') {
+        // AI 生成的媒体，从 resultData 中获取 URL
+        videoUrl = mediaItem.source.resultData?.url || ''
+      } else if (mediaItem && mediaItem.source.type === 'user-selected') {
+        // 用户上传的媒体，暂时无法获取 URL，需要其他方式
+        throw new Error('用户上传的视频暂不支持直接提取 URL')
+      }
+    }
+
+    if (!videoUrl) {
+      throw new Error('无法获取视频 URL')
+    }
+
+    // 2. 确定时间戳（默认使用前3秒，后续可以让用户选择）
+    const timestamps = '1,4'  // 使用1-4秒
+
+    // 3. 准备任务配置
+    const taskConfig = {
+      timestamps,
+      video_url: videoUrl,  // 使用上传的视频URL
+      // 或者使用 from_task: refVideoFile.taskId（如果视频来自其他任务）
+    }
+
+    // 4. 准备请求参数
+    const requestParams: MediaGenerationRequest = {
+      ai_task_type: AITaskType.BLTCY_CHARACTER,  // 角色创建任务类型
+      content_type: ContentType.IMAGE,            // 返回图片类型
+      task_config: taskConfig,
+    }
+
+    console.log('🚀 [CharacterEditor] 提交角色创建任务到后端...', requestParams)
+
+    // 5. 提交任务到后端
+    const submitResult = await submitCharacterCreationTask(requestParams)
+
+    // 6. 错误处理
+    if (!submitResult.success) {
+      const errorMessage = buildTaskErrorMessage(
+        submitResult.error_code,
+        submitResult.error_details,
+        tFunc,
+      )
+
+      // 根据错误类型提供不同的用户体验
+      if (shouldShowRechargePrompt(submitResult.error_code)) {
+        // 余额不足：显示充值引导对话框
+        unifiedStore.dialogWarning({
+          title: tFunc('media.error.insufficientBalance'),
+          content: errorMessage + '\n\n' + tFunc('media.error.rechargePrompt'),
+          positiveText: tFunc('media.confirm'),
+          negativeText: tFunc('media.cancel'),
+          onPositiveClick: () => {
+            // TODO: 跳转到充值页面
+            console.log('跳转到充值页面')
+          },
+        })
+      } else if (isRetryableError(submitResult.error_code)) {
+        // 可重试错误：显示重试选项
+        unifiedStore.dialogWarning({
+          title: tFunc('media.character.generationFailed'),
+          content: errorMessage,
+          positiveText: tFunc('media.retry'),
+          negativeText: tFunc('media.cancel'),
+          onPositiveClick: () => {
+            // 重新提交任务
+            handleGenerate()
+          },
+        })
+      } else {
+        // 其他错误：直接显示错误消息
+        unifiedStore.messageError(errorMessage)
+      }
+
+      return
+    }
+
+    console.log(
+      `✅ [CharacterEditor] 任务提交成功: ${submitResult.task_id}, 成本: ${submitResult.cost}`,
+    )
+
+    // 7. 创建AI生成数据源
+    const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
+      {
+        type: 'ai-generation',
+        aiTaskId: submitResult.task_id, // 使用真实的后端任务ID
+        requestParams: requestParams,
+        taskStatus: TaskStatus.PENDING, // 初始状态为 PENDING
+      },
+      SourceOrigin.USER_CREATE,
+    )
+
+    // 8. 创建媒体项目
+    const mediaId = generateMediaId('png')  // 角色头像为PNG格式
+    const mediaName = `${characterName.value}_portrait`
+
+    const mediaItem = unifiedStore.createUnifiedMediaItemData(mediaId, mediaName, aiSource, {
+      mediaType: 'image',
+    })
+
+    // 9. 添加到媒体库
+    unifiedStore.addMediaItem(mediaItem)
+
+    // 10. 处理角色文件夹
+    let characterDirId: string
+    if (unifiedStore.characterEditorState.mode === 'edit' && unifiedStore.curCharacterDir) {
+      // 编辑模式：使用现有角色文件夹
+      characterDirId = unifiedStore.curCharacterDir.id
+    } else if (unifiedStore.characterEditorState.mode === 'create') {
+      // 创建模式：先创建角色文件夹
+      const characterDir = unifiedStore.createCharacterDirectory(
+        characterName.value || '未命名角色',
+        characterRemark.value || '',
+        refVideo.value,
+        unifiedStore.currentDir?.id || null, // 使用当前目录作为父目录
+      )
+      characterDirId = characterDir.id
+      console.log('✅ [CharacterEditor] 角色文件夹创建成功:', characterDir.name)
+
+      // 切换到编辑模式
+      unifiedStore.openCharacterEditor('edit', characterDirId)
+      console.log('✅ [CharacterEditor] 已切换到编辑模式:', characterDirId)
+    } else {
+      throw new Error('无效的角色编辑器模式')
+    }
+
+    // 11. 将 MediaItem 添加到角色文件夹
+    unifiedStore.addMediaToDirectory(mediaId, characterDirId)
+
+    // 12. 保存 MediaItem ID 到角色信息中
+    const characterDir = unifiedStore.getCharacterDirectory(characterDirId)
+    if (characterDir) {
+      // 如果已有 profileMediaItemId，先删除旧的 MediaItem
+      const oldProfileMediaItemId = characterDir.character.profileMediaItemId
+      if (oldProfileMediaItemId) {
+        console.log('🗑️ [CharacterEditor] 删除旧的头像 MediaItem:', oldProfileMediaItemId)
+        await unifiedStore.deleteMediaItem(oldProfileMediaItemId, characterDirId)
+      }
+
+      // 保存新的 MediaItem ID
+      characterDir.character.profileMediaItemId = mediaItem.id
+      console.log('✅ [CharacterEditor] 已更新头像 MediaItem ID:', mediaItem.id)
+    }
+
+    // 13. 启动媒体处理流程（进度监控和文件获取）
+    unifiedStore.startMediaProcessing(mediaItem)
+
+    // 14. 显示成功消息
+    unifiedStore.messageSuccess(tFunc('media.character.taskSubmitted'))
+
+    console.log('✅ [CharacterEditor] 角色头像生成流程启动完成')
+
+  } catch (error) {
+    console.error('❌ [CharacterEditor] 任务提交失败:', error)
+    unifiedStore.messageError(
+      tFunc('media.character.submitFailed', {
+        error: error instanceof Error ? error.message : '未知错误',
+      }),
+    )
+  } finally {
+    isGenerating.value = false
+  }
 }
 
 // 关闭编辑器

@@ -22,6 +22,7 @@ export enum DirectoryType {
 export interface CharacterInfo {
   remark: string // 角色备注文本
   refVideo: FileData[] // 角色参考视频
+  profileMediaItemId?: string // 可选：角色头像对应的 MediaItem ID
 }
 
 /**

@@ -44,16 +44,51 @@ export function useCharacter(
     const dir = directory.value
     if (!dir || dir.type !== DirectoryType.CHARACTER) return 'unknown'
 
-    // 角色文件夹不再有肖像图片，始终返回 unknown
+    const characterDir = dir as CharacterDirectory
+    const profileMediaItemId = characterDir.character.profileMediaItemId
+
+    // 如果没有头像 MediaItem，返回 unknown
+    if (!profileMediaItemId) return 'unknown'
+
+    // 获取头像 MediaItem
+    const mediaItem = unifiedStore.getMediaItem(profileMediaItemId)
+    if (!mediaItem) return 'unknown'
+
+    // 根据 MediaItem 的状态返回对应的状态
+    if (mediaItem.mediaStatus === 'pending' || mediaItem.mediaStatus === 'asyncprocessing' || mediaItem.mediaStatus === 'decoding') {
+      return 'loading'
+    } else if (mediaItem.mediaStatus === 'ready') {
+      return 'ready'
+    } else if (mediaItem.mediaStatus === 'error' || mediaItem.mediaStatus === 'cancelled' || mediaItem.mediaStatus === 'missing') {
+      return 'error'
+    }
+
     return 'unknown'
   })
 
   /**
    * 获取角色缩略图 URL
-   * 始终返回 undefined，因为不再有肖像图片
+   * 返回头像 MediaItem 的缩略图 URL
    */
   const characterThumbnailUrl = computed(() => {
-    return undefined
+    const dir = directory.value
+    if (!dir || dir.type !== DirectoryType.CHARACTER) return undefined
+
+    const characterDir = dir as CharacterDirectory
+    const profileMediaItemId = characterDir.character.profileMediaItemId
+
+    // 如果没有头像 MediaItem，返回 undefined
+    if (!profileMediaItemId) return undefined
+
+    // 获取头像 MediaItem
+    const mediaItem = unifiedStore.getMediaItem(profileMediaItemId)
+    if (!mediaItem) return undefined
+
+    // 如果 MediaItem 未准备好，返回 undefined
+    if (mediaItem.mediaStatus !== 'ready') return undefined
+
+    // 返回缩略图 URL（如果有）
+    return mediaItem.runtime.bunny?.thumbnailUrl || undefined
   })
 
   /**

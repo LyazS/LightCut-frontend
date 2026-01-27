@@ -34,6 +34,28 @@
       "fileAdded": "File added: {name}",
       "dragFailed": "File drag failed, please retry",
       "thumbnailLoadFailed": "Thumbnail load failed, will show file type icon"
+    },
+    "character": {
+      "portrait": "Character Portrait",
+      "noPortrait": "No Portrait",
+      "generatingPortrait": "Generating portrait...",
+      "portraitGenerationFailed": "Portrait generation failed",
+      "taskSubmitted": "Character portrait generation task submitted",
+      "submitFailed": "Task submission failed: {error}",
+      "generationFailed": "Character portrait generation failed",
+      "selectTimeRange": "Select Time Range",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "selectedRange": "Selected Range",
+      "duration": "Duration",
+      "timestampTooShort": "Time range must be at least 1 second",
+      "timestampTooLong": "Time range cannot exceed 3 seconds",
+      "invalidTimestamp": "Invalid timestamp format",
+      "videoRequired": "Please upload a reference video",
+      "processingVideo": "Processing video...",
+      "analyzingCharacter": "Analyzing character features...",
+      "generatingAvatar": "Generating character avatar...",
+      "characterCreated": "Character created successfully"
     }
   }
 }

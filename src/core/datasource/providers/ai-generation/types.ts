@@ -14,6 +14,7 @@ export enum AITaskType {
   BIZYAIR_GENERATE_MEDIA = 'bizyair_generate_media',
   BLTCY_SORA2 = 'bltcy_sora2',  // BLTCY Sora2 视频生成（支持 T2V 和 I2V）
   RUNNINGHUB_GENERATE_MEDIA = 'runninghub_generate_media',  // RunningHub 媒体生成
+  BLTCY_CHARACTER = 'bltcy_character',  // BLTCY 角色创建
 }
 
 /**

@@ -1,12 +1,30 @@
 <template>
   <div class="folder-icon" :class="iconClass">
-    <!-- 角色文件夹：显示用户图标 -->
-    <component
-      v-if="isCharacterFolder"
-      :is="IconComponents.USER"
-      :size="size"
-      class="accent-color"
-    />
+    <!-- 角色文件夹：显示头像缩略图或用户图标 -->
+    <template v-if="isCharacterFolder">
+      <!-- 加载中：显示加载动画 -->
+      <component
+        v-if="characterMediaStatus === 'loading'"
+        :is="IconComponents.LOADING"
+        :size="size"
+        class="loading-icon"
+      />
+      <!-- 有头像缩略图：显示头像 -->
+      <img
+        v-else-if="characterThumbnailUrl"
+        :src="characterThumbnailUrl"
+        :alt="directory?.name"
+        class="character-thumbnail"
+        :class="thumbnailClass"
+      />
+      <!-- 无头像缩略图：显示用户图标 -->
+      <component
+        v-else
+        :is="IconComponents.USER"
+        :size="size"
+        class="accent-color"
+      />
+    </template>
     <!-- 非角色文件夹：显示文件夹图标 -->
     <component
       v-else
@@ -35,10 +53,15 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // 使用 useCharacter composable
-const { directory, isCharacterFolder } = useCharacter(computed(() => props.folderId))
+const { directory, isCharacterFolder, characterThumbnailUrl, characterMediaStatus } = useCharacter(computed(() => props.folderId))
 
 // 容器类名
 const iconClass = computed(() => {
+  return props.isListView ? 'list-view' : 'icon-view'
+})
+
+// 缩略图类名
+const thumbnailClass = computed(() => {
   return props.isListView ? 'list-view' : 'icon-view'
 })
 </script>
@@ -69,5 +92,28 @@ const iconClass = computed(() => {
 /* 颜色样式 */
 .accent-color {
   color: var(--color-accent-primary);
+}
+
+/* 角色头像缩略图样式 */
+.character-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* 加载图标样式 */
+.loading-icon {
+  animation: spin 1s linear infinite;
+  color: var(--color-accent-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
