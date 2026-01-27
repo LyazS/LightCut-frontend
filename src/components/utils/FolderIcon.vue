@@ -1,40 +1,16 @@
 <template>
-  <div class="folder-icon" :class="[iconClass, { 'character-mode': isCharacterFolder }]">
-    <!-- 角色文件夹：根据状态显示不同内容 -->
-    <template v-if="isCharacterFolder">
-      <!-- 加载中状态：显示旋转加载动画 -->
-      <component
-        v-if="characterMediaStatus === 'loading'"
-        :is="IconComponents.LOADING"
-        :size="size"
-        class="loading-spinner loading-color"
-      />
-      <!-- 就绪状态：显示缩略图 -->
-      <img
-        v-else-if="characterMediaStatus === 'ready' && characterThumbnailUrl"
-        :src="characterThumbnailUrl"
-        class="character-thumbnail"
-        :alt="directory?.name || ''"
-      />
-      <!-- 错误状态：显示用户图标 -->
-      <component
-        v-else-if="characterMediaStatus === 'error'"
-        :is="IconComponents.USER"
-        :size="size"
-        class="error-color"
-      />
-      <!-- 未知状态：显示默认图标 -->
-      <component
-        v-else
-        :is="IconComponents.USER"
-        :size="size"
-        class="accent-color"
-      />
-    </template>
-    <!-- 非角色文件夹：显示默认图标 -->
+  <div class="folder-icon" :class="iconClass">
+    <!-- 角色文件夹：显示用户图标 -->
+    <component
+      v-if="isCharacterFolder"
+      :is="IconComponents.USER"
+      :size="size"
+      class="accent-color"
+    />
+    <!-- 非角色文件夹：显示文件夹图标 -->
     <component
       v-else
-      :is="currentIcon"
+      :is="IconComponents.FOLDER"
       :size="size"
       class="accent-color"
     />
@@ -59,19 +35,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // 使用 useCharacter composable
-const {
-  directory,
-  isCharacterFolder,
-  characterMediaStatus,
-  characterThumbnailUrl,
-} = useCharacter(computed(() => props.folderId))
-
-// 根据文件夹类型获取对应的图标
-const currentIcon = computed(() => {
-  const dir = directory.value
-  if (!dir) return IconComponents.FOLDER
-  return dir.type === DirectoryType.CHARACTER ? IconComponents.USER : IconComponents.FOLDER
-})
+const { directory, isCharacterFolder } = useCharacter(computed(() => props.folderId))
 
 // 容器类名
 const iconClass = computed(() => {
@@ -102,40 +66,8 @@ const iconClass = computed(() => {
   background-color: transparent;
 }
 
-/* 角色模式：圆形图标 */
-.folder-icon.character-mode {
-  border-radius: 50%;
-}
-
-/* 角色缩略图样式 */
-.character-thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-/* 旋转加载动画 */
-.loading-spinner {
-  animation: spin 1s linear infinite;
-}
-
 /* 颜色样式 */
-.loading-color,
 .accent-color {
   color: var(--color-accent-primary);
-}
-
-.error-color {
-  color: var(--color-error);
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 </style>

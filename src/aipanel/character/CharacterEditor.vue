@@ -24,36 +24,20 @@
       />
     </div>
 
-    <!-- 角色描述 -->
+    <!-- 角色备注 -->
     <div class="form-group">
-      <label>{{ tFunc('media.character.description') }}</label>
+      <label>{{ tFunc('media.character.remark') }}</label>
       <textarea
-        v-model="characterDescription"
+        v-model="characterRemark"
         class="form-textarea"
-        :placeholder="tFunc('media.character.descriptionPlaceholder')"
+        :placeholder="tFunc('media.character.remarkPlaceholder')"
         rows="8"
       />
     </div>
 
-    <!-- 参考图 -->
+    <!-- 参考视频 -->
     <div class="form-group">
-      <FileInputField :config="refImagesConfig" v-model="refImages" :locale="fieldLocale" />
-    </div>
-
-    <!-- 图像比例 -->
-    <div class="form-group">
-      <label>{{ tFunc('media.character.aspectRatio') }}</label>
-      <select v-model="aspectRatio" class="form-select">
-        <option value="1:1">1:1</option>
-        <option value="16:9">16:9</option>
-        <option value="9:16">9:16</option>
-        <option value="3:2">3:2</option>
-        <option value="3:4">3:4</option>
-        <option value="4:3">4:3</option>
-        <option value="4:5">4:5</option>
-        <option value="5:4">5:4</option>
-        <option value="21:9">21:9</option>
-      </select>
+      <FileInputField :config="refVideoConfig" v-model="refVideo" :locale="fieldLocale" />
     </div>
 
     <!-- 生成按钮或加载提示 -->
@@ -78,49 +62,6 @@
         <span class="loading-text">{{ tFunc('aiPanel.generating') }}</span>
       </div>
     </div>
-
-    <!-- 分隔线 - 只有肖像就绪时才显示 -->
-    <div v-if="showIntroSection" class="section-divider">
-      <div class="divider-line"></div>
-      <span class="divider-text">{{ tFunc('media.character.introSectionTitle') }}</span>
-      <div class="divider-line"></div>
-    </div>
-
-    <!-- 自我介绍生成区域 - 只有肖像就绪时才显示 -->
-    <div v-if="showIntroSection">
-      <!-- 提示词输入框 -->
-      <div class="form-group">
-        <label>{{ tFunc('media.character.introPrompt') }}</label>
-        <textarea
-          v-model="introPrompt"
-          class="form-textarea"
-          :placeholder="tFunc('media.character.introPromptPlaceholder')"
-          rows="6"
-        />
-      </div>
-
-      <!-- 生成自我介绍按钮 -->
-      <div class="form-actions">
-        <HoverButton
-          v-if="!isGeneratingIntro && !isMediaLoading"
-          variant="large"
-          class="generate-intro-button"
-          :disabled="!canGenerateIntro"
-          @click="handleGenerateIntro"
-        >
-          <template #icon>
-            <component :is="IconComponents.SPARKLING" size="16px" />
-          </template>
-          {{ tFunc('media.character.generateIntro') }}
-        </HoverButton>
-
-        <!-- 加载提示框 -->
-        <div v-else-if="isGeneratingIntro" class="loading-indicator">
-          <component :is="IconComponents.LOADING" size="24px" class="loading-icon" />
-          <span class="loading-text">{{ tFunc('aiPanel.generating') }}</span>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -133,33 +74,11 @@ import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
 import FileInputField from '@/aipanel/aigenerate/fields/FileInputField.vue'
 import type { MultiFileData } from '@/aipanel/aigenerate/types'
-import {
-  AIGenerationSourceFactory,
-  TaskStatus,
-  ContentType,
-  AITaskType,
-} from '@/core/datasource/providers/ai-generation/AIGenerationSource'
-import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
-import { generateMediaId } from '@/core/utils/idGenerator'
-import { fetchClient } from '@/utils/fetchClient'
-import { buildTaskErrorMessage } from '@/utils/errorMessageBuilder'
-import type { TaskSubmitResponse } from '@/types/taskApi'
-import { RunningHubFileUploaderStd } from '@/core/utils/runninghubFileUploaderStd'
-import { BltcyFileUploader } from '@/core/utils/bltcyFileUploader'
-import { exportMediaItem } from '@/core/utils/projectExporter'
-import { MediaItemQueries } from '@/core/mediaitem/queries'
 
 const { t: tFunc, locale } = useAppI18n()
 const unifiedStore = useUnifiedStore()
 
 const isGenerating = ref(false)
-
-// 自我介绍生成相关状态
-const isGeneratingIntro = ref(false)
-const introPrompt = ref('')
-// 固定参数：9:16竖屏，10秒时长
-const VIDEO_ASPECT_RATIO = '9:16'
-const VIDEO_DURATION = '10'
 
 // 获取当前角色目录ID
 const currentCharacterDirId = computed(() => {
@@ -174,7 +93,7 @@ const { characterMediaStatus } = useCharacter(currentCharacterDirId)
 
 // 判断媒体是否正在加载
 const isMediaLoading = computed(() => {
-  // 创建模式下，没有 portraitMediaId，不处于加载状态
+  // 创建模式下，不处于加载状态
   if (unifiedStore.characterEditorState.mode === 'create') {
     return false
   }
@@ -188,61 +107,39 @@ const fieldLocale = computed<'zh' | 'en'>(() => {
   return locale.value === 'zh-CN' ? 'zh' : 'en'
 })
 
-// 参考图配置
-const refImagesConfig = computed(() => ({
+// 参考视频配置
+const refVideoConfig = computed(() => ({
   type: 'file-input' as const,
   label: {
-    zh: tFunc('media.character.refImages'),
-    en: tFunc('media.character.refImages'),
+    zh: '参考视频',
+    en: 'Reference Video',
   },
-  path: 'refImages',
-  accept: ['image'], // 只接受图片
+  path: 'refVideo',
+  accept: ['video'], // 只接受视频
   placeholder: {
-    zh: tFunc('media.character.refImagesPlaceholder'),
-    en: tFunc('media.character.refImagesPlaceholder'),
+    zh: '拖拽视频到此处或点击上传',
+    en: 'Drag video here or click to upload',
   },
-  maxFiles: 10,
+  maxFiles: 1,
 }))
 
-// 参考图（支持创建和编辑模式）
-const refImages = computed({
+// 参考视频（支持创建和编辑模式）
+const refVideo = computed({
   get: () => {
     if (unifiedStore.characterEditorState.mode === 'create') {
-      return unifiedStore.characterEditorState.tempRefImages
+      return unifiedStore.characterEditorState.tempRefVideo
     } else {
       const character = unifiedStore.curCharacterDir
-      return character?.character.refImages ?? []
+      return character?.character.refVideo || []
     }
   },
   set: (value: MultiFileData) => {
     if (unifiedStore.characterEditorState.mode === 'create') {
-      unifiedStore.characterEditorState.tempRefImages = value
+      unifiedStore.characterEditorState.tempRefVideo = value
     } else {
       const character = unifiedStore.curCharacterDir
       if (character) {
-        character.character.refImages = value
-      }
-    }
-  },
-})
-
-// 图像比例（支持创建和编辑模式）
-const aspectRatio = computed({
-  get: () => {
-    if (unifiedStore.characterEditorState.mode === 'create') {
-      return unifiedStore.characterEditorState.tempAspectRatio
-    } else {
-      const character = unifiedStore.curCharacterDir
-      return character?.character.aspectRatio || '1:1'
-    }
-  },
-  set: (value: string) => {
-    if (unifiedStore.characterEditorState.mode === 'create') {
-      unifiedStore.characterEditorState.tempAspectRatio = value
-    } else {
-      const character = unifiedStore.curCharacterDir
-      if (character) {
-        character.character.aspectRatio = value
+        character.character.refVideo = value
       }
     }
   },
@@ -270,23 +167,23 @@ const characterName = computed({
   },
 })
 
-// 角色描述（支持创建和编辑模式）
-const characterDescription = computed({
+// 角色备注（支持创建和编辑模式）
+const characterRemark = computed({
   get: () => {
     if (unifiedStore.characterEditorState.mode === 'create') {
-      return unifiedStore.characterEditorState.tempDescription
+      return unifiedStore.characterEditorState.tempRemark
     } else {
       const character = unifiedStore.curCharacterDir
-      return character?.character.description || ''
+      return character?.character.remark || ''
     }
   },
   set: (value: string) => {
     if (unifiedStore.characterEditorState.mode === 'create') {
-      unifiedStore.characterEditorState.tempDescription = value
+      unifiedStore.characterEditorState.tempRemark = value
     } else {
       const character = unifiedStore.curCharacterDir
       if (character) {
-        character.character.description = value
+        character.character.remark = value
       }
     }
   },
@@ -295,26 +192,8 @@ const characterDescription = computed({
 // 验证逻辑
 const canGenerate = computed(() => {
   const name = characterName.value || ''
-  const description = characterDescription.value || ''
-  return name.trim().length >= 1 && description.trim().length >= 10
-})
-
-// 是否显示自我介绍生成区域
-// 只有当肖像媒体处于就绪状态时才显示
-const showIntroSection = computed(() => {
-  return characterMediaStatus.value === 'ready'
-})
-
-// 是否可以生成自我介绍
-const canGenerateIntro = computed(() => {
-  // 1. 肖像必须就绪（通过 showIntroSection 已经验证）
-  if (!showIntroSection.value) {
-    return false
-  }
-
-  // 2. 提示词不能为空且长度至少10个字符
-  const prompt = introPrompt.value.trim()
-  return prompt.length >= 10
+  const remark = characterRemark.value || ''
+  return name.trim().length >= 1 && remark.trim().length >= 10
 })
 
 // 按钮文本（根据模式不同显示不同文本）
@@ -326,378 +205,14 @@ const generateButtonText = computed(() => {
   }
 })
 
-// 生成角色肖像
-async function handleGenerate() {
-  if (!canGenerate.value) return
-
-  isGenerating.value = true
-  try {
-    const character = unifiedStore.curCharacterDir
-    const characterId = character?.id || null
-    const currentDirId = unifiedStore.currentDir?.id || null
-    await generateCharacterPortrait(characterId, currentDirId)
-    unifiedStore.messageSuccess(tFunc('media.character.generateSuccess'))
-  } catch (error) {
-    console.error('生成角色肖像失败:', error)
-    const errorMessage =
-      error instanceof Error ? error.message : tFunc('media.character.generateFailed')
-    unifiedStore.messageError(errorMessage)
-  } finally {
-    isGenerating.value = false
-  }
+// 生成角色肖像（占位函数）
+function handleGenerate() {
+  console.log('生成按钮被点击')
 }
 
 // 关闭编辑器
 function handleClose() {
   unifiedStore.closeCharacterEditor()
-}
-
-/**
- * 提交 AI 生成任务到后端
- */
-async function submitAIGenerationTask(requestParams: any): Promise<TaskSubmitResponse> {
-  try {
-    const response = await fetchClient.post<TaskSubmitResponse>(
-      '/api/media/generate',
-      requestParams,
-    )
-    if (response.status !== 200) {
-      throw new Error(`提交任务失败: ${response.statusText}`)
-    }
-    return response.data
-  } catch (error) {
-    return {
-      success: false,
-      error_code: 'UNKNOWN_ERROR' as any,
-      error_details: {
-        error: error instanceof Error ? error.message : '网络请求失败',
-      },
-    }
-  }
-}
-
-/**
- * 生成角色肖像
- * 复用 CreateCharacterModal 的逻辑
- * @param characterId 角色ID（编辑模式）或 null（创建模式）
- * @param currentDirId 当前目录ID（创建模式需要）
- */
-async function generateCharacterPortrait(
-  characterId: string | null,
-  currentDirId: string | null,
-): Promise<void> {
-  let characterDir: any
-  let characterName: string
-  let characterDescription: string
-
-  if (unifiedStore.characterEditorState.mode === 'create') {
-    // 创建模式：使用临时数据
-    characterName = unifiedStore.characterEditorState.tempName.trim()
-    characterDescription = unifiedStore.characterEditorState.tempDescription.trim()
-
-    // 验证
-    if (!characterName || characterName.length < 1) {
-      throw new Error(tFunc('media.character.nameRequired'))
-    }
-    if (!characterDescription || characterDescription.length < 10) {
-      throw new Error(tFunc('media.character.descriptionTooShort'))
-    }
-
-    if (!currentDirId) {
-      throw new Error(tFunc('media.selectDirectoryFirst'))
-    }
-  } else {
-    // 编辑模式：从角色文件夹获取数据
-    characterDir = unifiedStore.curCharacterDir
-    if (!characterDir) {
-      throw new Error('角色文件夹不存在')
-    }
-
-    characterName = characterDir.name.trim()
-    characterDescription = characterDir.character.description.trim()
-
-    // 验证
-    if (!characterName || characterName.length < 1) {
-      throw new Error(tFunc('media.character.nameRequired'))
-    }
-    if (!characterDescription || characterDescription.length < 10) {
-      throw new Error(tFunc('media.character.descriptionTooShort'))
-    }
-  }
-
-  try {
-    // 1. 准备 banana-image 请求参数（包含参考图）
-    const taskConfig = {
-      id: 'rh-nano-banana-2',
-      prompt: characterDescription,
-      resolution: '1K',
-      aspectRatio: aspectRatio.value,
-      imageUrls: refImages.value, // 添加参考图（使用 imageUrls 字段）
-    }
-
-    // 2. 使用 RunningHubFileUploaderStd 处理文件上传
-    const processedConfig = await RunningHubFileUploaderStd.processConfigUploads(
-      taskConfig,
-      unifiedStore.getMediaItem,
-      unifiedStore.getTimelineItem,
-      (fileIndex, stage, progress) => {
-        console.log(`参考图 ${fileIndex + 1}: ${stage} ${progress}%`)
-      },
-      () => {
-        console.log('参考图上传完成')
-      },
-    )
-
-    // 3. 准备请求参数（使用处理后的配置）
-    const requestParams = {
-      ai_task_type: AITaskType.RUNNINGHUB_GENERATE_MEDIA,
-      content_type: ContentType.IMAGE,
-      task_config: processedConfig, // 使用处理后的配置
-      sub_ai_task_type: 'standard_api',
-    }
-
-    console.log('🚀 [CharacterEditor] 提交AI生成任务到后端...', requestParams)
-
-    // 4. 提交任务到后端
-    const submitResult = await submitAIGenerationTask(requestParams)
-
-    // 5. 错误处理
-    if (!submitResult.success) {
-      const errorMessage = buildTaskErrorMessage(
-        submitResult.error_code,
-        submitResult.error_details,
-        tFunc,
-      )
-      throw new Error(errorMessage)
-    }
-
-    console.log(
-      `✅ [CharacterEditor] 任务提交成功: ${submitResult.task_id}, 成本: ${submitResult.cost}`,
-    )
-
-    // 6. 创建 AI 生成数据源（使用真实的后端任务ID）
-    const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
-      {
-        type: 'ai-generation',
-        aiTaskId: submitResult.task_id, // 使用真实的后端任务ID
-        requestParams: requestParams,
-        taskStatus: TaskStatus.PENDING, // 初始状态为 PENDING
-      },
-      SourceOrigin.USER_CREATE,
-    )
-
-    // 7. 生成媒体ID
-    const mediaId = generateMediaId('png')
-
-    // 8. 创建媒体项
-    const mediaItem = unifiedStore.createUnifiedMediaItemData(
-      mediaId,
-      `${characterName}_portrait`,
-      aiSource,
-    )
-
-    // 9. 启动媒体处理流程
-    unifiedStore.startMediaProcessing(mediaItem)
-
-    // 10. 添加到媒体库
-    unifiedStore.addMediaItem(mediaItem)
-
-    // 11. 创建或更新角色文件夹
-    if (unifiedStore.characterEditorState.mode === 'create') {
-      // 创建模式：创建新的角色文件夹
-      characterDir = unifiedStore.createCharacterDirectory(
-        characterName,
-        characterDescription,
-        currentDirId!,
-      )
-      // 添加媒体到角色文件夹
-      unifiedStore.addMediaToDirectory(mediaId, characterDir.id)
-      // 更新角色文件夹的图片引用
-      characterDir.character.portraitMediaId = mediaId
-      // 保存参考图和图像比例
-      characterDir.character.refImages = refImages.value
-      characterDir.character.aspectRatio = aspectRatio.value
-      // 切换到编辑模式
-      unifiedStore.characterEditorState.mode = 'edit'
-      unifiedStore.characterEditorState.characterId = characterDir.id
-      unifiedStore.characterEditorState.tempName = ''
-      unifiedStore.characterEditorState.tempDescription = ''
-      unifiedStore.characterEditorState.tempRefImages = []
-      unifiedStore.characterEditorState.tempAspectRatio = '1:1' // 重置为默认值
-    } else {
-      // 编辑模式：添加到现有角色文件夹
-      unifiedStore.addMediaToDirectory(mediaId, characterDir.id)
-
-      // 删除旧的 portraitMediaId（如果存在）
-      if (characterDir.character.portraitMediaId) {
-        try {
-          await unifiedStore.deleteMediaItem(
-            characterDir.character.portraitMediaId,
-            characterDir.id,
-          )
-          console.log('✅ 已删除旧的角色肖像:', characterDir.character.portraitMediaId)
-        } catch (error) {
-          console.error('删除旧肖像失败:', error)
-        }
-      }
-
-      // 更新角色文件夹的图片引用
-      characterDir.character.portraitMediaId = mediaId
-      // 保存参考图和图像比例
-      characterDir.character.refImages = refImages.value
-      characterDir.character.aspectRatio = aspectRatio.value
-    }
-
-    console.log('✅ 角色肖像生成任务已提交:', mediaId)
-  } catch (error) {
-    console.error('生成角色肖像失败:', error)
-    throw error
-  }
-}
-
-// 生成自我介绍
-async function handleGenerateIntro() {
-  if (!canGenerateIntro.value) return
-
-  isGeneratingIntro.value = true
-  try {
-    const character = unifiedStore.curCharacterDir
-    if (!character) {
-      throw new Error('角色文件夹不存在')
-    }
-
-    await generateCharacterIntro(character.id)
-    unifiedStore.messageSuccess(tFunc('media.character.generateIntroSuccess'))
-  } catch (error) {
-    console.error('生成自我介绍失败:', error)
-    const errorMessage =
-      error instanceof Error ? error.message : tFunc('media.character.generateIntroFailed')
-    unifiedStore.messageError(errorMessage)
-  } finally {
-    isGeneratingIntro.value = false
-  }
-}
-
-/**
- * 生成角色自我介绍
- * @param characterId 角色ID
- */
-async function generateCharacterIntro(characterId: string): Promise<void> {
-  // 1. 获取角色文件夹
-  const characterDir = unifiedStore.curCharacterDir
-  if (!characterDir) {
-    throw new Error('角色文件夹不存在')
-  }
-
-  // 2. 获取肖像媒体项
-  const portraitMediaId = characterDir.character.portraitMediaId
-  if (!portraitMediaId) {
-    throw new Error(tFunc('media.character.noPortrait'))
-  }
-
-  const mediaItem = unifiedStore.getMediaItem(portraitMediaId)
-  if (!mediaItem) {
-    throw new Error('找不到肖像媒体项')
-  }
-
-  // 3. 验证媒体项状态
-  if (!MediaItemQueries.isReady(mediaItem)) {
-    throw new Error(tFunc('media.character.portraitNotReady'))
-  }
-
-  // 4. 导出 imageClip 为 Blob
-  console.log('📤 [CharacterEditor] 导出肖像图片...')
-  const imageBlob = await exportMediaItem({ mediaItem })
-
-  // 5. 创建 File 对象
-  const imageFile = new File([imageBlob], `${characterDir.name}_portrait.png`, {
-    type: 'image/png',
-  })
-
-  // 6. 上传到 BLTCY
-  console.log('☁️ [CharacterEditor] 上传图片到 BLTCY...')
-  const uploadResult = await BltcyFileUploader.uploadFile(imageFile, {
-    onProgress: (progress) => {
-      console.log(`上传进度: ${progress}%`)
-    },
-  })
-
-  if (!uploadResult.success || !uploadResult.id) {
-    throw new Error(`图片上传失败: ${uploadResult.error}`)
-  }
-
-  console.log('✅ [CharacterEditor] 图片上传成功:', uploadResult.id)
-
-  // 7. 构建任务配置（参考 bltcy-sora2.json）
-  // 固定使用 9:16 竖屏，10秒时长
-  const taskConfig = {
-    id: 'bltcy-sora2', // 必须包含 id 字段
-    images: [uploadResult.url], // 使用上传后的文件 URL
-    prompt: introPrompt.value.trim(),
-    aspect_ratio: VIDEO_ASPECT_RATIO,
-    duration: VIDEO_DURATION,
-  }
-
-  // 8. 准备请求参数
-  const requestParams = {
-    ai_task_type: AITaskType.BLTCY_SORA2,
-    content_type: ContentType.VIDEO,
-    task_config: taskConfig,
-  }
-
-  console.log('🚀 [CharacterEditor] 提交自我介绍生成任务...', requestParams)
-
-  // 9. 提交任务到后端
-  const submitResult = await submitAIGenerationTask(requestParams)
-
-  // 10. 错误处理
-  if (!submitResult.success) {
-    const errorMessage = buildTaskErrorMessage(
-      submitResult.error_code,
-      submitResult.error_details,
-      tFunc,
-    )
-    throw new Error(errorMessage)
-  }
-
-  console.log(
-    `✅ [CharacterEditor] 任务提交成功: ${submitResult.task_id}, 成本: ${submitResult.cost}`,
-  )
-
-  // 11. 创建 AI 生成数据源
-  const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
-    {
-      type: 'ai-generation',
-      aiTaskId: submitResult.task_id,
-      requestParams: requestParams,
-      taskStatus: TaskStatus.PENDING,
-    },
-    SourceOrigin.USER_CREATE,
-  )
-
-  // 12. 生成媒体ID
-  const mediaId = generateMediaId('mp4')
-
-  // 13. 创建媒体项
-  const mediaItemData = unifiedStore.createUnifiedMediaItemData(
-    mediaId,
-    `${characterDir.name}_intro`,
-    aiSource,
-  )
-
-  // 14. 启动媒体处理流程
-  unifiedStore.startMediaProcessing(mediaItemData)
-
-  // 15. 添加到媒体库
-  unifiedStore.addMediaItem(mediaItemData)
-
-  // 16. 添加到角色文件夹
-  unifiedStore.addMediaToDirectory(mediaId, characterDir.id)
-
-  // 17. 保存自我介绍视频的引用（可选）
-  // characterDir.character.introMediaId = mediaId
-
-  console.log('✅ 自我介绍生成任务已提交:', mediaId)
 }
 </script>
 
@@ -761,8 +276,7 @@ async function generateCharacterIntro(characterId: string): Promise<void> {
 
 /* 表单输入框 */
 .form-input,
-.form-textarea,
-.form-select {
+.form-textarea {
   width: 100%;
   padding: var(--spacing-sm);
   background: var(--color-bg-quaternary);
@@ -774,18 +288,8 @@ async function generateCharacterIntro(characterId: string): Promise<void> {
   resize: vertical;
 }
 
-.form-select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
-}
-
 .form-input:focus,
-.form-textarea:focus,
-.form-select:focus {
+.form-textarea:focus {
   outline: none;
   border-color: var(--color-accent-primary);
 }
@@ -821,42 +325,6 @@ async function generateCharacterIntro(characterId: string): Promise<void> {
   color: #b7eb8f;
 }
 
-/* 分隔区域 */
-.section-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin: var(--spacing-xl) 0;
-}
-
-.divider-line {
-  flex: 1;
-  height: 1px;
-  background-color: var(--color-border-secondary);
-}
-
-.divider-text {
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-}
-
-/* 生成自我介绍按钮 */
-.form-actions :deep(.generate-intro-button) {
-  background-color: #1890ff;
-  color: #fff;
-}
-
-.form-actions :deep(.generate-intro-button:hover:not(:disabled)) {
-  background-color: #40a9ff;
-}
-
-.form-actions :deep(.generate-intro-button:disabled) {
-  background-color: #d9d9d9;
-  color: #8c8c8c;
-}
-
 /* 加载提示框 */
 .loading-indicator {
   display: flex;
@@ -887,14 +355,5 @@ async function generateCharacterIntro(characterId: string): Promise<void> {
   to {
     transform: rotate(360deg);
   }
-}
-
-/* 空状态 */
-.character-editor-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--color-text-secondary);
 }
 </style>

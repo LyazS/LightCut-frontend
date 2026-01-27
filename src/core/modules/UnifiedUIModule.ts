@@ -13,9 +13,8 @@ export interface CharacterEditorState {
   characterId: string | null // 正在编辑的角色 ID（仅编辑模式）
   // 创建模式的临时数据
   tempName: string // 临时角色名称
-  tempDescription: string // 临时角色描述
-  tempRefImages: FileData[] // 临时参考图 FileData 数组
-  tempAspectRatio: string // 临时图像比例（必选，初始值为 '1:1'）
+  tempRemark: string // 临时角色备注
+  tempRefVideo: FileData[] // 临时参考视频
 }
 
 /**
@@ -57,9 +56,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
     mode: 'none',
     characterId: null,
     tempName: '',
-    tempDescription: '',
-    tempRefImages: [],
-    tempAspectRatio: '1:1',
+    tempRemark: '',
+    tempRefVideo: [],
   })
 
   // 角色文件夹引用（计算属性）
@@ -130,9 +128,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         mode: 'create',
         characterId: null,
         tempName: '',
-        tempDescription: '',
-        tempRefImages: [],
-        tempAspectRatio: '1:1',
+        tempRemark: '',
+        tempRefVideo: [],
       }
     } else {
       // 编辑模式：设置角色ID
@@ -140,9 +137,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         mode: 'edit',
         characterId: characterId || null,
         tempName: '',
-        tempDescription: '',
-        tempRefImages: [],
-        tempAspectRatio: '1:1',
+        tempRemark: '',
+        tempRefVideo: [],
       }
     }
     console.log('✅ 角色编辑器已打开:', mode, characterId)
@@ -156,9 +152,8 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
       mode: 'none',
       characterId: null,
       tempName: '',
-      tempDescription: '',
-      tempRefImages: [],
-      tempAspectRatio: '1:1',
+      tempRemark: '',
+      tempRefVideo: [],
     }
     console.log('✅ 角色编辑器已关闭')
   }

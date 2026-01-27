@@ -16,6 +16,7 @@ import type {
   CharacterInfo,
   CharacterDirectory,
 } from '@/core/directory/types'
+import type { FileData } from '@/aipanel/aigenerate/types'
 import { DirectoryType } from '@/core/directory/types'
 import { ClipboardOperation as ClipboardOp } from '@/core/directory/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
@@ -103,7 +104,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function createCharacterDirectory(
     name: string,
-    description: string,
+    remark: string,
+    refVideo: FileData[] = [],
     parentId: string | null = null,
   ): CharacterDirectory {
     const characterDir: CharacterDirectory = {
@@ -115,10 +117,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
       childDirIds: [],
       mediaItemIds: [],
       character: {
-        description,
-        createdAt: new Date().toISOString(),
-        refImages: [],
-        aspectRatio: '1:1',
+        remark,
+        refVideo,
       },
     }
 
