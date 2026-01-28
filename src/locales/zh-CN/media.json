@@ -188,7 +188,10 @@
       "noPortrait": "请先生成角色肖像",
       "portraitNotReady": "角色肖像尚未生成完成，请稍后再试",
       "promptTooShort": "提示词至少需要10个字符",
-      "taskSubmitted": "任务已提交"
+      "taskSubmitted": "任务已提交",
+      "timestamps": "时间戳范围",
+      "timestampsStartPlaceholder": "开始时间",
+      "timestampsEndPlaceholder": "结束时间"
     }
   }
 }

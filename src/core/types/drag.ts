@@ -3,7 +3,7 @@
  * 基于新架构从零开始实现
  */
 
-import type { FileInputConfig, MultiFileData } from '@/aipanel/aigenerate/types'
+import type { FileInputConfig, MultiFileData } from '@/core/datasource/providers/ai-generation/types'
 
 // ==================== 拖拽源类型 ====================
 

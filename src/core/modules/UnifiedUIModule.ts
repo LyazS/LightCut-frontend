@@ -3,7 +3,7 @@ import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedDirectoryModule } from './UnifiedDirectoryModule'
 import type { CharacterDirectory } from '@/core/directory/types'
-import type { FileData } from '@/aipanel/aigenerate/types'
+import type { FileData } from '@/core/datasource/providers/ai-generation/types'
 
 /**
  * 角色编辑器状态接口
@@ -15,6 +15,7 @@ export interface CharacterEditorState {
   tempName: string // 临时角色名称
   tempRemark: string // 临时角色备注
   tempRefVideo: FileData[] // 临时参考视频
+  tempTimestamps: { st: number; ed: number } // 临时时间戳范围（开始时间和结束时间，单位：秒）
 }
 
 /**
@@ -58,6 +59,7 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
     tempName: '',
     tempRemark: '',
     tempRefVideo: [],
+    tempTimestamps: { st: 1, ed: 4 },
   })
 
   // 角色文件夹引用（计算属性）
@@ -130,6 +132,7 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         tempName: '',
         tempRemark: '',
         tempRefVideo: [],
+        tempTimestamps: { st: 1, ed: 4 },
       }
     } else {
       // 编辑模式：设置角色ID
@@ -139,6 +142,7 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
         tempName: '',
         tempRemark: '',
         tempRefVideo: [],
+        tempTimestamps: { st: 1, ed: 4 },
       }
     }
     console.log('✅ 角色编辑器已打开:', mode, characterId)
@@ -154,6 +158,7 @@ export function createUnifiedUIModule(registry: ModuleRegistry): {
       tempName: '',
       tempRemark: '',
       tempRefVideo: [],
+      tempTimestamps: { st: 1, ed: 4 },
     }
     console.log('✅ 角色编辑器已关闭')
   }

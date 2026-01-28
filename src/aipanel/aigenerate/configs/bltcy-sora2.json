@@ -32,8 +32,7 @@
       "placeholder": {
         "en": "Drag image here or from timeline, no image will text2video",
         "zh": "拖拽图片素材或时间轴片段到此处，无图片将会文生视频"
-      },
-      "required": true
+      }
     },
     {
       "type": "textarea-input",
@@ -47,7 +46,7 @@
         "zh": "描述你想要生成的视频动作..."
       },
       "required": true,
-      "maxLength": 1000
+      "maxLength": 5000
     },
     {
       "type": "select-input",

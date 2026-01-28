@@ -40,6 +40,30 @@
       <FileInputField :config="refVideoConfig" v-model="refVideo" :locale="fieldLocale" />
     </div>
 
+    <!-- 时间戳范围 -->
+    <div class="form-group">
+      <label>{{ tFunc('media.character.timestamps') }}</label>
+      <div class="timestamps-inputs">
+        <NumberInput
+          v-model="timestampsStart"
+          :min="0"
+          :step="1"
+          :precision="0"
+          :placeholder="tFunc('media.character.timestampsStartPlaceholder')"
+          class="timestamps-number-input"
+        />
+        <span class="timestamps-separator">-</span>
+        <NumberInput
+          v-model="timestampsEnd"
+          :min="0"
+          :step="1"
+          :precision="0"
+          :placeholder="tFunc('media.character.timestampsEndPlaceholder')"
+          class="timestamps-number-input"
+        />
+      </div>
+    </div>
+
     <!-- 生成按钮或加载提示 -->
     <div class="form-actions">
       <!-- 生成按钮 -->
@@ -72,6 +96,7 @@ import { useAppI18n } from '@/core/composables/useI18n'
 import { useCharacter } from '@/core/composables/useCharacter'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
+import NumberInput from '@/components/base/NumberInput.vue'
 import FileInputField from '@/aipanel/aigenerate/fields/FileInputField.vue'
 import type { MultiFileData } from '@/aipanel/aigenerate/types'
 import {
@@ -207,6 +232,74 @@ const characterRemark = computed({
   },
 })
 
+// 时间戳开始时间（支持创建和编辑模式）
+const timestampsStart = computed({
+  get: () => {
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      return unifiedStore.characterEditorState.tempTimestamps.st
+    } else {
+      const character = unifiedStore.curCharacterDir
+      return character?.character.timestamps.st || 1
+    }
+  },
+  set: (value: number) => {
+    // 获取当前的结束时间
+    let currentEnd = 0
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      currentEnd = unifiedStore.characterEditorState.tempTimestamps.ed
+    } else {
+      const character = unifiedStore.curCharacterDir
+      currentEnd = character?.character.timestamps.ed || 4
+    }
+
+    // 限制：结束时间 - 开始时间 <= 3，即开始时间 >= 结束时间 - 3
+    const constrainedValue = Math.max(Math.min(value, currentEnd - 1), currentEnd - 3)
+
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      unifiedStore.characterEditorState.tempTimestamps.st = constrainedValue
+    } else {
+      const character = unifiedStore.curCharacterDir
+      if (character) {
+        character.character.timestamps.st = constrainedValue
+      }
+    }
+  },
+})
+
+// 时间戳结束时间（支持创建和编辑模式）
+const timestampsEnd = computed({
+  get: () => {
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      return unifiedStore.characterEditorState.tempTimestamps.ed
+    } else {
+      const character = unifiedStore.curCharacterDir
+      return character?.character.timestamps.ed || 4
+    }
+  },
+  set: (value: number) => {
+    // 获取当前的开始时间
+    let currentStart = 0
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      currentStart = unifiedStore.characterEditorState.tempTimestamps.st
+    } else {
+      const character = unifiedStore.curCharacterDir
+      currentStart = character?.character.timestamps.st || 1
+    }
+
+    // 限制：结束时间 - 开始时间 >= 1 且 <= 3
+    const constrainedValue = Math.max(Math.min(value, currentStart + 3), currentStart + 1)
+
+    if (unifiedStore.characterEditorState.mode === 'create') {
+      unifiedStore.characterEditorState.tempTimestamps.ed = constrainedValue
+    } else {
+      const character = unifiedStore.curCharacterDir
+      if (character) {
+        character.character.timestamps.ed = constrainedValue
+      }
+    }
+  },
+})
+
 // 验证逻辑：只需要验证角色名称和参考视频
 const canGenerate = computed(() => {
   const name = characterName.value || ''
@@ -286,8 +379,8 @@ async function handleGenerate() {
       throw new Error('无法获取视频 URL')
     }
 
-    // 2. 确定时间戳（默认使用前3秒，后续可以让用户选择）
-    const timestamps = '1,4'  // 使用1-4秒
+    // 2. 确定时间戳（使用用户设置的值）
+    const timestamps = `${timestampsStart.value},${timestampsEnd.value}`
 
     // 3. 准备任务配置
     const taskConfig = {
@@ -387,6 +480,7 @@ async function handleGenerate() {
         characterRemark.value || '',
         refVideo.value,
         unifiedStore.currentDir?.id || null, // 使用当前目录作为父目录
+        { st: timestampsStart.value, ed: timestampsEnd.value }, // 传入时间戳
       )
       characterDirId = characterDir.id
       console.log('✅ [CharacterEditor] 角色文件夹创建成功:', characterDir.name)
@@ -524,6 +618,24 @@ function handleClose() {
   min-height: 80px;
 }
 
+/* 时间戳输入框容器 */
+.timestamps-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.timestamps-number-input {
+  flex: 1;
+  min-width: 100px;
+}
+
+.timestamps-separator {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
 /* 表单操作区 */
 .form-actions {
   margin-top: var(--spacing-lg);
@@ -547,8 +659,8 @@ function handleClose() {
 }
 
 .form-actions :deep(.generate-button:disabled) {
-  background-color: #d9f7be;
-  color: #b7eb8f;
+  background-color: #e8e8e8;
+  color: #999;
 }
 
 /* 加载提示框 */

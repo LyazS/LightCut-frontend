@@ -189,7 +189,7 @@ async function handleGenerate() {
           },
           () => {},
         )
-      } else if (uploadServer === 'runninghub2') {
+      } else if (uploadServer === 'runninghubstd') {
         newConfig = await RunningHubFileUploaderStd.processConfigUploads(
           aiConfig.value,
           unifiedStore.getMediaItem,
@@ -390,7 +390,7 @@ async function handleDebugOutput() {
 
         console.log('🔍 [GeneratePanel] 上传后的配置:')
         console.log(JSON.stringify(newConfig, null, 2))
-      } else if (uploadServer === 'runninghub2') {
+      } else if (uploadServer === 'runninghubstd') {
         newConfig = await RunningHubFileUploaderStd.processConfigUploads(
           aiConfig.value,
           unifiedStore.getMediaItem,

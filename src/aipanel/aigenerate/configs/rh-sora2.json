@@ -11,7 +11,7 @@
   "contentType": "video",
   "aiTaskType": "runninghub_generate_media",
   "subAiTaskType": "standard_api",
-  "uploadServer": "runninghub2",
+  "uploadServer": "runninghubstd",
   "cost": 0.1,
   "aiConfig": {
     "imageUrls": [],

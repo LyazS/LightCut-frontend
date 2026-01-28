@@ -3,7 +3,7 @@
  * 包含虚拟目录、标签页、显示项、剪贴板等相关接口
  */
 
-import type { FileData } from '@/aipanel/aigenerate/types'
+import type { FileData } from '@/core/datasource/providers/ai-generation/types'
 
 // ==================== 目录相关类型 ====================
 
@@ -23,6 +23,7 @@ export interface CharacterInfo {
   remark: string // 角色备注文本
   refVideo: FileData[] // 角色参考视频
   profileMediaItemId?: string // 可选：角色头像对应的 MediaItem ID
+  timestamps: { st: number; ed: number } // 时间戳范围（开始时间和结束时间，单位：秒）
 }
 
 /**

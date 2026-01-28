@@ -2,6 +2,7 @@
   <div class="multi-file-input-field">
     <label class="field-label">
       {{ config.label[locale] }}
+      <span v-if="isRequired" class="required-mark">*</span>
       <span v-if="maxFiles > 1" class="file-count"> ({{ fileList.length }}/{{ maxFiles }}) </span>
     </label>
 
@@ -92,8 +93,9 @@
     </div>
 
     <!-- 错误信息 -->
-    <div v-if="errorMessage" class="error-message">
-      {{ errorMessage }}
+    <div v-if="displayErrorMessage" class="error-message">
+      <component :is="IconComponents.WARNING" size="14px" />
+      <span>{{ displayErrorMessage }}</span>
     </div>
   </div>
 </template>
@@ -107,6 +109,7 @@ import type {
   FileData,
   MultiFileData,
   FileSlot,
+  FieldValidationError,
 } from '@/aipanel/aigenerate/types'
 import { FileItemStatus } from '@/aipanel/aigenerate/types'
 import { IconComponents } from '@/constants/iconComponents'
@@ -122,6 +125,7 @@ interface Props {
   config: FileInputConfig
   modelValue: MultiFileData
   locale: 'zh' | 'en'
+  error?: FieldValidationError  // 新增：验证错误
 }
 
 interface Emits {
@@ -141,8 +145,19 @@ const dragOverIndex = ref<number | null>(null)
 const errorMessage = ref<string | null>(null)
 const thumbnailUrls = ref<Map<number, string | null>>(new Map())
 
+// 是否显示必填标记
+const isRequired = computed(() => props.config.minFiles && props.config.minFiles > 0)
+
 // 最大文件数量
 const maxFiles = computed(() => props.config.maxFiles || 1)
+
+// 显示的错误消息（优先显示验证错误，其次显示操作错误）
+const displayErrorMessage = computed(() => {
+  if (props.error) {
+    return props.error.message[props.locale]
+  }
+  return errorMessage.value
+})
 
 // 计算应该显示的槽位数量（渐进式UI）
 const visibleSlots = computed(() => {
@@ -648,8 +663,17 @@ onUnmounted(() => {
   transform: scale(1.1);
 }
 
+/* 必填标记 */
+.required-mark {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
 /* 错误信息 */
 .error-message {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
   margin-top: var(--spacing-xs);
   font-size: var(--font-size-xs);
   color: var(--color-error);

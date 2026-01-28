@@ -103,6 +103,7 @@ export interface ProgressUpdateEvent extends BaseTaskStreamEvent {
   status: TaskStatus
   progress: number
   message: string
+  metadata?: Record<string, any>
 }
 
 /**
@@ -194,6 +195,8 @@ export interface BaseUIConfig {
   type: string
   label: I18nText
   path: string
+  required?: boolean  // 是否必填
+  placeholder?: I18nText
 }
 
 /**
@@ -212,6 +215,8 @@ export interface NumberInputConfig extends BaseUIConfig {
  */
 export interface TextareaInputConfig extends BaseUIConfig {
   type: 'textarea-input'
+  maxLength?: number  // 最大长度限制
+  minLength?: number  // 最小长度限制
 }
 
 /**
@@ -234,6 +239,7 @@ export interface FileInputConfig extends BaseUIConfig {
   accept?: string[] // 接受的文件类型，如 ['image', 'video']
   placeholder?: I18nText // 占位符文本
   maxFiles?: number // 最大文件数量，默认为 1
+  minFiles?: number // 最小文件数量，默认为 0
 }
 
 /**
@@ -285,6 +291,41 @@ export interface FileSlot {
   canAcceptDrop: boolean
 }
 
+// ==================== 验证相关类型 ====================
+
+/**
+ * 验证错误类型枚举
+ */
+export enum ValidationErrorType {
+  REQUIRED = 'required',           // 必填字段为空
+  MIN_LENGTH = 'minLength',        // 文本长度不足
+  MAX_LENGTH = 'maxLength',        // 文本长度超限
+  MIN_FILES = 'minFiles',          // 文件数量不足
+  MAX_FILES = 'maxFiles',          // 文件数量超限
+  MIN_VALUE = 'minValue',          // 数值小于最小值
+  MAX_VALUE = 'maxValue',          // 数值大于最大值
+  INVALID_FORMAT = 'invalidFormat' // 格式不正确
+}
+
+/**
+ * 单个字段的验证错误
+ */
+export interface FieldValidationError {
+  path: string           // 字段路径，如 'aiConfig.prompt'
+  fieldLabel: I18nText   // 字段标签
+  errorType: ValidationErrorType
+  message: I18nText      // 错误消息
+}
+
+/**
+ * 完整的验证结果
+ */
+export interface ValidationResult {
+  isValid: boolean                        // 是否通过验证
+  errors: FieldValidationError[]          // 错误列表
+  errorsByPath: Map<string, FieldValidationError>  // 按路径索引的错误
+}
+
 /**
  * UI 配置项联合类型
  */
@@ -293,7 +334,7 @@ export type UIConfig = NumberInputConfig | TextareaInputConfig | SelectInputConf
 /**
  * 上传服务器类型
  */
-export type UploadServerType = 'bizyair' | 'bltcy' | 'runninghub'
+export type UploadServerType = 'bizyair' | 'bltcy' | 'runninghub' | 'runninghubstd'
 
 /**
  * AI 生成配置结构

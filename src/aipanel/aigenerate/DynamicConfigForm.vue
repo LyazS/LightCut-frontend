@@ -11,6 +11,7 @@
         :config="fieldConfig as any"
         :modelValue="getFieldValue(fieldConfig.path)"
         :locale="locale"
+        :error="getFieldError(fieldConfig.path)"
         @update:modelValue="handleFieldChange(fieldConfig.path, $event)"
       />
       <div v-else class="field-error">
@@ -23,7 +24,7 @@
 <script setup lang="ts">
 import { cloneDeep } from 'lodash'
 import { FIELD_COMPONENT_MAP, type FieldType } from './fields'
-import type { UIConfig } from '@/aipanel/aigenerate/types'
+import type { UIConfig, FieldValidationError } from '@/aipanel/aigenerate/types'
 import { getValueByPath, setValueByPath } from './utils/pathUtils'
 
 interface Props {
@@ -32,6 +33,8 @@ interface Props {
   // AI配置对象（双向绑定，可修改）
   aiConfig: Record<string, any>
   locale: 'zh' | 'en'
+  // 验证错误映射（可选）
+  validationErrors?: Map<string, FieldValidationError>
 }
 
 interface Emits {
@@ -56,6 +59,11 @@ const normalizePath = (path: string): string => {
 const getFieldValue = (path: string) => {
   const normalizedPath = normalizePath(path)
   return getValueByPath(props.aiConfig, normalizedPath)
+}
+
+// 获取字段的验证错误
+const getFieldError = (path: string): FieldValidationError | undefined => {
+  return props.validationErrors?.get(path)
 }
 
 // 处理字段变化 - 使用 lodash 深拷贝后更新

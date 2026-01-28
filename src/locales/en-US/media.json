@@ -188,7 +188,10 @@
       "noPortrait": "Please generate character portrait first",
       "portraitNotReady": "Character portrait is not ready yet, please try again later",
       "promptTooShort": "Prompt must be at least 10 characters",
-      "taskSubmitted": "Task submitted"
+      "taskSubmitted": "Task submitted",
+      "timestamps": "Timestamp Range",
+      "timestampsStartPlaceholder": "Start Time",
+      "timestampsEndPlaceholder": "End Time"
     }
   }
 }

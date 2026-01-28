@@ -2,11 +2,12 @@
   <div class="select-field">
     <label class="field-label">
       {{ config.label[locale] }}
+      <span v-if="isRequired" class="required-mark">*</span>
     </label>
     <select
       :value="modelValue"
       @change="handleChange"
-      class="field-select"
+      :class="fieldClasses"
     >
       <option
         v-for="option in config.options"
@@ -16,16 +17,24 @@
         {{ option.label[locale] }}
       </option>
     </select>
+    <!-- 错误提示 -->
+    <div v-if="hasError" class="error-message">
+      <component :is="IconComponents.WARNING" size="14px" />
+      <span>{{ errorMessage }}</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { SelectInputConfig } from '@/core/datasource/providers/ai-generation'
+import { computed } from 'vue'
+import type { SelectInputConfig, FieldValidationError } from '@/aipanel/aigenerate/types'
+import { IconComponents } from '@/constants/iconComponents'
 
 interface Props {
   config: SelectInputConfig
   modelValue: string | number
   locale: 'zh' | 'en'
+  error?: FieldValidationError  // 新增：验证错误
 }
 
 interface Emits {
@@ -34,6 +43,24 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// 是否显示必填标记
+const isRequired = computed(() => props.config.required)
+
+// 是否有错误
+const hasError = computed(() => !!props.error)
+
+// 错误消息
+const errorMessage = computed(() => {
+  if (!props.error) return ''
+  return props.error.message[props.locale]
+})
+
+// 字段样式类
+const fieldClasses = computed(() => ({
+  'field-select': true,
+  'field-error': hasError.value
+}))
 
 const handleChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
@@ -75,5 +102,32 @@ const handleChange = (event: Event) => {
 .field-select:focus {
   outline: none;
   border-color: var(--color-accent-primary);
+}
+
+/* 必填标记 */
+.required-mark {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+/* 错误状态的选择框 */
+.field-select.field-error {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.field-select.field-error:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 2px var(--color-error-bg);
+}
+
+/* 错误消息 */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
 }
 </style>

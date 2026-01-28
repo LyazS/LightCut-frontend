@@ -29,19 +29,26 @@
           :uiConfig="uiConfig"
           :aiConfig="aiConfig"
           :locale="locale"
+          :validationErrors="validationResult.errorsByPath"
           @update:aiConfig="handleAiConfigUpdate"
         />
 
         <!-- 发送按钮 -->
-        <button
-          v-if="aiConfig"
-          class="generate-button"
-          :disabled="isGenerating"
-          @click="handleGenerate"
-        >
-          <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
-          <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ calculatedCost }}$)</span>
-        </button>
+        <n-tooltip :disabled="!generateButtonTooltip" placement="top">
+          <template #trigger>
+            <button
+              v-if="aiConfig"
+              class="generate-button"
+              :class="{ 'button-invalid': !isFormValid }"
+              :disabled="isGenerateDisabled"
+              @click="handleGenerate"
+            >
+              <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
+              <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ calculatedCost }}$)</span>
+            </button>
+          </template>
+          {{ generateButtonTooltip }}
+        </n-tooltip>
 
         <!-- 调试输出按钮 -->
         <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
@@ -55,14 +62,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NScrollbar } from 'naive-ui'
+import { NScrollbar, NTooltip } from 'naive-ui'
 import DynamicConfigForm from './DynamicConfigForm.vue'
 import { collection, type ConfigKey } from '@/aipanel/aigenerate/configs'
 import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
-import type { UIConfig } from '@/aipanel/aigenerate/types'
+import type { UIConfig, ValidationResult } from '@/aipanel/aigenerate/types'
 import { calculateTotalCost } from './utils/costCalculator'
+import { validateAiConfig } from './utils/validator'
 
 interface Props {
   selectedConfig: ConfigKey | ''
@@ -97,6 +105,40 @@ const calculatedCost = computed(() => {
   const config = collection[props.selectedConfig]
   const cost = calculateTotalCost(config, props.aiConfig)
   return cost.toFixed(2)
+})
+
+// 计算验证结果
+const validationResult = computed<ValidationResult>(() => {
+  if (!props.uiConfig || !props.aiConfig) {
+    return {
+      isValid: false,
+      errors: [],
+      errorsByPath: new Map()
+    }
+  }
+  return validateAiConfig(props.uiConfig, props.aiConfig, props.locale)
+})
+
+// 表单是否有效
+const isFormValid = computed(() => validationResult.value.isValid)
+
+// 生成按钮是否禁用
+const isGenerateDisabled = computed(() => {
+  return props.isGenerating || !isFormValid.value
+})
+
+// 获取生成按钮的提示文本
+const generateButtonTooltip = computed(() => {
+  if (props.isGenerating) {
+    return props.locale === 'zh' ? '生成中...' : 'Generating...'
+  }
+  if (!isFormValid.value) {
+    const errorCount = validationResult.value.errors.length
+    return props.locale === 'zh'
+      ? `请完成 ${errorCount} 个必填字段`
+      : `Please complete ${errorCount} required field(s)`
+  }
+  return ''
 })
 
 // 根据 contentType 获取对应的图标组件
@@ -231,6 +273,19 @@ const handleAiConfigUpdate = (value: Record<string, any>) => {
   color: var(--color-text-hint);
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* 无效状态的按钮样式 */
+.generate-button.button-invalid {
+  background: var(--color-bg-quaternary);
+  color: var(--color-text-hint);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.generate-button.button-invalid:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .button-icon {
