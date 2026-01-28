@@ -777,6 +777,19 @@ function onItemDoubleClick(item: DisplayItem): void {
       unifiedStore.navigateToDir(item.id)  // 普通文件夹导航
     }
   } else {
+    // 检查媒体是否已经ready
+    const mediaItem = getMediaItem(item.id)
+    if (!mediaItem) {
+      unifiedStore.messageError(t('media.mediaNotFound'))
+      return
+    }
+
+    // 只有ready状态的媒体才能预览
+    if (mediaItem.mediaStatus !== 'ready') {
+      unifiedStore.messageWarning(t('media.previewNotReady', { name: mediaItem.name }))
+      return
+    }
+
     // 打开媒体预览
     previewMediaItemId.value = item.id
     showMediaPreviewModal.value = true

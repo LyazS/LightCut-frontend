@@ -72,8 +72,10 @@ import {
 
   // 用户相关
   RiUserFill,
+  RiUserLine,
   RiUserFollowFill,
   RiUserUnfollowLine,
+  RiUserUnfollowFill,
   RiLogoutBoxLine,
   RiKeyLine,
 
@@ -202,8 +204,10 @@ export const IconComponents = {
 
   // 用户
   USER: RiUserFill,
+  USER_LINE: RiUserLine,
   USER_LOGIN: RiUserFollowFill,
   USER_LOGOUT: RiUserUnfollowLine,
+  USER_ERROR: RiUserUnfollowFill,
   LOGOUT: RiLogoutBoxLine,
   KEY: RiKeyLine,
 

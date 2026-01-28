@@ -17,7 +17,21 @@
         class="character-thumbnail"
         :class="thumbnailClass"
       />
-      <!-- 无头像缩略图：显示用户图标 -->
+      <!-- 错误状态：显示红色的用户取消关注图标 -->
+      <component
+        v-else-if="characterMediaStatus === 'error'"
+        :is="IconComponents.USER_ERROR"
+        :size="size"
+        class="error-color"
+      />
+      <!-- 未知状态：显示黄色的用户线条图标 -->
+      <component
+        v-else-if="characterMediaStatus === 'unknown'"
+        :is="IconComponents.USER_LINE"
+        :size="size"
+        class="warning-color"
+      />
+      <!-- 其他状态：显示默认用户图标 -->
       <component
         v-else
         :is="IconComponents.USER"
@@ -38,7 +52,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { IconComponents } from '@/constants/iconComponents'
-import { DirectoryType } from '@/core/directory/types'
 import { useCharacter } from '@/core/composables/useCharacter'
 
 interface Props {
@@ -92,6 +105,14 @@ const thumbnailClass = computed(() => {
 /* 颜色样式 */
 .accent-color {
   color: var(--color-accent-primary);
+}
+
+.error-color {
+  color: #ef4444; /* 红色 */
+}
+
+.warning-color {
+  color: #f59e0b; /* 黄色 */
 }
 
 /* 角色头像缩略图样式 */

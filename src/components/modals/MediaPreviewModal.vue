@@ -18,30 +18,24 @@
         <p>{{ t('media.mediaNotFound') }}</p>
       </div>
 
-      <!-- 非就绪状态提示 -->
-      <div v-else-if="mediaItem.mediaStatus !== 'ready'" class="preview-status">
-        <component :is="getStatusIcon()" size="48px" />
-        <p>{{ getStatusText() }}</p>
-      </div>
-
       <!-- 根据媒体类型显示对应的预览组件 -->
       <template v-else>
         <!-- 视频预览 -->
         <VideoPreviewPlayer
-          v-if="mediaItem.mediaType === 'video' && mediaItem.mediaStatus === 'ready'"
-          :media-item="mediaItem as VideoMediaItem & ReadyMediaItem"
+          v-if="readyVideoMediaItem"
+          :media-item="readyVideoMediaItem"
         />
 
         <!-- 图片预览 -->
         <ImagePreviewViewer
-          v-else-if="mediaItem.mediaType === 'image' && mediaItem.mediaStatus === 'ready'"
-          :media-item="mediaItem as ImageMediaItem & ReadyMediaItem"
+          v-else-if="readyImageMediaItem"
+          :media-item="readyImageMediaItem"
         />
 
         <!-- 音频预览 -->
         <AudioPreviewPlayer
-          v-else-if="mediaItem.mediaType === 'audio' && mediaItem.mediaStatus === 'ready'"
-          :media-item="mediaItem as AudioMediaItem & ReadyMediaItem"
+          v-else-if="readyAudioMediaItem"
+          :media-item="readyAudioMediaItem"
         />
 
         <!-- 不支持的类型 -->
@@ -65,6 +59,7 @@ import type {
   AudioMediaItem,
   ReadyMediaItem,
 } from '@/core'
+import { MediaItemQueries } from '@/core/mediaitem/queries'
 import { IconComponents } from '@/constants/iconComponents'
 import UniversalModal from './UniversalModal.vue'
 import VideoPreviewPlayer from '../preview/VideoPreviewPlayer.vue'
@@ -91,6 +86,27 @@ const mediaItem = computed<UnifiedMediaItemData | undefined>(() => {
   return unifiedStore.getMediaItem(props.mediaItemId)
 })
 
+// 使用类型守卫获取就绪的视频媒体项
+const readyVideoMediaItem = computed(() => {
+  return mediaItem.value && MediaItemQueries.isVideo(mediaItem.value) && MediaItemQueries.isReady(mediaItem.value)
+    ? (mediaItem.value as VideoMediaItem & ReadyMediaItem)
+    : null
+})
+
+// 使用类型守卫获取就绪的图片媒体项
+const readyImageMediaItem = computed(() => {
+  return mediaItem.value && MediaItemQueries.isImage(mediaItem.value) && MediaItemQueries.isReady(mediaItem.value)
+    ? (mediaItem.value as ImageMediaItem & ReadyMediaItem)
+    : null
+})
+
+// 使用类型守卫获取就绪的音频媒体项
+const readyAudioMediaItem = computed(() => {
+  return mediaItem.value && MediaItemQueries.isAudio(mediaItem.value) && MediaItemQueries.isReady(mediaItem.value)
+    ? (mediaItem.value as AudioMediaItem & ReadyMediaItem)
+    : null
+})
+
 // 处理显示状态更新
 function handleUpdateShow(value: boolean): void {
   emit('update:show', value)
@@ -100,50 +116,6 @@ function handleUpdateShow(value: boolean): void {
 function handleClose(): void {
   emit('close')
   emit('update:show', false)
-}
-
-// 获取状态图标
-function getStatusIcon() {
-  if (!mediaItem.value) return IconComponents.WARNING
-
-  switch (mediaItem.value.mediaStatus) {
-    case 'pending':
-      return IconComponents.LOADING
-    case 'asyncprocessing':
-      return IconComponents.LOADING
-    case 'decoding':
-      return IconComponents.LOADING
-    case 'error':
-      return IconComponents.ERROR
-    case 'cancelled':
-      return IconComponents.CLOSE
-    case 'missing':
-      return IconComponents.WARNING
-    default:
-      return IconComponents.WARNING
-  }
-}
-
-// 获取状态文本
-function getStatusText() {
-  if (!mediaItem.value) return t('media.mediaNotFound')
-
-  switch (mediaItem.value.mediaStatus) {
-    case 'pending':
-      return t('media.statusPending')
-    case 'asyncprocessing':
-      return t('media.statusProcessing')
-    case 'decoding':
-      return t('media.statusDecoding')
-    case 'error':
-      return t('media.statusError')
-    case 'cancelled':
-      return t('media.statusCancelled')
-    case 'missing':
-      return t('media.statusMissing')
-    default:
-      return t('media.statusUnknown')
-  }
 }
 </script>
 
@@ -156,8 +128,7 @@ function getStatusText() {
   min-height: 400px;
 }
 
-.preview-error,
-.preview-status {
+.preview-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -167,8 +138,7 @@ function getStatusText() {
   color: var(--color-text-secondary);
 }
 
-.preview-error p,
-.preview-status p {
+.preview-error p {
   font-size: var(--font-size-md);
   margin: 0;
 }

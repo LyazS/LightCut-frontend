@@ -61,6 +61,19 @@ export interface MediaGenerationRequest {
 }
 
 /**
+ * 任务结果数据接口
+ *
+ * 存储任务执行完成后的结果信息，包含生成的媒体文件 URL。
+ * 对应后端的 TaskResultData 模型。
+ */
+export interface TaskResultData {
+  /** 生成的媒体文件 URL */
+  url: string
+  /** BLTCY 任务ID（可选） */
+  bltcy_task_id?: string
+}
+
+/**
  * 文生图任务配置
  */
 export interface TextToImageConfig {
@@ -100,7 +113,7 @@ export interface FinalEvent extends BaseTaskStreamEvent {
   status: TaskStatus
   progress: number
   message: string
-  result_data?: Record<string, any> // 任务结果数据字典（仅完成时有值）
+  result_data?: TaskResultData // 任务结果数据（仅完成时有值）
 }
 
 /**

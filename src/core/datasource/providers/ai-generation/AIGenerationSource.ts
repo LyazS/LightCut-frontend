@@ -16,7 +16,7 @@ export * from './types'
 // 导入枚举（作为值）和类型
 import { AITaskType, ContentType, TaskStatus, TaskStreamEventType } from './types'
 
-import type { MediaGenerationRequest } from './types'
+import type { MediaGenerationRequest, TaskResultData } from './types'
 
 // ==================== 数据源接口定义 ====================
 
@@ -27,7 +27,7 @@ export interface BaseAIGenerationSourceData extends BaseDataSourceData {
   type: 'ai-generation'
   aiTaskId: string
   requestParams: MediaGenerationRequest
-  resultData?: Record<string, any> // 远程任务完成后的结果数据字典
+  resultData?: TaskResultData // 远程任务完成后的结果数据
   taskStatus: TaskStatus // 🌟 新增：持久化任务状态（必填）
 }
 

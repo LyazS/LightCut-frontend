@@ -150,6 +150,8 @@
       "failed": "失败",
       "cancelled": "已取消"
     },
+    "mediaNotFound": "未找到媒体",
+    "previewNotReady": "素材 \"{name}\" 尚未就绪，无法预览",
     "character": {
       "create": "创建",
       "createCharacter": "创建角色",
@@ -185,7 +187,8 @@
       "generateIntroFailed": "生成自我介绍失败",
       "noPortrait": "请先生成角色肖像",
       "portraitNotReady": "角色肖像尚未生成完成，请稍后再试",
-      "promptTooShort": "提示词至少需要10个字符"
+      "promptTooShort": "提示词至少需要10个字符",
+      "taskSubmitted": "任务已提交"
     }
   }
 }

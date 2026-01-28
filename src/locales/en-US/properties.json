@@ -181,7 +181,8 @@
       "actions": "Actions",
       "retry": "Retry",
       "cancel": "Cancel",
-      "errorDetails": "Error Details"
+      "errorDetails": "Error Details",
+      "canCreateCharacter": "Can Create Real Person Character"
     },
     "mediaTypes": {
       "video": "Video",

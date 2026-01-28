@@ -24,6 +24,7 @@ import type {
   HeartbeatEvent,
   MediaTypeInfo,
   PrepareFileResult,
+  TaskResultData,
 } from './types'
 import { type AIGenerationSourceData, mapContentTypeToMediaType } from './AIGenerationSource'
 
@@ -292,7 +293,7 @@ export class AIGenerationProcessor extends DataSourceProcessor {
    */
   private async handleFinalResult(
     taskId: string,
-    resultData: Record<string, any>,
+    resultData: TaskResultData,
     source: AIGenerationSourceData,
   ): Promise<File> {
     // 保存 resultData 到 source（持久化字段）

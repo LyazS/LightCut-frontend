@@ -150,6 +150,8 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
+    "mediaNotFound": "Media not found",
+    "previewNotReady": "Media \"{name}\" is not ready yet and cannot be previewed",
     "character": {
       "create": "Create",
       "createCharacter": "Create Character",
@@ -185,7 +187,8 @@
       "generateIntroFailed": "Failed to generate introduction",
       "noPortrait": "Please generate character portrait first",
       "portraitNotReady": "Character portrait is not ready yet, please try again later",
-      "promptTooShort": "Prompt must be at least 10 characters"
+      "promptTooShort": "Prompt must be at least 10 characters",
+      "taskSubmitted": "Task submitted"
     }
   }
 }
