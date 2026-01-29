@@ -13,11 +13,26 @@
   "uploadServer": "bizyair",
   "cost": 0.2,
   "aiConfig": {
-    "ref_images": [],
-    "prompt": "",
-    "seed": -1,
-    "aspect_ratio": "1:1",
-    "resolution": "1K"
+    "ref_images": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "seed": {
+      "type": "number",
+      "value": -1
+    },
+    "aspect_ratio": {
+      "type": "string",
+      "value": "1:1"
+    },
+    "resolution": {
+      "type": "string",
+      "value": "1K"
+    }
   },
   "uiConfig": [
     {

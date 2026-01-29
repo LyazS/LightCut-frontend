@@ -1,5 +1,5 @@
 import type { AIGenerateConfig } from '@/aipanel/aigenerate/types'
-import { getValueByPath } from './pathUtils'
+import { getValueByPathWithWrapper } from './pathUtils'
 
 /**
  * 计算动态成本
@@ -23,7 +23,7 @@ export function calculateTotalCost(
         ? selectConfig.path.slice(9)
         : selectConfig.path
       
-      const selectedValue = getValueByPath(aiConfig, path)
+      const selectedValue = getValueByPathWithWrapper(aiConfig, path)
       
       // 查找选中选项的 add_cost
       const selectedOption = selectConfig.options.find(

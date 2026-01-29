@@ -13,7 +13,7 @@ import type {
   SelectInputConfig,
 } from '../types'
 import { ValidationErrorType } from '../types'
-import { getValueByPath } from './pathUtils'
+import { getValueByPathWithWrapper } from './pathUtils'
 
 /**
  * 验证整个 AI 配置
@@ -62,7 +62,7 @@ export function validateField(
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
   const normalizedPath = normalizePath(fieldConfig.path)
-  const value = getValueByPath(aiConfig, normalizedPath)
+  const value = getValueByPathWithWrapper(aiConfig, normalizedPath)
 
   // 根据字段类型执行不同的验证
   switch (fieldConfig.type) {

@@ -25,7 +25,7 @@
 import { cloneDeep } from 'lodash'
 import { FIELD_COMPONENT_MAP, type FieldType } from './fields'
 import type { UIConfig, FieldValidationError } from '@/aipanel/aigenerate/types'
-import { getValueByPath, setValueByPath } from './utils/pathUtils'
+import { getValueByPathWithWrapper, setValueByPathWithWrapper } from './utils/pathUtils'
 
 interface Props {
   // UI配置数组（单向绑定，只读）
@@ -55,10 +55,10 @@ const normalizePath = (path: string): string => {
   return path.startsWith('aiConfig.') ? path.substring(9) : path
 }
 
-// 获取字段值 - 直接从 props.aiConfig 读取
+// 获取字段值 - 从包装器结构中读取 value
 const getFieldValue = (path: string) => {
   const normalizedPath = normalizePath(path)
-  return getValueByPath(props.aiConfig, normalizedPath)
+  return getValueByPathWithWrapper(props.aiConfig, normalizedPath)
 }
 
 // 获取字段的验证错误
@@ -66,12 +66,12 @@ const getFieldError = (path: string): FieldValidationError | undefined => {
   return props.validationErrors?.get(path)
 }
 
-// 处理字段变化 - 使用 lodash 深拷贝后更新
+// 处理字段变化 - 设置到包装器结构的 value
 const handleFieldChange = (path: string, value: any) => {
   const normalizedPath = normalizePath(path)
   // 深拷贝 aiConfig 避免直接修改 props
   const newConfig = cloneDeep(props.aiConfig)
-  setValueByPath(newConfig, normalizedPath, value)
+  setValueByPathWithWrapper(newConfig, normalizedPath, value)
   
   // 触发双向绑定更新事件
   emit('update:aiConfig', newConfig)

@@ -51,6 +51,7 @@ import {
   shouldShowRechargePrompt,
   isRetryableError,
 } from '@/utils/errorMessageBuilder'
+import { flattenAiConfig } from './utils/pathUtils'
 
 // 初始化 unifiedStore
 const unifiedStore = useUnifiedStore()
@@ -154,14 +155,16 @@ async function handleGenerate() {
     isGenerating.value = true
     const configData = collection[selectedConfig.value]
 
-    // 🆕 1. 根据 uploadServer 配置选择上传处理器
+    // 1. 扁平化 aiConfig，将包装器结构转换为简单结构
+    let newConfig = flattenAiConfig(aiConfig.value)
+
+    // 2. 根据 uploadServer 配置选择上传处理器
     const uploadServer = configData.uploadServer
-    let newConfig: Record<string, any> = cloneDeep(aiConfig.value)
 
     if (uploadServer) {
       if (uploadServer === 'bizyair') {
         newConfig = await BizyairFileUploader.processConfigUploads(
-          aiConfig.value,
+          newConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -171,7 +174,7 @@ async function handleGenerate() {
         )
       } else if (uploadServer === 'bltcy') {
         newConfig = await BltcyFileUploader.processConfigUploads(
-          aiConfig.value,
+          newConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -181,7 +184,7 @@ async function handleGenerate() {
         )
       } else if (uploadServer === 'runninghub') {
         newConfig = await RunningHubFileUploader.processConfigUploads(
-          aiConfig.value,
+          newConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -191,7 +194,7 @@ async function handleGenerate() {
         )
       } else if (uploadServer === 'runninghubstd') {
         newConfig = await RunningHubFileUploaderStd.processConfigUploads(
-          aiConfig.value,
+          newConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -205,20 +208,20 @@ async function handleGenerate() {
       }
     }
 
-    // 3. 准备请求参数
+    // 3. 准备请求参数（newConfig 已经是扁平化的）
     const requestParams: MediaGenerationRequest = {
       ai_task_type: configData.aiTaskType, // 使用配置中的 aiTaskType
       content_type: configData.contentType, // image, video, audio
       task_config: {
         id: configData.id, // 添加配置 id
-        ...newConfig, // AI配置（不包含 web_app_id）
+        ...newConfig, // 使用扁平化后的配置
       },
       sub_ai_task_type: configData.subAiTaskType, // 子任务类型（可选）
     }
 
     console.log('🚀 [GeneratePanel] 提交AI生成任务到后端...', requestParams)
 
-    // 2. 提交任务到后端
+    // 4. 提交任务到后端
     const submitResult = await submitAIGenerationTask(requestParams)
 
     // 3. 错误处理
@@ -342,7 +345,12 @@ async function handleDebugOutput() {
     console.warn('⚠️ [GeneratePanel] aiConfig 为空')
     return
   }
-  console.log(JSON.stringify(aiConfig.value, null, 2))
+
+  // 1. 扁平化配置用于调试
+  const flattenedConfig = flattenAiConfig(aiConfig.value)
+  console.log('🔍 [GeneratePanel] 扁平化后的配置:')
+  console.log(JSON.stringify(flattenedConfig, null, 2))
+
   try {
     // 根据 uploadServer 配置选择上传处理器（仅用于调试）
     if (!selectedConfig.value) {
@@ -356,7 +364,7 @@ async function handleDebugOutput() {
     if (uploadServer) {
       if (uploadServer === 'bizyair') {
         newConfig = await BizyairFileUploader.processConfigUploads(
-          aiConfig.value,
+          flattenedConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -368,7 +376,7 @@ async function handleDebugOutput() {
         console.log(JSON.stringify(newConfig, null, 2))
       } else if (uploadServer === 'bltcy') {
         newConfig = await BltcyFileUploader.processConfigUploads(
-          aiConfig.value,
+          flattenedConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -380,7 +388,7 @@ async function handleDebugOutput() {
         console.log(JSON.stringify(newConfig, null, 2))
       } else if (uploadServer === 'runninghub') {
         newConfig = await RunningHubFileUploader.processConfigUploads(
-          aiConfig.value,
+          flattenedConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {
@@ -392,7 +400,7 @@ async function handleDebugOutput() {
         console.log(JSON.stringify(newConfig, null, 2))
       } else if (uploadServer === 'runninghubstd') {
         newConfig = await RunningHubFileUploaderStd.processConfigUploads(
-          aiConfig.value,
+          flattenedConfig, // 传递扁平化后的配置
           unifiedStore.getMediaItem,
           unifiedStore.getTimelineItem,
           (fileIndex, stage, progress) => {

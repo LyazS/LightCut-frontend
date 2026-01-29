@@ -13,12 +13,30 @@
   "uploadServer": "bizyair",
   "cost": 0.05,
   "aiConfig": {
-    "ref_images": [],
-    "prompt": "",
-    "negative_prompt": "",
-    "width": 1024,
-    "height": 1024,
-    "seed": -1
+    "ref_images": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "negative_prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "width": {
+      "type": "number",
+      "value": 1024
+    },
+    "height": {
+      "type": "number",
+      "value": 1024
+    },
+    "seed": {
+      "type": "number",
+      "value": -1
+    }
   },
   "uiConfig": [
     {

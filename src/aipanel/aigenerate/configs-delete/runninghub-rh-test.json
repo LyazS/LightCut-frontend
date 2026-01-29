@@ -14,8 +14,14 @@
   "subAiTaskType": "comfyui",
   "cost": 0.1,
   "aiConfig": {
-    "image": [],
-    "value": "hi girls"
+    "image": {
+      "type": "array",
+      "value": []
+    },
+    "value": {
+      "type": "string",
+      "value": "hi girls"
+    }
   },
   "uiConfig": [
     {

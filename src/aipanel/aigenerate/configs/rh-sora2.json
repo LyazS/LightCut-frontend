@@ -14,10 +14,22 @@
   "uploadServer": "runninghubstd",
   "cost": 0.1,
   "aiConfig": {
-    "imageUrls": [],
-    "prompt": "",
-    "aspectRatio": "16:9",
-    "duration": "10"
+    "imageUrls": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "sora2prompt",
+      "value": ""
+    },
+    "aspectRatio": {
+      "type": "string",
+      "value": "16:9"
+    },
+    "duration": {
+      "type": "string",
+      "value": "10"
+    }
   },
   "uiConfig": [
     {
@@ -47,7 +59,8 @@
         "zh": "描述你想生成的视频内容..."
       },
       "required": true,
-      "maxLength": 5000
+      "maxLength": 5000,
+      "enableTag": true
     },
     {
       "type": "select-input",

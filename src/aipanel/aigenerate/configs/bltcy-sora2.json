@@ -13,10 +13,22 @@
   "uploadServer": "bltcy",
   "cost": 0.2,
   "aiConfig": {
-    "images": [],
-    "prompt": "",
-    "aspect_ratio": "16:9",
-    "duration": "10"
+    "images": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "sora2prompt",
+      "value": ""
+    },
+    "aspect_ratio": {
+      "type": "string",
+      "value": "16:9"
+    },
+    "duration": {
+      "type": "string",
+      "value": "10"
+    }
   },
   "uiConfig": [
     {
@@ -46,7 +58,8 @@
         "zh": "描述你想要生成的视频动作..."
       },
       "required": true,
-      "maxLength": 5000
+      "maxLength": 5000,
+      "enableTag": true
     },
     {
       "type": "select-input",

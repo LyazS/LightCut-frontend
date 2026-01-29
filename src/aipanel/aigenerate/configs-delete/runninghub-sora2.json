@@ -14,10 +14,22 @@
   "subAiTaskType": "comfyui",
   "cost": 1.0,
   "aiConfig": {
-    "image": [],
-    "prompt": "",
-    "model": "portrait",
-    "duration_seconds": 10
+    "image": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "sora2prompt",
+      "value": ""
+    },
+    "model": {
+      "type": "string",
+      "value": "portrait"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "value": 10
+    }
   },
   "uiConfig": [
     {
@@ -46,7 +58,8 @@
         "en": "Enter prompt to generate video",
         "zh": "输入提示词来生成视频"
       },
-      "required": true
+      "required": true,
+      "enableTag": true
     },
     {
       "type": "select-input",

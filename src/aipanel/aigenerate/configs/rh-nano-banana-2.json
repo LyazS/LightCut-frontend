@@ -14,10 +14,22 @@
   "uploadServer": "runninghubstd",
   "cost": 0.15,
   "aiConfig": {
-    "prompt": "",
-    "imageUrls": [],
-    "resolution": "1K",
-    "aspectRatio": "1:1"
+    "prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "imageUrls": {
+      "type": "array",
+      "value": []
+    },
+    "resolution": {
+      "type": "string",
+      "value": "1K"
+    },
+    "aspectRatio": {
+      "type": "string",
+      "value": "1:1"
+    }
   },
   "uiConfig": [
     {

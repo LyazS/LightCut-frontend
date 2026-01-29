@@ -4,12 +4,25 @@
       {{ config.label[locale] }}
       <span v-if="isRequired" class="required-mark">*</span>
     </label>
-    <textarea
-      :value="modelValue"
-      @input="handleInput"
-      :class="fieldClasses"
-      rows="4"
+    <!-- 根据 enableTag 决定使用 TagInput 还是普通的 textarea -->
+    <TagInput
+      v-if="enableTag"
+      :model-value="modelValue"
+      @update:model-value="emit('update:modelValue', $event)"
+      :available-tags="characterTags"
       :placeholder="getPlaceholder()"
+      :max-height="'400px'"
+      :min-height="'160px'"
+      :class="fieldClasses"
+    />
+    <textarea
+      v-else
+      :value="modelValue"
+      @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+      :placeholder="getPlaceholder()"
+      :maxlength="config.maxLength"
+      :class="fieldClasses"
+      class="plain-textarea"
     />
     <!-- 错误提示 -->
     <div v-if="hasError" class="error-message">
@@ -21,6 +34,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useUnifiedStore } from '@/core/unifiedStore'
+import TagInput from '@/components/base/TagInput.vue'
+import type { TagItem } from '@/components/base/TagInput.vue'
 import type { TextareaInputConfig, FieldValidationError } from '@/aipanel/aigenerate/types'
 import { IconComponents } from '@/constants/iconComponents'
 
@@ -28,7 +44,7 @@ interface Props {
   config: TextareaInputConfig
   modelValue: string
   locale: 'zh' | 'en'
-  error?: FieldValidationError  // 新增：验证错误
+  error?: FieldValidationError
 }
 
 interface Emits {
@@ -37,6 +53,11 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+const unifiedStore = useUnifiedStore()
+
+// 是否启用标签功能
+const enableTag = computed(() => props.config.enableTag ?? false)
 
 // 是否显示必填标记
 const isRequired = computed(() => props.config.required)
@@ -50,19 +71,74 @@ const errorMessage = computed(() => {
   return props.error.message[props.locale]
 })
 
+// 计算当前目录下的角色标签
+const characterTags = computed<TagItem[]>(() => {
+  const currentDir = unifiedStore.currentDir
+
+  if (!currentDir) {
+    return []
+  }
+
+  const tags: TagItem[] = []
+  const colorPalette = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+    '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16',
+  ]
+
+  for (const childDirId of currentDir.childDirIds) {
+    const childDir = unifiedStore.getDirectory(childDirId)
+
+    if (childDir && unifiedStore.isCharacterDirectory(childDir)) {
+      const characterDir = unifiedStore.getCharacterDirectory(childDirId)
+
+      if (characterDir) {
+        // 获取 sora2_username
+        let sora2Username: string | undefined
+        if (characterDir.character.profileMediaItemId) {
+          const mediaItem = unifiedStore.getMediaItem(characterDir.character.profileMediaItemId)
+          if (mediaItem && mediaItem.source.type === 'ai-generation' && mediaItem.source.resultData) {
+            sora2Username = mediaItem.source.resultData.sora2_username
+          }
+        }
+
+        // 只有当 sora2Username 存在时才添加到 tags
+        if (sora2Username) {
+          tags.push({
+            label: characterDir.name,
+            color: colorPalette[tags.length % colorPalette.length],
+            value: sora2Username
+          })
+        }
+      }
+    }
+  }
+
+  return tags
+})
+
 // 字段样式类
 const fieldClasses = computed(() => ({
-  'field-textarea': true,
+  'tag-input-wrapper': enableTag.value,
+  'plain-textarea': !enableTag.value,
   'field-error': hasError.value
 }))
 
-const handleInput = (event: Event) => {
-  const target = event.target as HTMLTextAreaElement
-  emit('update:modelValue', target.value)
-}
-
 const getPlaceholder = () => {
-  return props.config.placeholder?.[props.locale] || (props.locale === 'zh' ? '请输入内容...' : 'Enter content...')
+  // 如果有自定义占位符，使用自定义占位符
+  if (props.config.placeholder?.[props.locale]) {
+    return props.config.placeholder[props.locale]
+  }
+
+  // 根据 enableTag 返回不同的默认占位符
+  if (enableTag.value) {
+    return props.locale === 'zh'
+      ? '在这里输入文本，按 @ 键添加角色标签...'
+      : 'Enter text here, press @ to add character tags...'
+  } else {
+    return props.locale === 'zh'
+      ? '在这里输入文本...'
+      : 'Enter text here...'
+  }
 }
 </script>
 
@@ -79,39 +155,56 @@ const getPlaceholder = () => {
   font-weight: 500;
 }
 
-.field-textarea {
-  width: 100%;
-  padding: var(--spacing-sm);
-  background: var(--color-bg-quaternary);
-  border: 1px solid var(--color-border-secondary);
-  border-radius: var(--border-radius-small);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  font-family: inherit;
-  resize: vertical;
-  min-height: 80px;
-}
-
-.field-textarea:focus {
-  outline: none;
-  border-color: var(--color-accent-primary);
-}
-
 /* 必填标记 */
 .required-mark {
   color: var(--color-error);
   margin-left: 2px;
 }
 
-/* 错误状态的输入框 */
-.field-textarea.field-error {
+/* 错误状态 */
+:deep(.tag-input-editor.field-error) {
   border-color: var(--color-error);
   background: var(--color-error-bg);
 }
 
-.field-textarea.field-error:focus {
+:deep(.tag-input-editor.field-error:focus) {
   border-color: var(--color-error);
   box-shadow: 0 0 0 2px var(--color-error-bg);
+}
+
+/* 普通 textarea 样式 */
+.plain-textarea {
+  width: 100%;
+  min-height: 160px;
+  max-height: 400px;
+  padding: 1rem;
+  border: 2px solid #374151;
+  border-radius: 0.5rem;
+  background: #1f2937;
+  color: #e5e7eb;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  resize: vertical;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.plain-textarea:focus {
+  border-color: #60a5fa;
+}
+
+.plain-textarea.field-error {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.plain-textarea.field-error:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 2px var(--color-error-bg);
+}
+
+.plain-textarea::placeholder {
+  color: #6b7280;
 }
 
 /* 错误消息 */

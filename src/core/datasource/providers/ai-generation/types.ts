@@ -6,15 +6,27 @@
 // ==================== 枚举定义 ====================
 
 /**
+ * 字段类型枚举
+ */
+export enum FieldType {
+  STRING = 'string',
+  NUMBER = 'number',
+  ARRAY = 'array',
+  BOOLEAN = 'boolean',
+  OBJECT = 'object',
+  SORA2PROMPT = 'sora2prompt', // Sora2 提示词类型，支持标签转换
+}
+
+/**
  * AI任务类型枚举
  */
 export enum AITaskType {
   TEXT_TO_IMAGE = 'text_to_image',
   REMOTE_IMAGE = 'remote_image',
   BIZYAIR_GENERATE_MEDIA = 'bizyair_generate_media',
-  BLTCY_SORA2 = 'bltcy_sora2',  // BLTCY Sora2 视频生成（支持 T2V 和 I2V）
-  RUNNINGHUB_GENERATE_MEDIA = 'runninghub_generate_media',  // RunningHub 媒体生成
-  BLTCY_CHARACTER = 'bltcy_character',  // BLTCY 角色创建
+  BLTCY_SORA2 = 'bltcy_sora2', // BLTCY Sora2 视频生成（支持 T2V 和 I2V）
+  RUNNINGHUB_GENERATE_MEDIA = 'runninghub_generate_media', // RunningHub 媒体生成
+  BLTCY_CHARACTER = 'bltcy_character', // BLTCY 角色创建
 }
 
 /**
@@ -71,6 +83,8 @@ export interface TaskResultData {
   url: string
   /** BLTCY 任务ID（可选） */
   bltcy_task_id?: string
+  /** Sora2 角色用户名（可选） */
+  sora2_username?: string
 }
 
 /**
@@ -195,7 +209,7 @@ export interface BaseUIConfig {
   type: string
   label: I18nText
   path: string
-  required?: boolean  // 是否必填
+  required?: boolean // 是否必填
   placeholder?: I18nText
 }
 
@@ -215,8 +229,9 @@ export interface NumberInputConfig extends BaseUIConfig {
  */
 export interface TextareaInputConfig extends BaseUIConfig {
   type: 'textarea-input'
-  maxLength?: number  // 最大长度限制
-  minLength?: number  // 最小长度限制
+  maxLength?: number // 最大长度限制
+  minLength?: number // 最小长度限制
+  enableTag?: boolean // 是否启用标签功能（TagInput），默认为 false
 }
 
 /**
@@ -227,7 +242,7 @@ export interface SelectInputConfig extends BaseUIConfig {
   options: Array<{
     label: I18nText
     value: string | number
-    add_cost?: number  // 可选的额外成本字段
+    add_cost?: number // 可选的额外成本字段
   }>
 }
 
@@ -297,33 +312,33 @@ export interface FileSlot {
  * 验证错误类型枚举
  */
 export enum ValidationErrorType {
-  REQUIRED = 'required',           // 必填字段为空
-  MIN_LENGTH = 'minLength',        // 文本长度不足
-  MAX_LENGTH = 'maxLength',        // 文本长度超限
-  MIN_FILES = 'minFiles',          // 文件数量不足
-  MAX_FILES = 'maxFiles',          // 文件数量超限
-  MIN_VALUE = 'minValue',          // 数值小于最小值
-  MAX_VALUE = 'maxValue',          // 数值大于最大值
-  INVALID_FORMAT = 'invalidFormat' // 格式不正确
+  REQUIRED = 'required', // 必填字段为空
+  MIN_LENGTH = 'minLength', // 文本长度不足
+  MAX_LENGTH = 'maxLength', // 文本长度超限
+  MIN_FILES = 'minFiles', // 文件数量不足
+  MAX_FILES = 'maxFiles', // 文件数量超限
+  MIN_VALUE = 'minValue', // 数值小于最小值
+  MAX_VALUE = 'maxValue', // 数值大于最大值
+  INVALID_FORMAT = 'invalidFormat', // 格式不正确
 }
 
 /**
  * 单个字段的验证错误
  */
 export interface FieldValidationError {
-  path: string           // 字段路径，如 'aiConfig.prompt'
-  fieldLabel: I18nText   // 字段标签
+  path: string // 字段路径，如 'aiConfig.prompt'
+  fieldLabel: I18nText // 字段标签
   errorType: ValidationErrorType
-  message: I18nText      // 错误消息
+  message: I18nText // 错误消息
 }
 
 /**
  * 完整的验证结果
  */
 export interface ValidationResult {
-  isValid: boolean                        // 是否通过验证
-  errors: FieldValidationError[]          // 错误列表
-  errorsByPath: Map<string, FieldValidationError>  // 按路径索引的错误
+  isValid: boolean // 是否通过验证
+  errors: FieldValidationError[] // 错误列表
+  errorsByPath: Map<string, FieldValidationError> // 按路径索引的错误
 }
 
 /**
@@ -348,6 +363,39 @@ export interface AIGenerateConfig {
   uploadServer?: UploadServerType // 上传服务器类型，默认为 'default'
   subAiTaskType?: string // 子任务类型（可选），用于区分同一服务提供商的不同API类型
   cost: number // 生成成本
-  aiConfig: Record<string, any> // 不再包含 web_app_id
+  aiConfig: AIConfigWithWrapper // 使用包装器结构
   uiConfig: UIConfig[]
 }
+
+// ==================== 包装器结构类型 ====================
+
+/**
+ * 字段包装器类型
+ * 用于 aiConfig 中的字段，包含类型信息和实际值
+ */
+export interface FieldWrapper<T = any> {
+  type: FieldType
+  value: T
+}
+
+/**
+ * AI 配置字段类型
+ * 可能是字符串、数字或数组的包装器
+ */
+export type AIConfigField =
+  | FieldWrapper<boolean>
+  | FieldWrapper<string>
+  | FieldWrapper<number>
+  | FieldWrapper<any[]>
+
+/**
+ * AI 配置类型（带包装器）
+ * 前端内部使用的配置结构
+ */
+export type AIConfigWithWrapper = Record<string, AIConfigField>
+
+/**
+ * AI 配置类型（扁平化）
+ * 提交到后端时使用的配置结构
+ */
+export type AIConfigFlattened = Record<string, any>
