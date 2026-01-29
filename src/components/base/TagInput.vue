@@ -392,6 +392,9 @@ onUnmounted(() => {
   caret-color: #60a5fa;
   overflow-y: auto;
   color: #e5e7eb;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .tag-input-editor:focus {
