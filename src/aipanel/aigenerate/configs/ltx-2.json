@@ -1,0 +1,150 @@
+{
+  "id": "ltx-2",
+  "name": {
+    "en": "LTX-2 Text/Image to Video",
+    "zh": "LTX-2 文本/图片生成视频"
+  },
+  "description": {
+    "en": "Generate videos from text/images using LTX-2 model",
+    "zh": "使用 LTX-2 模型从文本/图片生成视频"
+  },
+  "contentType": "video",
+  "aiTaskType": "bizyair_generate_media",
+  "uploadServer": "bizyair",
+  "cost": 0.5,
+  "aiConfig": {
+    "ref_images": {
+      "type": "array",
+      "value": []
+    },
+    "prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "negative_prompt": {
+      "type": "string",
+      "value": ""
+    },
+    "aspect_ratio": {
+      "type": "string",
+      "value": "16:9"
+    },
+    "duration": {
+      "type": "number",
+      "value": 5
+    }
+  },
+  "uiConfig": [
+    {
+      "type": "file-input",
+      "label": {
+        "en": "Image",
+        "zh": "图片"
+      },
+      "path": "aiConfig.ref_images",
+      "accept": ["image"],
+      "maxFiles": 1,
+      "minFiles": 0,
+      "placeholder": {
+        "en": "Drag image here or from timeline, no image will text2video",
+        "zh": "拖拽图片素材或时间轴片段到此处，无图片将会文生视频"
+      }
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Prompt",
+        "zh": "提示词"
+      },
+      "path": "aiConfig.prompt",
+      "placeholder": {
+        "en": "Describe the video content you want to generate...",
+        "zh": "描述你想要生成的视频内容..."
+      },
+      "required": true,
+      "maxLength": 5000,
+      "enableTag": true
+    },
+    {
+      "type": "textarea-input",
+      "label": {
+        "en": "Negative Prompt",
+        "zh": "负面提示词"
+      },
+      "path": "aiConfig.negative_prompt",
+      "placeholder": {
+        "en": "Describe what you don't want in the video...",
+        "zh": "描述你不希望在视频中出现的内容..."
+      },
+      "maxLength": 5000
+    },
+    {
+      "type": "select-input",
+      "label": {
+        "en": "Aspect Ratio",
+        "zh": "宽高比"
+      },
+      "path": "aiConfig.aspect_ratio",
+      "options": [
+        {
+          "value": "16:9",
+          "label": {
+            "en": "16:9 (Landscape - 1280x720)",
+            "zh": "16:9 (横屏 - 1280x720)"
+          }
+        },
+        {
+          "value": "9:16",
+          "label": {
+            "en": "9:16 (Portrait - 720x1280)",
+            "zh": "9:16 (竖屏 - 720x1280)"
+          }
+        },
+        {
+          "value": "1:1",
+          "label": {
+            "en": "1:1 (Square - 1024x1024)",
+            "zh": "1:1 (方形 - 1024x1024)"
+          }
+        },
+        {
+          "value": "4:3",
+          "label": {
+            "en": "4:3 (Landscape - 1280x960)",
+            "zh": "4:3 (横屏 - 1280x960)"
+          }
+        },
+        {
+          "value": "3:4",
+          "label": {
+            "en": "3:4 (Portrait - 960x1280)",
+            "zh": "3:4 (竖屏 - 960x1280)"
+          }
+        },
+        {
+          "value": "21:9",
+          "label": {
+            "en": "21:9 (Ultrawide - 1680x720)",
+            "zh": "21:9 (超宽屏 - 1680x720)"
+          }
+        }
+      ]
+    },
+    {
+      "type": "number-input",
+      "label": {
+        "en": "Duration",
+        "zh": "时长"
+      },
+      "path": "aiConfig.duration",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "precision": 0,
+      "placeholder": {
+        "en": "Video duration (seconds)",
+        "zh": "视频时长（秒）"
+      }
+    }
+  ]
+}
