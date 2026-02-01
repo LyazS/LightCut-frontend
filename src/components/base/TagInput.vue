@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 // 类型定义
 export interface TagItem {
@@ -237,6 +237,9 @@ const setContent = (content: string) => {
   // 清空编辑器
   editorRef.value.innerHTML = ''
 
+  // 如果内容为空，直接返回
+  if (!content) return
+
   // 解析内容，查找 [[...]] 模式
   let lastIndex = 0
   const tagRegex = /\[\[(.*?)\]\]/g
@@ -289,12 +292,16 @@ const setContent = (content: string) => {
 watch(
   () => props.modelValue,
   (newValue) => {
-    // 避免循环更新：只有当编辑器内容与 modelValue 不一致时才更新
-    const currentContent = getTextContent()
-    if (currentContent !== newValue) {
-      setContent(newValue)
-    }
-  }
+    // 使用 nextTick 确保 DOM 已经渲染完成
+    nextTick(() => {
+      // 避免循环更新：只有当编辑器内容与 modelValue 不一致时才更新
+      const currentContent = getTextContent()
+      if (currentContent !== newValue) {
+        setContent(newValue)
+      }
+    })
+  },
+  { immediate: true } // 立即执行，确保初始化时同步
 )
 
 // 暴露方法给父组件

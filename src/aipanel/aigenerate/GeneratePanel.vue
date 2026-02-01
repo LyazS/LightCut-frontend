@@ -52,6 +52,7 @@ import {
   isRetryableError,
 } from '@/utils/errorMessageBuilder'
 import { flattenAiConfig } from './utils/pathUtils'
+import { ConfigCacheManager } from './utils/configCacheManager'
 
 // 初始化 unifiedStore
 const unifiedStore = useUnifiedStore()
@@ -98,17 +99,26 @@ const handleConfigChange = (value: ConfigKey) => {
   // 使用 lodash 深度拷贝 uiConfig（单向绑定，只读）
   uiConfig.value = cloneDeep(selectedConfigData.uiConfig)
 
-  // 使用 lodash 深度拷贝 aiConfig（双向绑定，可修改）
-  aiConfig.value = cloneDeep(selectedConfigData.aiConfig)
+  // 优先从缓存加载 aiConfig，失败则使用默认配置
+  const cachedConfig = ConfigCacheManager.loadConfig(value)
 
-  console.log('选中的配置:', value)
-  console.log('UI配置（只读）:', uiConfig.value)
-  console.log('AI配置（可修改）:', aiConfig.value)
+  if (cachedConfig) {
+    // 使用缓存的配置
+    aiConfig.value = cloneDeep(cachedConfig)
+  } else {
+    // 使用默认配置
+    aiConfig.value = cloneDeep(selectedConfigData.aiConfig)
+  }
 }
 
 // 处理 AI 配置更新
 const handleAiConfigUpdate = (value: Record<string, any>) => {
   aiConfig.value = value
+
+  // 自动保存到缓存
+  if (selectedConfig.value) {
+    ConfigCacheManager.saveConfig(selectedConfig.value, value)
+  }
 }
 
 /**
