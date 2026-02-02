@@ -2,11 +2,16 @@ import { useI18n } from 'vue-i18n'
 import type { I18nSchema } from '@/locales'
 import { useRouter } from 'vue-router'
 
-export function useAppI18n() {
+type AppI18nReturn = ReturnType<typeof createAppI18n>
+
+// 单例缓存
+let i18nCache: AppI18nReturn | null = null
+
+function createAppI18n() {
   const { t, locale, availableLocales } = useI18n<[I18nSchema], 'en-US' | 'zh-CN'>()
   const router = useRouter()
 
-  // 初始化语言设置（在 composable 内部自动执行）
+  // 初始化语言设置
   const savedLang = localStorage.getItem('preferred-language')
   const browserLang = navigator.language
 
@@ -64,6 +69,13 @@ export function useAppI18n() {
     languageOptions,
     updatePageTitle,
   }
+}
+
+export function useAppI18n() {
+  if (!i18nCache) {
+    i18nCache = createAppI18n()
+  }
+  return i18nCache
 }
 
 export type { I18nSchema }

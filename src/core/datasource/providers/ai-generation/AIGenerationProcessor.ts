@@ -309,13 +309,21 @@ export class AIGenerationProcessor extends DataSourceProcessor {
       throw new Error('resultData 中缺少 url 字段')
     }
 
+    let file: File
     if (this.isRemotePath(resultUrl)) {
       // 远程文件：直接下载
-      return await this.downloadRemoteFile(taskId, resultUrl, source)
+      file = await this.downloadRemoteFile(taskId, resultUrl, source)
     } else {
       // 本地文件：调用 /tasks/{id}/file
-      return await this.fetchLocalFile(taskId, source)
+      file = await this.fetchLocalFile(taskId, source)
     }
+
+    // 发送系统通知
+    const { useUnifiedStore } = await import('@/core/unifiedStore')
+    const store = useUnifiedStore()
+    await store.notifySystem('AI 生成完成', '您的媒体文件已成功生成')
+
+    return file
   }
 
   /**

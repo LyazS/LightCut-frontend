@@ -380,6 +380,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 加载弹窗方法
     createLoading: unifiedUseNaiveUIModule.createLoading,
 
+    // 系统通知方法
+    notifySystem: unifiedUseNaiveUIModule.notifySystem,
+
     initApi: unifiedUseNaiveUIModule.initApi,
 
     // ==================== 历史模块状态和方法 ====================

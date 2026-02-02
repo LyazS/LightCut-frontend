@@ -78,13 +78,10 @@
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
-      <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息"> 调试 </HoverButton> -->
-      <!-- <HoverButton @click="debugHistory" title="在控制台打印历史操作记录信息">
-        <template #icon>
-          <RemixIcon name="history-line" size="1x" />
-        </template>
-        历史
-      </HoverButton> -->
+      <!-- 测试通知按钮 -->
+      <HoverButton @click="testNotification" title="测试系统通知功能">
+        测试通知
+      </HoverButton>
     </div>
   </div>
 </template>
@@ -438,6 +435,21 @@ function debugHistory() {
   console.log('📊 历史记录摘要:', historySummary)
 
   console.groupEnd()
+}
+
+/**
+ * 测试系统通知功能
+ */
+async function testNotification() {
+  console.log('🔔 测试系统通知功能...')
+
+  const success = await unifiedStore.notifySystem('测试通知', '这是一条测试系统通知的消息')
+
+  if (success) {
+    console.log('✅ 系统通知已发送')
+  } else {
+    console.log('⚠️ 系统通知发送失败（可能是权限未授予或浏览器不支持）')
+  }
 }
 </script>
 
