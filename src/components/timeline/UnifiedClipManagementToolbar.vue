@@ -78,10 +78,6 @@
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
-      <!-- 测试通知按钮 -->
-      <HoverButton @click="testNotification" title="测试系统通知功能">
-        测试通知
-      </HoverButton>
     </div>
   </div>
 </template>
@@ -437,20 +433,6 @@ function debugHistory() {
   console.groupEnd()
 }
 
-/**
- * 测试系统通知功能
- */
-async function testNotification() {
-  console.log('🔔 测试系统通知功能...')
-
-  const success = await unifiedStore.notifySystem('测试通知', '这是一条测试系统通知的消息')
-
-  if (success) {
-    console.log('✅ 系统通知已发送')
-  } else {
-    console.log('⚠️ 系统通知发送失败（可能是权限未授予或浏览器不支持）')
-  }
-}
 </script>
 
 <style scoped>

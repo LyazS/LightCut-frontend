@@ -538,7 +538,7 @@ export function createUnifiedUseNaiveUIModule() {
       const notification = new Notification(title, {
         body: body,
         silent: true,  // 静默推送，不发出声音
-        icon: '/icon/favicon-96x96.png',  // 使用应用图标
+        icon: '/logo-ok/favicon-96x96.png',  // 使用应用图标
       })
 
       // 点击通知时聚焦回网页

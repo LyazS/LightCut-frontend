@@ -137,7 +137,7 @@
       },
       "path": "aiConfig.duration",
       "min": 1,
-      "max": 10,
+      "max": 20,
       "step": 1,
       "precision": 0,
       "placeholder": {
