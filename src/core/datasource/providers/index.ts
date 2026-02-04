@@ -4,3 +4,4 @@
 
 export * from './user-selected'
 export * from './ai-generation'
+export * from './bizyair'

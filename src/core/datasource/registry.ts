@@ -10,6 +10,7 @@ import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTyp
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { UserSelectedFileProcessor } from '@/core/datasource/providers/user-selected/UserSelectedFileProcessor'
 import { AIGenerationProcessor } from '@/core/datasource/providers/ai-generation/AIGenerationProcessor'
+import { BizyAirProcessor } from '@/core/datasource/providers/bizyair/BizyAirProcessor'
 
 // ==================== 类型定义 ====================
 
@@ -72,6 +73,13 @@ export class DataSourceRegistry {
   }
 
   /**
+   * 获取BizyAir处理器
+   */
+  getBizyAirProcessor(): BizyAirProcessor | undefined {
+    return this.processors.get('bizyair') as BizyAirProcessor | undefined
+  }
+
+  /**
    * 获取所有处理器
    */
   getAllProcessors(): Map<string, DataSourceProcessor> {
@@ -115,6 +123,9 @@ export class DataSourceRegistry {
 
     // 注册AI生成处理器
     this.register('ai-generation', AIGenerationProcessor.getInstance())
+
+    // 注册BizyAir处理器
+    this.register('bizyair', BizyAirProcessor.getInstance())
   }
 
   // ==================== 便捷方法 ====================
