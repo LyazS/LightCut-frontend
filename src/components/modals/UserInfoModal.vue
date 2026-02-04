@@ -64,6 +64,28 @@
           </button>
         </div>
       </div>
+
+      <!-- BizyAir API Key 配置区域 -->
+      <div class="bizyair-apikey-section">
+        <div class="section-title">
+          <component :is="IconComponents.SETTINGS" size="16px" />
+          {{ t('user.bizyairConfig') }}
+        </div>
+        <input
+          v-model="unifiedStore.bizyairApiKey"
+          type="password"
+          :placeholder="t('user.bizyairApiKeyPlaceholder')"
+          class="apikey-input-full"
+          @blur="handleSaveBizyAirApiKey"
+        />
+        <div v-if="!hasApiKey" class="apikey-hint">
+          {{ t('user.bizyairApiKeyHint') }}
+        </div>
+        <div v-else class="apikey-status">
+          <component :is="IconComponents.CHECK" size="14px" />
+          {{ t('user.bizyairApiKeyConfigured') }}
+        </div>
+      </div>
     </div>
 
     <template #footer>
@@ -83,7 +105,7 @@ import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { User } from '@/core/modules/UnifiedUserModule'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
@@ -91,6 +113,11 @@ const unifiedStore = useUnifiedStore()
 // 激活码相关状态
 const activationCode = ref('')
 const isLoading = ref(false)
+
+// 检查是否已配置 API Key
+const hasApiKey = computed(() => {
+  return unifiedStore.hasBizyAirApiKey()
+})
 
 // 定义props
 const props = defineProps<{
@@ -156,6 +183,19 @@ async function handleUseActivationCode() {
     console.warn('激活码使用失败:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+// 保存 BizyAir API Key
+function handleSaveBizyAirApiKey() {
+  const apiKey = unifiedStore.bizyairApiKey.trim()
+
+  if (apiKey) {
+    // 有内容则保存
+    unifiedStore.saveBizyAirApiKey(apiKey)
+  } else {
+    // 为空则清除已保存的 key
+    unifiedStore.clearBizyAirApiKey()
   }
 }
 </script>
@@ -306,5 +346,60 @@ async function handleUseActivationCode() {
 .use-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* BizyAir API Key 配置区域样式 */
+.bizyair-apikey-section {
+  width: 100%;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.apikey-input-full {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-small);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.apikey-input-full:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.apikey-input-full::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.apikey-hint {
+  margin-top: var(--spacing-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.apikey-status {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
 }
 </style>

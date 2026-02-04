@@ -261,6 +261,8 @@ export const IconComponents = {
   TEXT_LINE: RiText,
   LAYOUT: RiLayoutGridLine,
   TOOLS: RiToolsLine,
+  SETTINGS: RiToolsLine,
+  SAVE: RiDownloadLine,
 } as const
 
 /**

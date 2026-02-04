@@ -493,6 +493,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     isLoggingIn: unifiedUserModule.isLoggingIn,
     isRegistering: unifiedUserModule.isRegistering,
     isUsingActivationCode: unifiedUserModule.isUsingActivationCode,
+    bizyairApiKey: unifiedUserModule.bizyairApiKey,
 
     // 用户认证方法
     login: unifiedUserModule.login,
@@ -506,6 +507,12 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 激活码功能
     useActivationCode: unifiedUserModule.useActivationCode,
+
+    // BizyAir API Key 管理
+    saveBizyAirApiKey: unifiedUserModule.saveBizyAirApiKey,
+    getBizyAirApiKey: unifiedUserModule.getBizyAirApiKey,
+    clearBizyAirApiKey: unifiedUserModule.clearBizyAirApiKey,
+    hasBizyAirApiKey: unifiedUserModule.hasBizyAirApiKey,
 
     // ==================== 工具函数导出 ====================
     getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
