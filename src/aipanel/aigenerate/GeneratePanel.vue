@@ -16,7 +16,7 @@
       :is-generating="isGenerating"
       :locale="currentLang"
       @back="handleBack"
-      @generate="handleGenerate"
+      @generate="handleGenerateBizyAir"
       @debug-output="handleDebugOutput"
       @update:aiConfig="handleAiConfigUpdate"
     />
@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { cloneDeep } from 'lodash'
 import ConfigCardGrid from './ConfigCardGrid.vue'
 import ConfigFormView from './ConfigFormView.vue'
@@ -46,6 +46,14 @@ import {
 import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
+import {
+  BizyAirSourceFactory,
+  BizyAirTaskStatus,
+} from '@/core/datasource/providers/bizyair/BizyAirSource'
+import { BizyAirAPIClient } from '@/core/datasource/providers/bizyair/BizyAirAPIClient'
+import { BizyAirConfigManager } from '@/core/datasource/providers/bizyair/BizyAirConfigManager'
+import { BizyAirProcessor } from '@/core/datasource/providers/bizyair/BizyAirProcessor'
+import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import {
   buildTaskErrorMessage,
   shouldShowRechargePrompt,
@@ -430,6 +438,217 @@ async function handleDebugOutput() {
     unifiedStore.messageError(`调试失败: ${error instanceof Error ? error.message : '未知错误'}`)
   }
 }
+
+/**
+ * 处理生成按钮点击 - 使用 BizyAirProcessor 直接调用 BizyAir API
+ * 参考 handleGenerate 方法，但不通过后端，直接调用 BizyAir API
+ */
+async function handleGenerateBizyAir() {
+  if (!selectedConfig.value || !aiConfig.value) {
+    return
+  }
+
+  try {
+    isGenerating.value = true
+    const configData = collection[selectedConfig.value]
+
+    // 1. 扁平化 aiConfig，将包装器结构转换为简单结构
+    let newConfig = flattenAiConfig(aiConfig.value)
+
+    // 2. 根据 uploadServer 配置选择上传处理器
+    const uploadServer = configData.uploadServer
+
+    if (uploadServer) {
+      if (uploadServer === 'bizyair') {
+        newConfig = await BizyairFileUploader.processConfigUploads(
+          newConfig, // 传递扁平化后的配置
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {},
+        )
+      } else if (uploadServer === 'bltcy') {
+        newConfig = await BltcyFileUploader.processConfigUploads(
+          newConfig, // 传递扁平化后的配置
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {},
+        )
+      } else if (uploadServer === 'runninghub') {
+        newConfig = await RunningHubFileUploader.processConfigUploads(
+          newConfig, // 传递扁平化后的配置
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {},
+        )
+      } else if (uploadServer === 'runninghubstd') {
+        newConfig = await RunningHubFileUploaderStd.processConfigUploads(
+          newConfig, // 传递扁平化后的配置
+          unifiedStore.getMediaItem,
+          unifiedStore.getTimelineItem,
+          (fileIndex, stage, progress) => {
+            console.log(`文件 ${fileIndex + 1}: ${stage} ${progress}%`)
+          },
+          () => {},
+        )
+      } else {
+        // TODO: 实现其他上传处理器
+        throw new Error(`不支持的上传服务器: ${uploadServer}`)
+      }
+    }
+
+    // 3. 准备请求参数（newConfig 已经是扁平化的）
+    const requestParams = {
+      ai_task_type: configData.aiTaskType, // 使用配置中的 aiTaskType
+      content_type: configData.contentType, // image, video, audio
+      task_config: {
+        id: configData.id, // 添加配置 id
+        ...newConfig, // 使用扁平化后的配置
+      },
+      sub_ai_task_type: configData.subAiTaskType, // 子任务类型（可选）
+    }
+
+    console.log('🚀 [GeneratePanel] 准备提交 BizyAir 任务...', requestParams)
+
+    // 4. 获取 BizyAir API Key
+    const apiKey = await unifiedStore.getBizyAirApiKey()
+    if (!apiKey) {
+      unifiedStore.dialogWarning({
+        title: t('media.error.apiKeyMissing'),
+        content: '请先在设置中配置 BizyAir API Key',
+        positiveText: t('media.confirm'),
+        negativeText: t('media.cancel'),
+        onPositiveClick: () => {
+          // TODO: 跳转到设置页面
+          console.log('跳转到设置页面')
+        },
+      })
+      return
+    }
+
+    // 5. 获取 BizyAir 应用配置
+    const appConfig = BizyAirConfigManager.getConfig(requestParams.task_config)
+    console.log('📋 [GeneratePanel] BizyAir 应用配置:', appConfig)
+
+    // 6. 构建 BizyAir API 请求数据
+    const bizyAirRequestData = BizyAirConfigManager.getRequestBuilder(requestParams.task_config)(
+      requestParams.task_config,
+      appConfig
+    )
+    console.log('📤 [GeneratePanel] BizyAir API 请求数据:', bizyAirRequestData)
+
+    // 7. 提交任务到 BizyAir API
+    const bizyairTaskId = await BizyAirAPIClient.submitAsyncTask(bizyAirRequestData, apiKey)
+    console.log(`✅ [GeneratePanel] BizyAir 任务提交成功: ${bizyairTaskId}`)
+
+    // 8. 创建 BizyAir 数据源
+    const bizyAirSource = BizyAirSourceFactory.createBizyAirSource(
+      {
+        type: 'bizyair',
+        bizyairTaskId: bizyairTaskId,
+        requestParams: requestParams,
+        taskStatus: BizyAirTaskStatus.QUEUING, // 初始状态为 QUEUING
+      },
+      SourceOrigin.USER_CREATE
+    )
+
+    // 9. 创建媒体项目（直接创建，不使用 createUnifiedMediaItemData）
+    // 根据内容类型确定文件扩展名
+    let extension = 'png'
+    let mediaType: 'image' | 'video' | 'audio' = 'image'
+
+    if (configData.contentType === 'video') {
+      extension = 'mp4'
+      mediaType = 'video'
+    } else if (configData.contentType === 'audio') {
+      extension = 'mp3'
+      mediaType = 'audio'
+    }
+
+    const mediaId = generateMediaId(extension)
+    const mediaName = `${configData.name[currentLang.value]}_${Date.now()}`
+
+    // 直接创建 UnifiedMediaItemData 对象
+    const mediaItem: UnifiedMediaItemData = reactive({
+      id: mediaId,
+      name: mediaName,
+      createdAt: new Date().toISOString(),
+      mediaStatus: 'pending',
+      mediaType,
+      source: bizyAirSource,
+      runtime: {},
+    })
+
+    // 10. 添加到媒体库
+    unifiedStore.addMediaItem(mediaItem)
+
+    // 11. 根据输出位置添加到目录
+    if (outputLocation.value === 'current') {
+      // 添加到当前目录
+      if (unifiedStore.currentDir) {
+        unifiedStore.addMediaToDirectory(mediaId, unifiedStore.currentDir.id)
+      } else {
+        console.warn('⚠️ [GeneratePanel] 当前目录不存在，无法添加媒体项')
+      }
+    } else {
+      // 添加到临时目录
+      // TODO: 实现临时目录逻辑
+      // 可以创建一个专门的"AI生成"目录
+      console.log('📁 [GeneratePanel] 添加到临时目录（待实现）')
+    }
+
+    // 12. 使用 unifiedStore 启动媒体处理流程
+    unifiedStore.startMediaProcessing(mediaItem)
+
+    // 13. 显示成功消息
+    unifiedStore.messageSuccess(t('aiPanel.taskSubmitted'))
+
+    console.log('✅ [GeneratePanel] BizyAir 生成流程启动完成')
+  } catch (error) {
+    console.error('❌ [GeneratePanel] BizyAir 任务提交失败:', error)
+
+    // 处理 BizyAir API 错误
+    const errorMessage = error instanceof Error ? error.message : '未知错误'
+
+    // 检查是否是认证错误
+    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('API Key')) {
+      unifiedStore.dialogWarning({
+        title: t('media.error.apiKeyInvalid'),
+        content: errorMessage + '\n\n请检查您的 BizyAir API Key 配置',
+        positiveText: t('media.confirm'),
+        negativeText: t('media.cancel'),
+        onPositiveClick: () => {
+          // TODO: 跳转到设置页面
+          console.log('跳转到设置页面')
+        },
+      })
+    } else if (errorMessage.includes('429')) {
+      unifiedStore.dialogWarning({
+        title: t('media.error.rateLimit'),
+        content: errorMessage + '\n\n请稍后再试',
+        positiveText: t('media.confirm'),
+        negativeText: t('media.cancel'),
+      })
+    } else {
+      unifiedStore.messageError(
+        t('aiPanel.submitFailed', {
+          error: errorMessage,
+        })
+      )
+    }
+  } finally {
+    isGenerating.value = false
+  }
+}
+
 </script>
 
 <style scoped>

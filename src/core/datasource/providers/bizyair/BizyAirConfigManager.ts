@@ -13,16 +13,40 @@
 
 import type { BizyAirAppConfig } from './types'
 
-// ==================== 配置选择器导入 ====================
-
-// 默认配置组（作为 fallback）
-import { selectConfig as defaultSelectConfig } from './configs/default/configSelector'
-
-
-// ==================== 请求构建器导入 ====================
+// ==================== 请求构建器类导入 ====================
 
 // 导入 BizyAir 请求构建器类
 import { BizyAirRequestBuilder } from './BizyAirRequestBuilder'
+
+// ==================== 动态导入配置 ====================
+
+/**
+ * 动态加载所有配置选择器
+ * 使用 Vite 的 import.meta.glob API 在构建时静态分析并导入所有匹配的模块
+ */
+const selectorModules = import.meta.glob('./configs/*/configSelector.ts', {
+  eager: true
+})
+
+/**
+ * 动态加载所有请求构建器
+ */
+const builderModules = import.meta.glob('./configs/*/requestBuilder.ts', {
+  eager: true
+})
+
+/**
+ * 提取配置组 ID 的辅助函数
+ * 从模块导出的 SELECTOR_ID 常量提取配置 ID
+ */
+function extractConfigId(_path: string, module: any): string | null {
+  return module.SELECTOR_ID || null
+}
+
+// ==================== 默认配置导入 ====================
+
+// 单独导入 default 配置作为 fallback
+import { selectConfig as defaultSelectConfig } from './configs/default/configSelector'
 
 // ==================== 配置选择器类型定义 ====================
 
@@ -58,22 +82,55 @@ export class BizyAirConfigManager {
    * 选择器映射表
    * key: 配置组 ID (task_config['id'])
    * value: 配置选择器函数
+   *
+   * 使用动态导入自动构建，从 configs 目录自动发现所有配置组
    */
-  private static selectorMap: Map<string, ConfigSelector> = new Map([
-    // Default configuration is the fallback selector
-  ])
+  private static selectorMap: Map<string, ConfigSelector> = new Map(
+    (function () {
+      const map = new Map<string, ConfigSelector>()
+
+      for (const [path, module] of Object.entries(selectorModules)) {
+        const configId = extractConfigId(path, module)
+        if (configId && configId !== 'default') {
+          const selector = (module as any).selectConfig
+          if (selector) {
+            map.set(configId, selector)
+            console.log(`[BizyAirConfigManager] 自动注册配置选择器: ${configId}`)
+          }
+        }
+      }
+
+      return map
+    })()
+  )
 
   /**
    * 构建器映射表
    * key: 配置组 ID
    * value: 请求构建器函数
    *
+   * 使用动态导入自动构建，从 configs 目录自动发现所有配置组
    * 注意：由于所有配置组都使用相同的 BizyAirRequestBuilder.build() 方法，
    * 只是参数预处理不同，因此这里存储的是各个配置组的自定义构建器函数
    */
-  private static builderMap: Map<string, RequestBuilder> = new Map([
-    // All configurations now use the default builder
-  ])
+  private static builderMap: Map<string, RequestBuilder> = new Map(
+    (function () {
+      const map = new Map<string, RequestBuilder>()
+
+      for (const [path, module] of Object.entries(builderModules)) {
+        const configId = extractConfigId(path, module)
+        if (configId && configId !== 'default') {
+          const builder = (module as any).buildRequestData
+          if (builder) {
+            map.set(configId, builder)
+            console.log(`[BizyAirConfigManager] 自动注册请求构建器: ${configId}`)
+          }
+        }
+      }
+
+      return map
+    })()
+  )
 
   /**
    * 默认选择器（当找不到匹配的配置组时使用）
@@ -93,48 +150,23 @@ export class BizyAirConfigManager {
   /**
    * 初始化配置管理器
    *
-   * 在应用启动时调用，用于加载所有配置组
-   * 由于使用静态导入，此方法主要用于验证配置完整性
-   *
-   * @throws Error 如果配置验证失败
+   * 在应用启动时调用，用于记录已加载的配置组
+   * 由于使用动态导入，配置组已在模块加载时自动注册
    */
   static async initialize(): Promise<void> {
     if (BizyAirConfigManager.initialized) {
-      console.warn('[BizyAirConfigManager] 已经初始化，跳过重复初始化')
       return
     }
 
     console.log('[BizyAirConfigManager] 开始初始化...')
 
-    try {
-      // 验证选择器映射表
-      if (BizyAirConfigManager.selectorMap.size === 0) {
-        console.error('[BizyAirConfigManager] 选择器映射表为空')
-      } else {
-        console.log(
-          `[BizyAirConfigManager] 已加载 ${BizyAirConfigManager.selectorMap.size} 个配置选择器`
-        )
-      }
+    // 记录已注册的配置组
+    const registeredIds = Array.from(BizyAirConfigManager.selectorMap.keys())
+    console.log(`[BizyAirConfigManager] 已加载 ${registeredIds.length} 个配置选择器`)
+    console.log('[BizyAirConfigManager] 已注册的配置组:', registeredIds.join(', '))
 
-      // 验证构建器映射表
-      if (BizyAirConfigManager.builderMap.size === 0) {
-        console.warn('[BizyAirConfigManager] 构建器映射表为空')
-      } else {
-        console.log(
-          `[BizyAirConfigManager] 已加载 ${BizyAirConfigManager.builderMap.size} 个请求构建器`
-        )
-      }
-
-      // 记录已注册的配置组
-      const registeredIds = Array.from(BizyAirConfigManager.selectorMap.keys())
-      console.log('[BizyAirConfigManager] 已注册的配置组:', registeredIds.join(', '))
-
-      BizyAirConfigManager.initialized = true
-      console.log('[BizyAirConfigManager] 初始化完成')
-    } catch (error) {
-      console.error('[BizyAirConfigManager] 初始化失败:', error)
-      throw error
-    }
+    BizyAirConfigManager.initialized = true
+    console.log('[BizyAirConfigManager] 初始化完成')
   }
 
   /**

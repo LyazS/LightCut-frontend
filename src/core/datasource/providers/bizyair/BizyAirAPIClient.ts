@@ -20,8 +20,9 @@ import type {
 
 /**
  * BizyAir API 基础 URL
+ * 使用 .cn 域名避免 CORS 预检请求的重定向问题
  */
-const BASE_URL = 'https://api.bizyair.com/w/v1/webapp/task/openapi'
+const BASE_URL = 'https://api.bizyair.cn/w/v1/webapp/task/openapi'
 
 /**
  * 默认重试次数
@@ -202,7 +203,7 @@ export class BizyAirAPIClient {
     // 处理响应
     if (response.status === 202) {
       const result: SubmitTaskResponse = await response.json()
-      const requestId = result.data?.request_id
+      const requestId = result.request_id
 
       if (!requestId) {
         throw new BizyAirAPIError('响应中缺少 request_id')
@@ -312,7 +313,7 @@ export class BizyAirAPIClient {
       const result: TaskResultResponse = await response.json()
 
       if (result.data?.outputs && result.data.outputs.length > 0) {
-        return { url: result.data.outputs[0].url }
+        return { url: result.data.outputs[0].object_url }
       }
 
       throw new BizyAirAPIError('响应格式异常：缺少输出文件')

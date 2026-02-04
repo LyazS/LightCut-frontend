@@ -7,7 +7,7 @@
  * @module BizyAirRequestBuilder
  */
 
-import type { BizyAirAppConfig, InputMappingItem } from './types'
+import type { BizyAirAppConfig, InputMappingItem, ArrayMappingItem, ArrayUrlMappingItem } from './types'
 
 /**
  * 扩展的映射项接口，支持更多配置选项
@@ -25,7 +25,7 @@ interface ExtendedMappingItem extends InputMappingItem {
  * 扩展的输入映射接口
  */
 interface ExtendedInputMapping {
-  [key: string]: ExtendedMappingItem | ExtendedMappingItem[]
+  [key: string]: InputMappingItem | ArrayMappingItem | ArrayUrlMappingItem
 }
 
 /**
@@ -98,9 +98,25 @@ export class BizyAirRequestBuilder {
     for (const [userParam, mappingConfig] of Object.entries(inputMapping)) {
       const userValue = taskConfig[userParam]
 
-      // 处理数组类型（array）
-      if (Array.isArray(mappingConfig)) {
-        // mappingConfig 是数组，表示这是一个 array 类型参数
+      // 检查映射配置的类型
+      if ('items' in mappingConfig && mappingConfig.type === 'array') {
+        // ArrayMappingItem 类型：包含 type: "array" 和 items 字段
+        if (userValue !== undefined && Array.isArray(userValue)) {
+          const processedArray = this.processArrayType(userValue, mappingConfig.items)
+          if (processedArray !== null) {
+            // 将数组元素映射到各自的路径
+            for (let i = 0; i < processedArray.length; i++) {
+              const itemConfig = mappingConfig.items[i]
+              if (itemConfig && processedArray[i] !== null) {
+                const value = processedArray[i]
+                // 直接使用 mapping 路径作为键，不转换为嵌套结构
+                inputValues[itemConfig.mapping] = value
+              }
+            }
+          }
+        }
+      } else if (Array.isArray(mappingConfig)) {
+        // 兼容旧的数组格式：直接是 InputMappingItem[]
         if (userValue !== undefined && Array.isArray(userValue)) {
           const processedArray = this.processArrayType(userValue, mappingConfig)
           if (processedArray !== null) {
@@ -109,17 +125,18 @@ export class BizyAirRequestBuilder {
               const itemConfig = mappingConfig[i]
               if (itemConfig && processedArray[i] !== null) {
                 const value = processedArray[i]
-                this.setNestedValue(inputValues, itemConfig.mapping, value)
+                // 直接使用 mapping 路径作为键，不转换为嵌套结构
+                inputValues[itemConfig.mapping] = value
               }
             }
           }
         }
       } else {
-        // 处理单个映射配置
-        const itemConfig = mappingConfig as ExtendedMappingItem
+        // 处理单个映射配置（InputMappingItem 或 ArrayUrlMappingItem）
+        const itemConfig = mappingConfig as InputMappingItem | ArrayUrlMappingItem
 
         // 检查是否跳过 API 映射
-        if (itemConfig.skip_mapping) {
+        if ('skip_mapping' in itemConfig && itemConfig.skip_mapping) {
           console.debug(`参数 ${userParam} 标记为 skip_mapping=true，跳过 API 映射`)
           continue
         }
@@ -140,12 +157,22 @@ export class BizyAirRequestBuilder {
         let processedValue: any
         switch (itemConfig.type) {
           case 'arrayurl':
-            processedValue = this.processArrayUrlType(value, itemConfig)
+            if ('separator' in itemConfig) {
+              processedValue = this.processArrayUrlType(value, itemConfig as ArrayUrlMappingItem)
+            } else {
+              console.error(`参数 ${userParam}: arrayurl 类型缺少 separator 配置`)
+              continue
+            }
             break
-          case 'array':
-            // array 类型应该使用数组形式的 mappingConfig，这里不应该出现
-            console.warn(`参数 ${userParam}: 单个映射配置不应该有 type='array'`)
-            continue
+          case 'random_seed':
+            // 特殊处理 random_seed 类型（-1 表示随机生成）
+            if (value === -1) {
+              // 生成随机种子
+              processedValue = Math.floor(Math.random() * 4294967295)
+            } else {
+              processedValue = value
+            }
+            break
           case 'string':
           case 'number':
           case 'boolean':
@@ -156,7 +183,8 @@ export class BizyAirRequestBuilder {
         }
 
         if (processedValue !== null) {
-          this.setNestedValue(inputValues, itemConfig.mapping, processedValue)
+          // 直接使用 mapping 路径作为键，不转换为嵌套结构
+          inputValues[itemConfig.mapping] = processedValue
         }
       }
     }
@@ -290,8 +318,9 @@ export class BizyAirRequestBuilder {
           processedValue = itemValue
           break
         case 'arrayurl':
-          // 嵌套的 arrayurl 类型
-          processedValue = this.processArrayUrlType(itemValue, itemConfig)
+          // 嵌套的 arrayurl 类型 - 这种情况在数组元素中不应该出现
+          console.warn(`数组元素不支持 arrayurl 类型: ${itemConfig.type}`)
+          processedValue = itemValue
           break
         default:
           processedValue = itemValue
@@ -316,14 +345,14 @@ export class BizyAirRequestBuilder {
    * @example
    * ```typescript
    * const value = ["https://example.com/img1.jpg", "https://example.com/img2.jpg"]
-   * const inputDef = { path: "123:ImageLoader.images", type: "arrayurl", separator: "\n" }
+   * const inputDef = { mapping: "123:ImageLoader.images", type: "arrayurl", separator: "\n" }
    * const result = BizyAirRequestBuilder.processArrayUrlType(value, inputDef)
    * // 结果: "https://example.com/img1.jpg\nhttps://example.com/img2.jpg"
    * ```
    */
   private static processArrayUrlType(
     value: any,
-    inputDef: ExtendedMappingItem
+    inputDef: ArrayUrlMappingItem
   ): string | null {
     // 验证是否为数组
     if (!Array.isArray(value)) {

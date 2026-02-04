@@ -81,7 +81,7 @@ export interface BizyAirAppConfig {
   /** 单次生成成本 */
   cost: number
   /** 输入映射 */
-  input_mapping: Record<string, InputMappingItem | InputMappingItem[]>
+  input_mapping: Record<string, InputMappingItem | ArrayMappingItem | ArrayUrlMappingItem>
 }
 
 /**
@@ -105,7 +105,51 @@ export interface InputMappingItem {
     minLength?: number
     maxLength?: number
     description?: string
+    computed?: boolean
+    option?: string[]
   }
+  /** 是否跳过 API 映射（不发送到后端） */
+  skip_mapping?: boolean
+}
+
+/**
+ * 数组类型参数映射配置
+ * 
+ * 对应后端的 ArrayMappingConfig
+ */
+export interface ArrayMappingItem {
+  /** 参数类型，固定为 array */
+  type: 'array'
+  /** 数组元素配置列表 */
+  items: InputMappingItem[]
+}
+
+/**
+ * URL 数组类型参数映射配置
+ * 
+ * 对应后端的 ArrayUrlMappingConfig
+ */
+export interface ArrayUrlMappingItem {
+  /** 映射路径 */
+  mapping: string
+  /** 参数类型，固定为 arrayurl */
+  type: 'arrayurl'
+  /** 默认值（URL 数组） */
+  default?: string[]
+  /** 验证规则 */
+  validation?: {
+    required?: boolean
+    min?: number
+    max?: number
+    step?: number
+    minLength?: number
+    maxLength?: number
+    description?: string
+    computed?: boolean
+    option?: string[]
+  }
+  /** URL 分隔符（默认为换行符） */
+  separator?: string
 }
 
 /**
@@ -210,12 +254,11 @@ export interface BizyAirAPIResponse {
 
 /**
  * 提交任务响应接口
+ * BizyAir API 直接返回 request_id，不包装在 data 层
  */
-export interface SubmitTaskResponse extends BizyAirAPIResponse {
+export interface SubmitTaskResponse {
   /** 任务 ID */
-  data: {
-    request_id: string
-  }
+  request_id: string
 }
 
 /**
@@ -235,7 +278,7 @@ export interface TaskResultResponse extends BizyAirAPIResponse {
     /** 输出文件列表 */
     outputs: Array<{
       /** 文件 URL */
-      url: string
+      object_url: string
       /** 文件类型（可选） */
       type?: string
     }>

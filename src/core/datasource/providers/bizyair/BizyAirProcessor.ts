@@ -18,31 +18,8 @@ import { BizyAirTypeGuards } from './BizyAirSource'
 import { BizyAirAPIClient } from './BizyAirAPIClient'
 import { BizyAirConfigManager } from './BizyAirConfigManager'
 import { BizyAirTaskStatus } from './types'
-import type { BizyAirTaskDetail } from './types'
 import { mapBizyAirContentTypeToMediaType } from './BizyAirSource'
 import { DataSourceHelpers } from '@/core/datasource/core/DataSourceHelpers'
-
-// ==================== 辅助函数 ====================
-
-/**
- * 转换 BizyAir 任务状态到媒体状态
- */
-function mapTaskStatusToMediaStatus(taskStatus: BizyAirTaskStatus): 'asyncprocessing' | 'ready' | 'error' | 'cancelled' {
-  switch (taskStatus) {
-    case BizyAirTaskStatus.QUEUING:
-    case BizyAirTaskStatus.PREPARING:
-    case BizyAirTaskStatus.RUNNING:
-      return 'asyncprocessing'
-    case BizyAirTaskStatus.SUCCESS:
-      return 'ready'
-    case BizyAirTaskStatus.FAILED:
-      return 'error'
-    case BizyAirTaskStatus.CANCELED:
-      return 'cancelled'
-    default:
-      return 'error'
-  }
-}
 
 /**
  * 从 URL 推断文件扩展名
@@ -88,11 +65,13 @@ export class BizyAirProcessor extends DataSourceProcessor {
     this.maxConcurrentTasks = DATA_SOURCE_CONCURRENCY.AI_GENERATION_MAX_CONCURRENT_TASKS
 
     // 初始化 BizyAir 配置管理器
-    BizyAirConfigManager.initialize().then(() => {
-      console.log('✅ [BizyAirProcessor] BizyAir 配置管理器已初始化')
-    }).catch((error) => {
-      console.error('❌ [BizyAirProcessor] BizyAir 配置管理器初始化失败:', error)
-    })
+    BizyAirConfigManager.initialize()
+      .then(() => {
+        console.log('✅ [BizyAirProcessor] BizyAir 配置管理器已初始化')
+      })
+      .catch((error) => {
+        console.error('❌ [BizyAirProcessor] BizyAir 配置管理器初始化失败:', error)
+      })
   }
 
   // ==================== 实现抽象方法 ====================
@@ -143,7 +122,7 @@ export class BizyAirProcessor extends DataSourceProcessor {
   private async pollBizyAirTask(
     source: BizyAirSourceData,
     mediaItem: UnifiedMediaItemData,
-    signal: AbortSignal
+    signal: AbortSignal,
   ): Promise<File> {
     // 从统一Store获取 API Key
     const { useUnifiedStore } = await import('@/core/unifiedStore')
@@ -161,6 +140,7 @@ export class BizyAirProcessor extends DataSourceProcessor {
 
     console.log(`🔄 [BizyAirProcessor] 轮询任务: ${requestId}`)
 
+    this.transitionMediaStatus(mediaItem, 'asyncprocessing')
     // 1. 轮询任务直到完成
     const taskDetail = await BizyAirAPIClient.pollUntilComplete(
       requestId,
@@ -170,7 +150,7 @@ export class BizyAirProcessor extends DataSourceProcessor {
         source.progress = progress
         console.log(`📊 [BizyAirProcessor] 任务进度: ${progress}% - ${message}`)
       },
-      signal
+      signal,
     )
 
     // 2. 更新任务状态
@@ -214,7 +194,11 @@ export class BizyAirProcessor extends DataSourceProcessor {
    * @param source - BizyAir 数据源
    * @returns 文件对象
    */
-  private async downloadFile(url: string, taskId: string, source: BizyAirSourceData): Promise<File> {
+  private async downloadFile(
+    url: string,
+    taskId: string,
+    source: BizyAirSourceData,
+  ): Promise<File> {
     try {
       const response = await fetch(url)
       if (!response.ok) {
@@ -230,7 +214,9 @@ export class BizyAirProcessor extends DataSourceProcessor {
       })
 
       await RuntimeStateActions.completeAcquisition(source)
-      console.log(`✅ [BizyAirProcessor] 文件下载成功: ${url}, MIME: ${mimeType}, 扩展名: ${extension}`)
+      console.log(
+        `✅ [BizyAirProcessor] 文件下载成功: ${url}, MIME: ${mimeType}, 扩展名: ${extension}`,
+      )
 
       return file
     } catch (error) {
@@ -251,9 +237,7 @@ export class BizyAirProcessor extends DataSourceProcessor {
    * @param mediaItem 媒体项目
    * @returns 文件准备结果
    */
-  private async prepareFileForMediaItem(
-    mediaItem: UnifiedMediaItemData
-  ): Promise<{
+  private async prepareFileForMediaItem(mediaItem: UnifiedMediaItemData): Promise<{
     success: boolean
     file?: File
     mediaType?: MediaType | null
@@ -293,13 +277,20 @@ export class BizyAirProcessor extends DataSourceProcessor {
         file = await globalMetaFileManager.loadMediaFile(mediaItem.id)
         needSaveMeta = false // meta 文件已存在
         needSaveMedia = false // 媒体文件已存在
-      } else if (bizyAirSource.resultData && bizyAirSource.taskStatus === BizyAirTaskStatus.SUCCESS) {
+      } else if (
+        bizyAirSource.resultData &&
+        bizyAirSource.taskStatus === BizyAirTaskStatus.SUCCESS
+      ) {
         // 场景 B: 远程任务已完成，重新获取文件
         this.transitionMediaStatus(mediaItem, 'asyncprocessing')
         console.log(`🎯 [场景B] 远程任务已完成，直接从 resultData 获取:`, bizyAirSource.resultData)
         RuntimeStateActions.startAcquisition(bizyAirSource)
 
-        file = await this.downloadFile(bizyAirSource.resultData.url, bizyAirSource.bizyairTaskId, bizyAirSource)
+        file = await this.downloadFile(
+          bizyAirSource.resultData.url,
+          bizyAirSource.bizyairTaskId,
+          bizyAirSource,
+        )
         mediaType = mapBizyAirContentTypeToMediaType(bizyAirSource.requestParams.content_type)
 
         await RuntimeStateActions.completeAcquisition(bizyAirSource)
@@ -477,7 +468,7 @@ export class BizyAirProcessor extends DataSourceProcessor {
     // 检查状态是否为 pending
     if (task.mediaItem.mediaStatus !== 'pending') {
       console.warn(
-        `⚠️ [BizyAirProcessor] 只能取消 pending 状态的任务，当前状态: ${task.mediaItem.mediaStatus}`
+        `⚠️ [BizyAirProcessor] 只能取消 pending 状态的任务，当前状态: ${task.mediaItem.mediaStatus}`,
       )
       return false
     }
@@ -501,7 +492,9 @@ export class BizyAirProcessor extends DataSourceProcessor {
       if (bizyairTaskId && apiKey) {
         const cancelSuccess = await BizyAirAPIClient.cancelTask(bizyairTaskId, apiKey)
         if (!cancelSuccess) {
-          console.warn(`⚠️ [BizyAirProcessor] BizyAir 任务取消失败，不更新本地状态: ${bizyairTaskId}`)
+          console.warn(
+            `⚠️ [BizyAirProcessor] BizyAir 任务取消失败，不更新本地状态: ${bizyairTaskId}`,
+          )
           return false
         }
       }

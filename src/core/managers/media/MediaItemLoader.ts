@@ -6,6 +6,8 @@ import { DataSourceFactory } from '@/core/datasource/core/DataSourceTypes'
 import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
 import type { BaseUserSelectedFileSourceData } from '@/core/datasource/providers/user-selected/UserSelectedFileSource'
 import type { BaseAIGenerationSourceData } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
+import type { BaseBizyAirSourceData } from '@/core/datasource/providers/bizyair/types'
+import { BizyAirSourceFactory } from '@/core/datasource/providers/bizyair/BizyAirSource'
 
 /**
  * 媒体项目加载器（阶段二彻底重构版）
@@ -85,6 +87,12 @@ export class MediaItemLoader {
       // AI 生成数据源（从项目加载）
       source = DataSourceFactory.createAIGenerationSource(
         metaData.source as BaseAIGenerationSourceData,
+        SourceOrigin.PROJECT_LOAD,
+      )
+    } else if (sourceType === 'bizyair') {
+      // BizyAir 数据源（从项目加载）
+      source = BizyAirSourceFactory.createBizyAirSource(
+        metaData.source as BaseBizyAirSourceData,
         SourceOrigin.PROJECT_LOAD,
       )
     } else {
