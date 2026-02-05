@@ -562,6 +562,11 @@ const currentMenuItems = computed((): MenuItem[] => {
       },
       { type: 'separator' },
       {
+        label: t('media.pasteImport'),
+        icon: IconComponents.CLIPBOARD,
+        onClick: handlePasteFromClipboard,
+      },
+      {
         label: t('media.paste'),
         icon: IconComponents.CLIPBOARD,
         onClick: handlePaste,
@@ -1153,6 +1158,67 @@ async function processFiles(files: File[]): Promise<void> {
   console.log(t('media.fileProcessComplete', { success: successful, failed: failed }))
 }
 
+// 从系统剪贴板粘贴图片
+async function handlePasteFromClipboard(): Promise<void> {
+  if (!currentDir.value) {
+    unifiedStore.messageError(t('media.selectDirectoryFirst'))
+    return
+  }
+
+  showContextMenu.value = false
+
+  try {
+    // 检查浏览器是否支持 Clipboard API
+    if (!navigator.clipboard || !navigator.clipboard.read) {
+      unifiedStore.messageError(t('media.pasteImportNotSupported'))
+      return
+    }
+
+    // 读取剪贴板内容
+    const clipboardItems = await navigator.clipboard.read()
+    const imageFiles: File[] = []
+
+    // 遍历剪贴板项目
+    for (const item of clipboardItems) {
+      // 查找图片类型
+      const imageType = item.types.find(type => type.startsWith('image/'))
+
+      if (imageType) {
+        // 获取图片 Blob
+        const blob = await item.getType(imageType)
+
+        // 生成文件名
+        const timestamp = Date.now()
+        const extension = imageType.split('/')[1] || 'png'
+        const fileName = `Clipboard_Image_${timestamp}.${extension}`
+
+        // 将 Blob 转换为 File
+        const file = new File([blob], fileName, { type: imageType })
+        imageFiles.push(file)
+      }
+    }
+
+    // 检查是否找到图片
+    if (imageFiles.length === 0) {
+      unifiedStore.messageWarning(t('media.pasteImportNoImage'))
+      return
+    }
+
+    // 处理图片文件
+    await processFiles(imageFiles)
+    unifiedStore.messageSuccess(t('media.pasteImportSuccess', { count: imageFiles.length }))
+
+  } catch (error) {
+    console.error('从剪贴板粘贴图片失败:', error)
+    unifiedStore.messageError(
+      t('media.pasteImportFailed', {
+        error: error instanceof Error ? error.message : '未知错误'
+      })
+    )
+  }
+}
+
+
 // 添加媒体项
 async function addMediaItem(file: File): Promise<void> {
   if (!currentDir.value) return
@@ -1618,6 +1684,7 @@ async function handleBatchDelete(): Promise<void> {
     },
   })
 }
+
 </script>
 
 <style scoped>
