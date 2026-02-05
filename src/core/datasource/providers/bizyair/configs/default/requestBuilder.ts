@@ -8,9 +8,8 @@
 import type { BizyAirAppConfig } from '../../types'
 import { BizyAirRequestBuilder } from '../../BizyAirRequestBuilder'
 
-// 请求构建器标识符（可选，用于明确标识此构建器）
-// 如果不设置，将作为默认请求构建器
-// export const BUILDER_ID = 'default'
+// 请求构建器标识符
+export const BUILDER_ID = 'default'
 
 export function buildRequestData(
   taskConfig: Record<string, any>,

@@ -15,6 +15,8 @@ if (!configCache[loadedConfig.id]) {
 }
 configCache[loadedConfig.id][loadedConfig.variant] = loadedConfig
 
+export const SELECTOR_ID = 'default'
+
 export function selectConfig(taskConfig: Record<string, any>): BizyAirAppConfig {
   /**
    * 默认配置组的选择器
