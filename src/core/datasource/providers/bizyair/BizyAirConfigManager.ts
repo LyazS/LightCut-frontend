@@ -36,11 +36,19 @@ const builderModules = import.meta.glob('./configs/*/requestBuilder.ts', {
 })
 
 /**
- * 提取配置组 ID 的辅助函数
- * 从模块导出的 SELECTOR_ID 常量提取配置 ID
+ * 提取配置选择器 ID
+ * 从 configSelector 模块的 SELECTOR_ID 常量提取配置 ID
  */
-function extractConfigId(_path: string, module: any): string | null {
-  return module.SELECTOR_ID || null
+function extractSelectorId(_path: string, module: any): string | null {
+  return module.SELECTOR_ID ?? null
+}
+
+/**
+ * 提取请求构建器 ID
+ * 从 requestBuilder 模块的 BUILDER_ID 常量提取配置 ID
+ */
+function extractBuilderId(_path: string, module: any): string | null {
+  return module.BUILDER_ID ?? null
 }
 
 // ==================== 默认配置导入 ====================
@@ -90,7 +98,7 @@ export class BizyAirConfigManager {
       const map = new Map<string, ConfigSelector>()
 
       for (const [path, module] of Object.entries(selectorModules)) {
-        const configId = extractConfigId(path, module)
+        const configId = extractSelectorId(path, module)
         if (configId && configId !== 'default') {
           const selector = (module as any).selectConfig
           if (selector) {
@@ -118,7 +126,7 @@ export class BizyAirConfigManager {
       const map = new Map<string, RequestBuilder>()
 
       for (const [path, module] of Object.entries(builderModules)) {
-        const configId = extractConfigId(path, module)
+        const configId = extractBuilderId(path, module)
         if (configId && configId !== 'default') {
           const builder = (module as any).buildRequestData
           if (builder) {
