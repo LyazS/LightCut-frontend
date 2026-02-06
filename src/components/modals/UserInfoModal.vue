@@ -64,28 +64,6 @@
           </button>
         </div>
       </div>
-
-      <!-- BizyAir API Key 配置区域 -->
-      <div class="bizyair-apikey-section">
-        <div class="section-title">
-          <component :is="IconComponents.SETTINGS" size="16px" />
-          {{ t('user.bizyairConfig') }}
-        </div>
-        <input
-          v-model="unifiedStore.bizyairApiKey"
-          type="password"
-          :placeholder="t('user.bizyairApiKeyPlaceholder')"
-          class="apikey-input-full"
-          @blur="handleSaveBizyAirApiKey"
-        />
-        <div v-if="!hasApiKey" class="apikey-hint">
-          {{ t('user.bizyairApiKeyHint') }}
-        </div>
-        <div v-else class="apikey-status">
-          <component :is="IconComponents.CHECK" size="14px" />
-          {{ t('user.bizyairApiKeyConfigured') }}
-        </div>
-      </div>
     </div>
 
     <template #footer>
@@ -105,7 +83,7 @@ import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { User } from '@/core/modules/UnifiedUserModule'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 const { t } = useAppI18n()
 const unifiedStore = useUnifiedStore()
@@ -113,11 +91,6 @@ const unifiedStore = useUnifiedStore()
 // 激活码相关状态
 const activationCode = ref('')
 const isLoading = ref(false)
-
-// 检查是否已配置 API Key
-const hasApiKey = computed(() => {
-  return unifiedStore.hasBizyAirApiKey()
-})
 
 // 定义props
 const props = defineProps<{
@@ -183,19 +156,6 @@ async function handleUseActivationCode() {
     console.warn('激活码使用失败:', error)
   } finally {
     isLoading.value = false
-  }
-}
-
-// 保存 BizyAir API Key
-function handleSaveBizyAirApiKey() {
-  const apiKey = unifiedStore.bizyairApiKey.trim()
-
-  if (apiKey) {
-    // 有内容则保存
-    unifiedStore.saveBizyAirApiKey(apiKey)
-  } else {
-    // 为空则清除已保存的 key
-    unifiedStore.clearBizyAirApiKey()
   }
 }
 </script>

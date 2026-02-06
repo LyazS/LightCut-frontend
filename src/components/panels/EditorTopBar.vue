@@ -37,6 +37,15 @@
             <LanguageSelector />
 
             <HoverButton
+              @click="showProviderConfigDialog = true"
+              :title="t('app.apiConfigCenter')"
+            >
+              <template #icon>
+                <component :is="IconComponents.SETTINGS" size="16px" />
+              </template>
+            </HoverButton>
+
+            <HoverButton
               @click="toggleChatPanel"
               :title="t('editor.toggleChatPanel')"
               :active="unifiedStore.isChatPanelVisible"
@@ -102,6 +111,12 @@
     @close="showExportDialog = false"
     @export="handleExportWithSettings"
   />
+
+  <!-- Provider配置对话框 -->
+  <ProviderConfigModal
+    :show="showProviderConfigDialog"
+    @close="showProviderConfigDialog = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -115,6 +130,7 @@ import EditProjectModal from '@/components/modals/EditProjectModal.vue'
 import LoginModal from '@/components/modals/LoginModal.vue'
 import UserInfoModal from '@/components/modals/UserInfoModal.vue'
 import ExportSettingsModal from '@/components/modals/ExportSettingsModal.vue'
+import ProviderConfigModal from '@/components/modals/ProviderConfigModal.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Quality } from 'mediabunny'
 
@@ -131,6 +147,7 @@ const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
 const showExportDialog = ref(false)
+const showProviderConfigDialog = ref(false)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
 
