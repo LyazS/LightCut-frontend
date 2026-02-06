@@ -41,9 +41,12 @@
             />
             <h3 class="card-title">{{ config.label }}</h3>
           </div>
-          <span class="card-tag">
-            {{ getContentTypeLabel(config.value) }}
-          </span>
+          <!-- 根据 provider 类型显示对应的服务商 logo -->
+          <img
+            :src="getProviderLogo(config.provider).src"
+            :alt="getProviderLogo(config.provider).alt"
+            class="provider-logo"
+          />
         </div>
         <p
           class="card-description"
@@ -68,11 +71,21 @@ import { collection, type ConfigKey } from '@/aipanel/aigenerate/configs'
 import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { Component } from 'vue'
+import { useUnifiedStore } from '@/core/unifiedStore'
+
+/**
+ * 服务商类型枚举
+ */
+enum ProviderType {
+  LIGHTCUT = 'lightcut',      // LightCut 自己的服务
+  BIZYAIR = 'bizyair',         // BizyAir 服务
+}
 
 interface ConfigOption {
   label: string
   value: ConfigKey
   description: string
+  provider: ProviderType  // 服务商类型
 }
 
 interface Props {
@@ -89,16 +102,50 @@ const emit = defineEmits<Emits>()
 // 使用全局 i18n 获取翻译函数
 const { t } = useAppI18n()
 
+// 引入 unifiedStore 获取 BizyAir API Key 状态
+const unifiedStore = useUnifiedStore()
+
+/**
+ * 服务商 Logo 配置映射
+ */
+const providerLogoMap: Record<ProviderType, { src: string; alt: string }> = {
+  [ProviderType.LIGHTCUT]: {
+    src: '/icon/favicon.svg',
+    alt: 'LightCut',
+  },
+  [ProviderType.BIZYAIR]: {
+    src: '/logo-3rd/bizyair.webp',
+    alt: 'BizyAir',
+  },
+}
+
+/**
+ * 获取服务商 Logo 信息
+ */
+const getProviderLogo = (provider: ProviderType) => {
+  return providerLogoMap[provider]
+}
+
 // 搜索关键词
 const searchKeyword = ref('')
 
 // 从 collection 生成选项列表，支持多语言
 const configOptions = computed<ConfigOption[]>(() => {
   return Object.entries(collection).map(([key, config]) => {
+    // 根据配置和用户状态判断服务商类型
+    let provider = ProviderType.LIGHTCUT  // 默认使用 LightCut
+    
+    // 判断是否使用 BizyAir
+    if (config.aiTaskType === 'bizyair_generate_media' && unifiedStore.hasBizyAirApiKey()) {
+      provider = ProviderType.BIZYAIR
+    }
+    // 未来可以添加其他服务商的判断逻辑
+    
     return {
       label: config.name[props.locale],
       value: key as ConfigKey,
       description: config.description[props.locale],
+      provider,  // 添加服务商类型
     }
   })
 })
@@ -352,12 +399,14 @@ const clearSearch = () => {
 }
 
 
-.card-tag {
-  font-size: var(--font-size-xs);
-  padding: 2px 6px;
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-hint);
-  border-radius: var(--border-radius-small);
+/* 服务商 Logo 样式 */
+.provider-logo {
+  height: 20px;  /* 与原 card-tag 高度保持一致 */
+  width: auto;
+  object-fit: contain;
   flex-shrink: 0;
+  border-radius: var(--border-radius-small);
+  padding: 2px 4px;
 }
+
 </style>

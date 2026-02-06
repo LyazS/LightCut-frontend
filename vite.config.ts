@@ -31,47 +31,43 @@ export default defineConfig({
         manualChunks: (id) => {
           // 将大型依赖分离到单独的chunk
           if (id.includes('node_modules')) {
-            // Vue 核心库
+            // Vue 核心库（包括 vue、pinia、vue-router、@vue/*）
             if (id.includes('vue') || id.includes('pinia') || id.includes('@vue')) {
               return 'vue-vendor'
             }
-            // 路由
-            if (id.includes('vue-router')) {
+            // UI 组件库（naive-ui 及其依赖）- 合并到 vue-vendor 以避免循环依赖
+            if (id.includes('naive-ui')) {
               return 'vue-vendor'
             }
-            // UI 组件库
-            if (id.includes('naive-ui')) {
-              return 'ui-vendor'
-            }
-            // 媒体处理库
+            // 媒体处理库（mediabunny 和 @mediabunny）
             if (id.includes('mediabunny') || id.includes('@mediabunny')) {
               return 'media-vendor'
             }
-            // 工具库
-            if (id.includes('lodash') || id.includes('axios') || id.includes('dexie')) {
-              return 'utils-vendor'
-            }
-            // 国际化
-            if (id.includes('vue-i18n')) {
-              return 'i18n-vendor'
+            // OSS 存储（ali-oss 及其依赖）
+            if (id.includes('ali-oss') || id.includes('aliyun-sdk')) {
+              return 'oss-vendor'
             }
             // Markdown 相关
             if (id.includes('markdown-it') || id.includes('github-markdown-css')) {
               return 'markdown-vendor'
             }
-            // OSS 存储
-            if (id.includes('ali-oss')) {
-              return 'oss-vendor'
+            // 工具库（lodash、axios、dexie）
+            if (id.includes('lodash') || id.includes('axios') || id.includes('dexie')) {
+              return 'utils-vendor'
             }
-            // 图标库
+            // 国际化（vue-i18n）
+            if (id.includes('vue-i18n')) {
+              return 'i18n-vendor'
+            }
+            // 图标库（remixicon 和 @remixicon）
             if (id.includes('remixicon') || id.includes('@remixicon')) {
               return 'icon-vendor'
             }
-            // 上下文菜单
+            // 上下文菜单（@imengyu）
             if (id.includes('@imengyu')) {
               return 'context-vendor'
             }
-            // 其他工具
+            // 其他工具（nanoid、p-limit）
             if (id.includes('nanoid') || id.includes('p-limit')) {
               return 'misc-vendor'
             }
