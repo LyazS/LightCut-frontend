@@ -24,15 +24,15 @@
     <!-- 关键帧控制 - video/image/text（独立组件）-->
     <UnifiedKeyframeControls
       v-if="selectedTimelineItem && hasVisualProperties(selectedTimelineItem)"
-      :keyframe-button-state="unifiedKeyframeButtonState"
-      :can-operate-keyframes="canOperateUnifiedKeyframes"
-      :has-previous-keyframe="hasUnifiedPreviousKeyframe"
-      :has-next-keyframe="hasUnifiedNextKeyframe"
+      :keyframe-button-state="buttonState"
+      :can-operate-keyframes="canOperateKeyframes"
+      :has-previous-keyframe="hasPreviousKeyframe"
+      :has-next-keyframe="hasNextKeyframe"
       :keyframe-tooltip="getUnifiedKeyframeTooltip()"
       :show-debug-button="true"
-      @toggle-keyframe="toggleUnifiedKeyframe"
-      @go-to-previous="goToPreviousUnifiedKeyframe"
-      @go-to-next="goToNextUnifiedKeyframe"
+      @toggle-keyframe="toggleKeyframe"
+      @go-to-previous="goToPreviousKeyframe"
+      @go-to-next="goToNextKeyframe"
       @debug-keyframes="debugUnifiedKeyframes"
     />
 
@@ -62,6 +62,8 @@ import {
   isAudioTimelineItem,
 } from '@/core/timelineitem/queries'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables'
+import { useUnifiedStore } from '@/core/unifiedStore'
+import { getPreviousKeyframeFrame, getNextKeyframeFrame } from '@/core/utils/unifiedKeyframeUtils'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 
 import BasicInfoSection from './BasicInfoSection.vue'
@@ -77,22 +79,47 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const unifiedStore = useUnifiedStore()
 
-// 使用关键帧控制器（仅用于关键帧控制）
+// 使用关键帧控制器
 const {
-  unifiedKeyframeButtonState,
-  canOperateUnifiedKeyframes,
-  hasUnifiedPreviousKeyframe,
-  hasUnifiedNextKeyframe,
-  toggleUnifiedKeyframe,
-  goToPreviousUnifiedKeyframe,
-  goToNextUnifiedKeyframe,
+  buttonState,
+  canOperateKeyframes,
+  hasPreviousKeyframe,
+  hasNextKeyframe,
   getUnifiedKeyframeTooltip,
   debugUnifiedKeyframes,
 } = useUnifiedKeyframeTransformControls({
   selectedTimelineItem: computed(() => props.selectedTimelineItem),
   currentFrame: computed(() => props.currentFrame),
 })
+
+// 关键帧操作方法（直接使用 unifiedStore）
+const toggleKeyframe = async () => {
+  if (!props.selectedTimelineItem || !canOperateKeyframes.value) {
+    unifiedStore.messageWarning(
+      '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试操作关键帧。',
+    )
+    return
+  }
+  await unifiedStore.toggleKeyframeWithHistory(props.selectedTimelineItem.id, props.currentFrame)
+}
+
+const goToPreviousKeyframe = async () => {
+  if (!props.selectedTimelineItem) return
+  const frame = getPreviousKeyframeFrame(props.selectedTimelineItem, props.currentFrame)
+  if (frame !== null) {
+    unifiedStore.seekToFrame(frame)
+  }
+}
+
+const goToNextKeyframe = async () => {
+  if (!props.selectedTimelineItem) return
+  const frame = getNextKeyframeFrame(props.selectedTimelineItem, props.currentFrame)
+  if (frame !== null) {
+    unifiedStore.seekToFrame(frame)
+  }
+}
 
 // 是否显示倍速控制
 const showSpeedControl = computed(() => {

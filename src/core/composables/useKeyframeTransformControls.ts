@@ -3,14 +3,25 @@
  * 提供关键帧动画、位置、大小、旋转、透明度等变换属性的统一管理
  */
 
-import { computed, type Ref } from 'vue'
+import { computed, readonly, type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/core/utils/rotationTransform'
-import { useUnifiedKeyframeUI } from '@/core/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import type {
+  KeyframeUIState,
+  KeyframeButtonState,
+} from '@/core/timelineitem/animationtypes'
+import {
+  getKeyframeButtonState,
+  getKeyframeUIState,
+  getPreviousKeyframeFrame,
+  getNextKeyframeFrame,
+} from '@/core/utils/unifiedKeyframeUtils'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { debugKeyframes } from '@/core/utils/unifiedKeyframeUtils'
+import { UpdatePropertyCommand } from '@/core/modules/commands/keyframes'
+import { BatchUpdatePropertiesCommand } from '@/core/modules/commands/batchCommands'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -26,23 +37,41 @@ export function useUnifiedKeyframeTransformControls(
   const { selectedTimelineItem, currentFrame } = options
   const unifiedStore = useUnifiedStore()
 
-  // 统一关键帧UI管理
-  const {
-    buttonState: unifiedKeyframeButtonState,
-    toggleKeyframe: toggleUnifiedKeyframe,
-    handlePropertyChange: handleUnifiedPropertyChange,
-    updateUnifiedPropertyBatch,
-    goToPreviousKeyframe: goToPreviousUnifiedKeyframe,
-    goToNextKeyframe: goToNextUnifiedKeyframe,
-    hasPreviousKeyframe: hasUnifiedPreviousKeyframe,
-    hasNextKeyframe: hasUnifiedNextKeyframe,
-    canOperateKeyframes: canOperateUnifiedKeyframes,
-  } = useUnifiedKeyframeUI(selectedTimelineItem, currentFrame)
+  // ==================== 关键帧UI状态 ====================
 
-  // 添加播放头检测计算属性（用于变换控制UI状态）
-  const canOperateTransforms = computed(() => {
+  const keyframeUIState = computed<KeyframeUIState>(() => {
+    if (!selectedTimelineItem.value) {
+      return { hasAnimation: false, isOnKeyframe: false }
+    }
+    selectedTimelineItem.value.animation?.keyframes.length
+    return getKeyframeUIState(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const buttonState = computed<KeyframeButtonState>(() => {
+    if (!selectedTimelineItem.value) {
+      return 'none'
+    }
+    selectedTimelineItem.value.animation?.keyframes.length
+    return getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const hasPreviousKeyframe = computed(() => {
+    if (!selectedTimelineItem.value) return false
+    return getPreviousKeyframeFrame(selectedTimelineItem.value, currentFrame.value) !== null
+  })
+
+  const hasNextKeyframe = computed(() => {
+    if (!selectedTimelineItem.value) return false
+    return getNextKeyframeFrame(selectedTimelineItem.value, currentFrame.value) !== null
+  })
+
+  const isPlayheadInClip = computed(() => {
     if (!selectedTimelineItem.value) return false
     return isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const canOperateKeyframes = computed(() => {
+    return isPlayheadInClip.value
   })
 
   // ==================== 变换属性计算 ====================
@@ -188,15 +217,55 @@ export function useUnifiedKeyframeTransformControls(
   // ==================== 关键帧控制方法 ====================
 
   /**
+   * 批量更新属性（使用现有的命令系统）
+   * 🎯 正确方案：利用现有的批量操作架构，而不是重新实现
+   */
+  const updateUnifiedPropertyBatch = async (properties: Record<string, any>) => {
+    if (!selectedTimelineItem.value || currentFrame.value == null) return
+
+    try {
+      // 创建多个属性更新命令
+      const updateCommands = Object.entries(properties).map(([property, value]) => {
+        return new UpdatePropertyCommand(
+          selectedTimelineItem.value!.id,
+          currentFrame.value!,
+          property,
+          value,
+          {
+            getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id),
+          },
+          { seekTo: unifiedStore.seekToFrame }, // 播放头控制器
+        )
+      })
+
+      // 创建批量命令
+      const batchCommand = new BatchUpdatePropertiesCommand([selectedTimelineItem.value.id], updateCommands)
+
+      // 通过历史模块执行批量命令
+      await unifiedStore.executeBatchCommand(batchCommand)
+
+      console.log('🎬 [Keyframe Transform Controls] Batch property update completed via command system:', {
+        itemId: selectedTimelineItem.value.id,
+        properties: Object.keys(properties),
+        currentFrame: currentFrame.value,
+        buttonState: buttonState.value,
+        commandCount: updateCommands.length,
+      })
+    } catch (error) {
+      console.error('🎬 [Keyframe Transform Controls] Failed to batch update properties:', error)
+    }
+  }
+
+  /**
    * 获取统一关键帧按钮的提示文本
    */
   const getUnifiedKeyframeTooltip = () => {
     // 如果播放头不在clip时间范围内，显示相应提示
-    if (!canOperateUnifiedKeyframes.value) {
+    if (!canOperateKeyframes.value) {
       return '播放头不在当前clip时间范围内，无法操作关键帧'
     }
 
-    switch (unifiedKeyframeButtonState.value) {
+    switch (buttonState.value) {
       case 'none':
         return '点击创建关键帧动画'
       case 'on-keyframe':
@@ -240,6 +309,18 @@ export function useUnifiedKeyframeTransformControls(
   }) => {
     if (!selectedTimelineItem.value) return
 
+    // 检查播放头是否在clip时间范围内
+    if (!canOperateKeyframes.value) {
+      unifiedStore.messageWarning(
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
+      )
+      console.warn('🎬 [Keyframe Transform Controls] 播放头不在当前clip时间范围内，无法操作关键帧属性:', {
+        itemId: selectedTimelineItem.value.id,
+        currentFrame: currentFrame.value,
+      })
+      return
+    }
+
     // 如果没有提供transform参数，使用当前的响应式值（类型安全版本）
     const finalTransform = transform || {
       x: transformX.value,
@@ -255,9 +336,6 @@ export function useUnifiedKeyframeTransformControls(
       volume: volume.value,      // 新增：音量
     }
 
-    // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
-    // 注意：updateUnifiedProperty 已经包含了实时渲染更新，所以不需要再调用 updateTimelineItemTransformWithHistory
-
     // 🎯 特殊处理：如果同时设置了width和height，使用批量更新避免重复位置计算
     if (finalTransform.width !== undefined && finalTransform.height !== undefined) {
       await updateUnifiedPropertyBatch({
@@ -267,52 +345,66 @@ export function useUnifiedKeyframeTransformControls(
     } else {
       // 单独处理尺寸属性
       if (finalTransform.width !== undefined) {
-        await updateUnifiedProperty('width', finalTransform.width)
+        await unifiedStore.updatePropertyWithHistory(
+          selectedTimelineItem.value.id,
+          currentFrame.value,
+          'width',
+          finalTransform.width,
+        )
       }
       if (finalTransform.height !== undefined) {
-        await updateUnifiedProperty('height', finalTransform.height)
+        await unifiedStore.updatePropertyWithHistory(
+          selectedTimelineItem.value.id,
+          currentFrame.value,
+          'height',
+          finalTransform.height,
+        )
       }
     }
 
     // 处理其他属性
     if (finalTransform.x !== undefined) {
-      await updateUnifiedProperty('x', finalTransform.x)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'x',
+        finalTransform.x,
+      )
     }
     if (finalTransform.y !== undefined) {
-      await updateUnifiedProperty('y', finalTransform.y)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'y',
+        finalTransform.y,
+      )
     }
     if (finalTransform.rotation !== undefined) {
-      await updateUnifiedProperty('rotation', finalTransform.rotation)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'rotation',
+        finalTransform.rotation,
+      )
     }
     if (finalTransform.opacity !== undefined) {
-      await updateUnifiedProperty('opacity', finalTransform.opacity)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'opacity',
+        finalTransform.opacity,
+      )
     }
     if (finalTransform.volume !== undefined) {
-      await updateUnifiedProperty('volume', finalTransform.volume)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'volume',
+        finalTransform.volume,
+      )
     }
 
     console.log('✅ 统一关键帧变换属性更新完成')
-  }
-
-  /**
-   * 更新属性值（统一关键帧版本）
-   * 根据当前状态自动处理关键帧创建，同时确保实时渲染更新
-   */
-  const updateUnifiedProperty = async (property: string, value: any) => {
-    if (!selectedTimelineItem.value) return
-
-    try {
-      // 使用统一关键帧处理逻辑
-      await handleUnifiedPropertyChange(property, value)
-
-      console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {
-        property,
-        value,
-        buttonState: unifiedKeyframeButtonState.value,
-      })
-    } catch (error) {
-      console.error('🎬 [Unified Property] Failed to update property:', error)
-    }
   }
 
   // ==================== 缩放控制方法 ====================
@@ -517,55 +609,45 @@ export function useUnifiedKeyframeTransformControls(
   }
 
   return {
-    // 关键帧状态
-    unifiedKeyframeButtonState,
-    canOperateUnifiedKeyframes,
-    hasUnifiedPreviousKeyframe,
-    hasUnifiedNextKeyframe,
+    // ✅ 保留：关键帧UI状态
+    buttonState: readonly(buttonState),
+    keyframeUIState: readonly(keyframeUIState),
+    hasPreviousKeyframe: readonly(hasPreviousKeyframe),
+    hasNextKeyframe: readonly(hasNextKeyframe),
+    isPlayheadInClip: readonly(isPlayheadInClip),
+    canOperateKeyframes: readonly(canOperateKeyframes),
 
-    // 变换操作状态
-    canOperateTransforms,
-
-    // 变换属性
+    // ✅ 保留：变换属性
     transformX,
     transformY,
     scaleX,
     scaleY,
     rotation,
     opacity,
-    volume,      // 新增：音量属性
+    volume,
     proportionalScale,
     uniformScale,
     elementWidth,
     elementHeight,
 
-    // 关键帧控制方法
-    toggleUnifiedKeyframe,
-    goToPreviousUnifiedKeyframe,
-    goToNextUnifiedKeyframe,
-    getUnifiedKeyframeTooltip,
-    debugUnifiedKeyframes,
+    // ✅ 保留：变换操作状态（canOperateTransforms 是 canOperateKeyframes 的别名）
+    canOperateTransforms: readonly(canOperateKeyframes),
 
-    // 变换更新方法
+    // ✅ 保留：复杂变换方法
     updateTransform,
-    updateUnifiedProperty,
     updateUnifiedPropertyBatch,
-
-    // 缩放控制方法
     toggleProportionalScale,
     updateUniformScale,
     setScaleX,
     setScaleY,
-
-    // 旋转和透明度控制方法
     setRotation,
     setOpacity,
-    setVolume,   // 新增：音量控制方法
-
-    // 对齐控制方法
+    setVolume,
     alignHorizontal,
     alignVertical,
-    
-    // 注意：isMuted 和 toggleMute 不导出，保持在组件中独立处理
+
+    // ✅ 保留：辅助方法
+    getUnifiedKeyframeTooltip,
+    debugUnifiedKeyframes,
   }
 }
