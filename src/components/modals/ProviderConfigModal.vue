@@ -6,13 +6,13 @@
     @cancel="handleClose"
     :show-confirm="false"
     :show-cancel="false"
+    :show-footer="false"
   >
     <div class="provider-config-content">
       <!-- BizyAir 配置区域 -->
       <div class="provider-section">
         <div class="section-title">
-          <component :is="IconComponents.SETTINGS" size="16px" />
-          {{ t('user.bizyairConfig') }}
+          <img src="/logo-3rd/bizyair.webp" alt="BizyAir" class="provider-logo" />
         </div>
         <input
           v-model="unifiedStore.bizyairApiKey"
@@ -99,6 +99,12 @@ function handleSaveBizyAirApiKey() {
   font-size: var(--font-size-sm);
   font-weight: 600;
   margin-bottom: var(--spacing-sm);
+}
+
+.provider-logo {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
 }
 
 .apikey-input-full {

@@ -118,21 +118,34 @@
             <p>{{ t('project.loading') }}</p>
           </div>
 
-          <div v-else-if="projects.length === 0" class="empty-state">
-            <div class="empty-icon">
-              <component :is="IconComponents.EMPTY" size="48px" />
+          <div v-else-if="projects.length === 0" class="empty-state-container">
+            <div
+              class="setup-card clickable-card"
+              @click="!isLoading && createNewProject()"
+            >
+              <div class="setup-icon">
+                <component :is="IconComponents.ADD" size="48px" />
+              </div>
+              <h2>{{ t('project.empty.title') }}</h2>
+              <p>{{ t('project.empty.description') }}</p>
             </div>
-            <h3 class="empty-title">{{ t('project.empty.title') }}</h3>
-            <p class="empty-description">{{ t('project.empty.description') }}</p>
-            <HoverButton variant="primary" @click="createNewProject">
-              {{ t('project.new') }}
-              <template #icon>
-                <component :is="IconComponents.ADD" size="20px" />
-              </template>
-            </HoverButton>
           </div>
 
           <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
+            <!-- 固定的创建新项目卡片 -->
+            <div
+              class="project-card create-project-card"
+              @click="!isLoading && createNewProject()"
+            >
+              <div class="create-thumbnail">
+                <div class="create-icon-wrapper">
+                  <component :is="IconComponents.ADD" size="48px" />
+                </div>
+                <h3 class="create-title">{{ t('project.new') }}</h3>
+              </div>
+            </div>
+
+            <!-- 现有项目卡片 -->
             <div
               v-for="project in projects"
               :key="project.id"
@@ -392,33 +405,12 @@ async function loadProjects() {
   }
 }
 
-/**
- * 加载单个项目的缩略图
- */
-async function loadProjectThumbnail(projectId: string, projectName: string) {
-  try {
-    const thumbnailService = useProjectThumbnailService()
-    const thumbnailUrl = await thumbnailService.getThumbnailUrl(projectId)
-
-    // 更新项目的缩略图URL
-    const projectIndex = projects.value.findIndex((p) => p.id === projectId)
-    if (projectIndex !== -1) {
-      projects.value[projectIndex].thumbnail = thumbnailUrl
-    }
-
-    return thumbnailUrl
-  } catch (error) {
-    console.warn(`加载项目缩略图失败: ${projectName}`, error)
-    throw error
-  }
-}
-
 async function createNewProject() {
   if (!hasWorkspaceAccess.value || isLoading.value) return
 
   try {
     // 生成项目名称
-    const projectName = `新项目 ${new Date().toLocaleDateString()}`
+    const projectName = `${t('project.newName')} ${new Date().toLocaleDateString()}`
     const project = await unifiedProjectManager.createProject(projectName)
 
     // 跳转到编辑器页面
@@ -624,7 +616,8 @@ onMounted(async () => {
   padding: 0 2rem;
 }
 
-.workspace-setup {
+.workspace-setup,
+.empty-state-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -962,5 +955,71 @@ onMounted(async () => {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* 创建新项目卡片特殊样式 */
+.create-project-card {
+  border: none;
+}
+
+.create-thumbnail {
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-tertiary) 0%,
+    var(--color-bg-secondary) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  height: 100%;
+  width: 100%;
+}
+
+.create-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0;
+  text-align: center;
+}
+
+.create-project-card:hover .create-title {
+  color: var(--color-accent-primary);
+}
+
+.create-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--color-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.create-project-card:hover .create-icon-wrapper {
+  background-color: var(--color-accent-primary);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* 列表视图下的创建卡片样式 */
+.list-view .create-thumbnail {
+  width: 120px;
+}
+
+.list-view .create-icon-wrapper {
+  width: 48px;
+  height: 48px;
+}
+
+.list-view .create-icon-wrapper svg {
+  width: 24px !important;
+  height: 24px !important;
 }
 </style>

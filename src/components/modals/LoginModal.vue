@@ -1,7 +1,6 @@
 <template>
   <UniversalModal
     :show="show"
-    :title="isRegisterMode ? t('user.registerTitle') : t('user.loginTitle')"
     @close="handleCancel"
     @confirm="handleSubmit"
     @cancel="handleCancel"
@@ -10,6 +9,12 @@
     :show-footer="false"
     :loading="isLoading"
   >
+    <template #header>
+      <div class="login-header">
+        <img src="/icon/favicon.svg" alt="Logo" class="login-logo" />
+        <h3 class="login-title">{{ isRegisterMode ? t('user.registerTitle') : t('user.loginTitle') }}</h3>
+      </div>
+    </template>
     <form @submit.prevent="handleSubmit" class="login-form">
       <div class="form-group">
         <label for="username">{{ t('user.username') }}</label>
@@ -176,6 +181,26 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
+/* 登录头部样式 */
+.login-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.login-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.login-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
 /* 通用Modal的样式已经包含在UniversalModal组件中 */
 /* 这里只需要定义内容区域特有的样式 */
 .login-form {
@@ -199,7 +224,7 @@ async function handleSubmit() {
   padding: var(--spacing-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-small);
-  background-color: var(--color-bg-secondary);
+  background-color: rgba(0, 0, 0, 0.15);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   transition: border-color 0.2s ease;

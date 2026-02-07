@@ -1,6 +1,7 @@
 /**
  * 文件上传工具
  * 封装BizyAir文件上传的完整流程
+ * 支持代理模式和直接模式
  */
 
 import { exportMediaItem, exportTimelineItem } from './projectExporter'
@@ -11,7 +12,11 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import type { MediaType } from '@/core/mediaitem'
 import { cloneDeep } from 'lodash'
 
-// 上传凭证接口
+// ==================== 类型定义 ====================
+
+/**
+ * 上传凭证
+ */
 interface UploadCredentials {
   object_key: string
   access_key_id: string
@@ -22,8 +27,20 @@ interface UploadCredentials {
   region: string
 }
 
-// 获取上传凭证响应数据
-interface UploadTokenResponseData {
+/**
+ * BizyAir API 响应格式
+ */
+interface BizyAirApiResponse<T> {
+  code: number
+  message: string
+  status: boolean
+  data: T
+}
+
+/**
+ * 获取上传凭证响应
+ */
+interface UploadTokenResponse {
   file: {
     object_key: string
     access_key_id: string
@@ -37,19 +54,19 @@ interface UploadTokenResponseData {
   }
 }
 
-// 提交资源响应数据
-interface CommitResourceResponseData {
+/**
+ * 提交资源响应
+ */
+interface CommitResourceResponse {
+  id: number
+  name: string
+  ext: string
   url: string
 }
 
-// API响应包装器
-interface ApiResponse<T> {
-  success: boolean
-  data: T
-  error?: string
-}
-
-// 上传结果接口
+/**
+ * 上传结果接口
+ */
 interface UploadResult {
   success: boolean
   url?: string
@@ -57,47 +74,61 @@ interface UploadResult {
   error?: string
 }
 
-export class BizyairFileUploader {
-  /**
-   * 从FileData导出Blob
-   */
-  private static async exportFileDataToBlob(
-    fileData: FileData,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
-    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
-  ): Promise<Blob> {
-    if (fileData.source === 'media-item') {
-      const mediaItem = getMediaItem(fileData.mediaItemId!)
-      if (!mediaItem) {
-        throw new Error(`找不到媒体项: ${fileData.mediaItemId}`)
-      }
-      return await exportMediaItem({ mediaItem })
-    } else {
-      // timeline-item
-      const timelineItem = getTimelineItem(fileData.timelineItemId!)
-      if (!timelineItem) {
-        throw new Error(`找不到时间轴项: ${fileData.timelineItemId}`)
-      }
-      return await exportTimelineItem({
-        timelineItem,
-        getMediaItem,
-      })
-    }
-  }
+// ==================== 策略接口 ====================
 
+/**
+ * BizyAir 上传策略接口
+ */
+interface BizyAirUploadStrategy {
   /**
    * 获取上传凭证
+   * @param fileName 文件名（包含扩展名）
+   * @param apiKey API Key（直接模式需要）
+   * @returns 上传凭证
    */
-  private static async getUploadToken(fileName: string): Promise<UploadCredentials> {
-    // 构建查询参数
+  getUploadToken(fileName: string, apiKey?: string): Promise<UploadCredentials>
+  
+  /**
+   * 提交资源
+   * @param fileName 文件名
+   * @param objectKey OSS 对象键
+   * @param apiKey API Key（直接模式需要）
+   * @returns 资源 URL
+   */
+  commitResource(fileName: string, objectKey: string, apiKey?: string): Promise<string>
+}
+
+// ==================== 代理模式策略 ====================
+
+/**
+ * 代理模式上传策略
+ * 通过后端代理接口调用 BizyAir API
+ */
+class ProxyUploadStrategy implements BizyAirUploadStrategy {
+  async getUploadToken(fileName: string, apiKey?: string): Promise<UploadCredentials> {
+    // apiKey 参数被忽略，使用后端配置的 Key
     const queryParams = new URLSearchParams({
       file_name: fileName,
       file_type: 'inputs',
     })
 
-    const response = await fetchClient.get<ApiResponse<UploadTokenResponseData>>(
-      `/api/bizyairupload/token?${queryParams.toString()}`,
-    )
+    const response = await fetchClient.get<{
+      success: boolean
+      data: {
+        file: {
+          object_key: string
+          access_key_id: string
+          access_key_secret: string
+          security_token: string
+        }
+        storage: {
+          endpoint: string
+          bucket: string
+          region: string
+        }
+      }
+      error?: string
+    }>(`/api/bizyairupload/token?${queryParams.toString()}`)
 
     if (!response.data.success) {
       throw new Error(response.data.error || '获取上传凭证失败')
@@ -115,10 +146,115 @@ export class BizyairFileUploader {
     }
   }
 
+  async commitResource(fileName: string, objectKey: string, apiKey?: string): Promise<string> {
+    // apiKey 参数被忽略，使用后端配置的 Key
+    const response = await fetchClient.post<{
+      success: boolean
+      data: { url: string }
+      error?: string
+    }>('/api/bizyairupload/commit', {
+      name: fileName,
+      object_key: objectKey,
+    })
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || '提交资源失败')
+    }
+
+    return response.data.data.url
+  }
+}
+
+// ==================== 直接模式策略 ====================
+
+/**
+ * 直接模式上传策略
+ * 直接调用 BizyAir API（使用用户的 API Key）
+ */
+class DirectUploadStrategy implements BizyAirUploadStrategy {
+  private readonly apiUrl = 'https://api.bizyair.cn'
+
+  async getUploadToken(fileName: string, apiKey?: string): Promise<UploadCredentials> {
+    if (!apiKey || apiKey.trim().length === 0) {
+      throw new Error('直接模式需要提供 BizyAir API Key')
+    }
+    
+    const url = new URL(`${this.apiUrl}/x/v1/upload/token`)
+    url.searchParams.append('file_name', fileName)
+    url.searchParams.append('file_type', 'inputs')
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`获取上传凭证失败: ${response.status} ${errorText}`)
+    }
+
+    const data: BizyAirApiResponse<UploadTokenResponse> = await response.json()
+
+    if (data.code !== 20000) {
+      throw new Error(data.message || '获取上传凭证失败')
+    }
+
+    const { file, storage } = data.data
+    return {
+      object_key: file.object_key,
+      access_key_id: file.access_key_id,
+      access_key_secret: file.access_key_secret,
+      security_token: file.security_token,
+      endpoint: storage.endpoint,
+      bucket: storage.bucket,
+      region: storage.region,
+    }
+  }
+
+  async commitResource(fileName: string, objectKey: string, apiKey?: string): Promise<string> {
+    if (!apiKey || apiKey.trim().length === 0) {
+      throw new Error('直接模式需要提供 BizyAir API Key')
+    }
+    
+    const response = await fetch(`${this.apiUrl}/x/v1/input_resource/commit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: fileName,
+        object_key: objectKey,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`提交资源失败: ${response.status} ${errorText}`)
+    }
+
+    const data: BizyAirApiResponse<CommitResourceResponse> = await response.json()
+
+    if (data.code !== 20000) {
+      throw new Error(data.message || '提交资源失败')
+    }
+
+    return data.data.url
+  }
+}
+
+// ==================== OSS 上传器 ====================
+
+/**
+ * OSS 上传器（两种模式共享）
+ */
+class OSSUploader {
   /**
-   * 上传文件到OSS
+   * 上传文件到 OSS
    */
-  private static async uploadToOSS(
+  static async uploadToOSS(
     blob: Blob,
     credentials: UploadCredentials,
     onProgress?: (progress: number) => void,
@@ -126,7 +262,7 @@ export class BizyairFileUploader {
     // 动态导入 OSS 库以实现懒加载
     const OSS = (await import('ali-oss')).default
 
-    // 规范化region(移除oss-前缀)
+    // 规范化 region（移除 oss- 前缀）
     const normalizedRegion = credentials.region.startsWith('oss-')
       ? credentials.region.slice(4)
       : credentials.region
@@ -147,24 +283,48 @@ export class BizyairFileUploader {
       onProgress(100)
     }
   }
+}
+
+// ==================== 主类 ====================
+
+export class BizyairFileUploader {
+  /**
+   * 创建上传策略
+   */
+  private static createStrategy(apiKey: string | null): BizyAirUploadStrategy {
+    if (apiKey && apiKey.trim().length > 0) {
+      console.log('[BizyAir] 使用直接模式（用户 API Key）')
+      return new DirectUploadStrategy()
+    } else {
+      console.log('[BizyAir] 使用代理模式（后端 API Key）')
+      return new ProxyUploadStrategy()
+    }
+  }
 
   /**
-   * 提交输入资源
+   * 从 FileData 导出 Blob
    */
-  private static async commitResource(fileName: string, objectKey: string): Promise<string> {
-    const response = await fetchClient.post<ApiResponse<CommitResourceResponseData>>(
-      '/api/bizyairupload/commit',
-      {
-        name: fileName,
-        object_key: objectKey,
-      },
-    )
-
-    if (!response.data.success) {
-      throw new Error(response.data.error || '提交资源失败')
+  private static async exportFileDataToBlob(
+    fileData: FileData,
+    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
+  ): Promise<Blob> {
+    if (fileData.source === 'media-item') {
+      const mediaItem = getMediaItem(fileData.mediaItemId!)
+      if (!mediaItem) {
+        throw new Error(`找不到媒体项: ${fileData.mediaItemId}`)
+      }
+      return await exportMediaItem({ mediaItem })
+    } else {
+      const timelineItem = getTimelineItem(fileData.timelineItemId!)
+      if (!timelineItem) {
+        throw new Error(`找不到时间轴项: ${fileData.timelineItemId}`)
+      }
+      return await exportTimelineItem({
+        timelineItem,
+        getMediaItem,
+      })
     }
-
-    return response.data.data.url
   }
 
   /**
@@ -177,23 +337,31 @@ export class BizyairFileUploader {
     onProgress?: (stage: string, progress: number) => void,
   ): Promise<UploadResult> {
     try {
-      // 1. 导出文件
+      // 1. 获取用户 API Key（每次调用时从 unifiedStore 获取最新值）
+      const { useUnifiedStore } = await import('@/core/unifiedStore')
+      const unifiedStore = useUnifiedStore()
+      const userApiKey = unifiedStore.getBizyAirApiKey()
+      
+      // 2. 选择策略
+      const strategy = this.createStrategy(userApiKey)
+      
+      // 3. 导出文件
       onProgress?.('导出文件', 0)
       const blob = await this.exportFileDataToBlob(fileData, getMediaItem, getTimelineItem)
 
-      // 2. 获取上传凭证
+      // 4. 获取上传凭证（传入 API Key）
       onProgress?.('获取凭证', 20)
-      const credentials = await this.getUploadToken(fileData.name)
+      const credentials = await strategy.getUploadToken(fileData.name, userApiKey)
 
-      // 3. 上传到OSS
+      // 5. 上传到 OSS（共享逻辑）
       onProgress?.('上传中', 30)
-      await this.uploadToOSS(blob, credentials, (p) => {
+      await OSSUploader.uploadToOSS(blob, credentials, (p) => {
         onProgress?.('上传中', 30 + Math.round(p * 0.5))
       })
 
-      // 4. 提交资源
+      // 6. 提交资源（传入 API Key）
       onProgress?.('提交资源', 80)
-      const url = await this.commitResource(fileData.name, credentials.object_key)
+      const url = await strategy.commitResource(fileData.name, credentials.object_key, userApiKey)
 
       onProgress?.('完成', 100)
 
@@ -227,7 +395,7 @@ export class BizyairFileUploader {
         files[i],
         getMediaItem,
         getTimelineItem,
-        3, // 最多重试3次
+        3,
         (stage, progress) => onProgress?.(i, stage, progress),
       )
       results.set(i, result)
@@ -250,13 +418,17 @@ export class BizyairFileUploader {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        return await this.uploadFile(fileData, getMediaItem, getTimelineItem, onProgress)
+        return await this.uploadFile(
+          fileData, 
+          getMediaItem, 
+          getTimelineItem, 
+          onProgress
+        )
       } catch (error) {
         lastError = error as Error
         console.warn(`上传失败(尝试 ${attempt}/${maxRetries}):`, error)
 
         if (attempt < maxRetries) {
-          // 等待后重试(指数退避)
           await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)))
         }
       }
@@ -270,14 +442,6 @@ export class BizyairFileUploader {
 
   /**
    * 管道函数：处理配置中的文件上传
-   * 整合检测、上传和更新配置的完整流程
-   *
-   * @param config AI配置对象
-   * @param getMediaItem 获取媒体项的函数
-   * @param getTimelineItem 获取时间轴项的函数
-   * @param onProgress 进度回调
-   * @param onSuccess 上传成功回调
-   * @returns 新配置对象
    */
   static async processConfigUploads(
     config: Record<string, any>,
@@ -286,15 +450,11 @@ export class BizyairFileUploader {
     onProgress?: (fileIndex: number, stage: string, progress: number) => void,
     onSuccess?: () => void,
   ): Promise<Record<string, any>> {
-    // 1. 深度克隆配置，避免修改原对象
     const newConfig = cloneDeep(config)
-
-    // 2. 检测需要上传的文件
     const filesToUpload: FileData[] = []
 
     for (const [key, value] of Object.entries(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
-        // 使用 __type__ 字段检测 FileData
         if (value[0] && typeof value[0] === 'object' && value[0].__type__ === 'FileData') {
           filesToUpload.push(...value)
         }
@@ -305,7 +465,6 @@ export class BizyairFileUploader {
       return newConfig
     }
 
-    // 3. 批量上传文件
     const uploadResults = await this.uploadFiles(
       filesToUpload,
       getMediaItem,
@@ -313,24 +472,20 @@ export class BizyairFileUploader {
       onProgress,
     )
 
-    // 4. 检查上传结果
     for (const [index, result] of uploadResults.entries()) {
       if (!result.success) {
         throw new Error(`文件上传失败: ${result.error}`)
       }
     }
 
-    // 5. 如果有文件上传成功，调用成功回调
     if (uploadResults.size > 0 && onSuccess) {
       onSuccess()
     }
 
-    // 6. 更新新配置中的URL
     let fileIndex = 0
     for (const [key, value] of Object.entries(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
         if (value[0] && typeof value[0] === 'object' && value[0].__type__ === 'FileData') {
-          // 这是FileData数组,替换为URL数组
           newConfig[key] = value.map((_, index) => {
             const result = uploadResults.get(fileIndex + index)
             return result?.url || ''

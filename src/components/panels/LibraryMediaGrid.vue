@@ -479,6 +479,11 @@ const currentMenuItems = computed((): MenuItem[] => {
               showContextMenu.value = false
             },
           },
+          {
+            label: t('media.pasteImport'),
+            icon: IconComponents.CLIPBOARD,
+            onClick: handlePasteFromClipboard,
+          },
         ],
       },
       // 查看子菜单
@@ -561,11 +566,6 @@ const currentMenuItems = computed((): MenuItem[] => {
         ],
       },
       { type: 'separator' },
-      {
-        label: t('media.pasteImport'),
-        icon: IconComponents.CLIPBOARD,
-        onClick: handlePasteFromClipboard,
-      },
       {
         label: t('media.paste'),
         icon: IconComponents.CLIPBOARD,

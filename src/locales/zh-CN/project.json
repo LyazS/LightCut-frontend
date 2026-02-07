@@ -1,6 +1,7 @@
 {
   "project": {
     "new": "新建项目",
+    "newName": "新项目",
     "edit": "编辑",
     "delete": {
       "title": "删除",
