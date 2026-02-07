@@ -17,7 +17,6 @@ import {
   isAudioTimelineItem,
   TimelineItemQueries,
 } from '@/core/timelineitem/queries'
-import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import type { MediaType } from '../mediaitem'
 import {
   percentageToFrame,

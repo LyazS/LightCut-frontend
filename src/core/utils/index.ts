@@ -27,27 +27,18 @@ export {
   calculateDuration,
 } from './timeRangeUtils'
 
-// ==================== 坐标转换工具 ====================
+// ==================== 时间轴缩放与坐标映射工具 ====================
 export {
-  // 计算可见时间范围
-  calculateVisibleFrameRange,
+  // 时长计算
+  calculateContentEndTimeFrames,
+  calculateTotalDurationFrames,
+  calculateMaxVisibleDurationFrames,
 
-  // 坐标转换函数
+  // 坐标转换
+  calculateVisibleFrameRange,
   frameToPixel,
   pixelToFrame,
-
-  // 坐标系转换函数
-  webavToProjectCoords,
-  projectToWebavCoords,
-
-  // 验证和调试函数
-  validateCoordinateTransform,
-  debugCoordinateTransform,
-
-  // 中心缩放计算
-  calculateCenterScalePosition,
-  debugCenterScaling,
-} from './coordinateUtils'
+} from './timelineScaleUtils'
 
 // ==================== 统一时间工具 ====================
 export {

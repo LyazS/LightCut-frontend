@@ -20,7 +20,6 @@ import type { GetAnimation } from './bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { MediaItemQueries } from '@/core/mediaitem'
 import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
-import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 克隆和复制函数 ====================

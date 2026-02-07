@@ -2,7 +2,7 @@ import { ScriptExecutor } from '@/aipanel/agent/executors/ScriptExecutor'
 import { useBatchCommandBuilder } from '@/aipanel/agent/composables/useBatchCommandBuilder'
 import { ConfigValidator } from '@/aipanel/agent/core/ConfigValidator'
 import { framesToTimecode } from '@/core/utils/timeUtils'
-import { calculateVisibleFrameRange } from '@/core/utils/coordinateUtils'
+import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
 // 导入共享类型定义

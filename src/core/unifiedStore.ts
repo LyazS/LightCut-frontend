@@ -21,7 +21,7 @@ import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
 import { useEditSDK } from '@/aipanel/agent/composables/useEditSDK'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
+import { frameToPixel, pixelToFrame } from '@/core/utils/timelineScaleUtils'
 import {
   getTimelineItemsByTrack,
   isPlayheadInTimelineItem,
