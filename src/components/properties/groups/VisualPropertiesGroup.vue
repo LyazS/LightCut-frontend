@@ -11,7 +11,7 @@
             <span class="position-label">{{ t('properties.transform.positionX') }}</span>
             <NumberInput
               :model-value="transformX"
-              @change="(value) => updateTransform({ x: value })"
+              @change="setTransformXDirectly"
               :disabled="!canOperateTransforms"
               :min="positionLimits.minX"
               :max="positionLimits.maxX"
@@ -24,7 +24,7 @@
             <span class="position-label">{{ t('properties.transform.positionY') }}</span>
             <NumberInput
               :model-value="transformY"
-              @change="(value) => updateTransform({ y: value })"
+              @change="setTransformYDirectly"
               :disabled="!canOperateTransforms"
               :min="positionLimits.minY"
               :max="positionLimits.maxY"
@@ -116,7 +116,8 @@
         <div class="scale-controls">
           <SliderInput
             :model-value="uniformScale"
-            @input="updateUniformScale"
+            @input="updateUniformScaleDeferred"
+            @change="commitDeferredUpdates"
             :disabled="!canOperateTransforms"
             :min="0.01"
             :max="5"
@@ -124,7 +125,7 @@
           />
           <NumberInput
             :model-value="uniformScale"
-            @change="updateUniformScale"
+            @change="updateUniformScaleDirectly"
             :disabled="!canOperateTransforms"
             :min="0.01"
             :max="5"
@@ -143,7 +144,8 @@
           <div class="scale-controls">
             <SliderInput
               :model-value="scaleX"
-              @input="setScaleX"
+              @input="setScaleXDeferred"
+              @change="commitDeferredUpdates"
               :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
@@ -151,7 +153,7 @@
             />
             <NumberInput
               :model-value="scaleX"
-              @change="setScaleX"
+              @change="setScaleXDirectly"
               :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
@@ -167,7 +169,8 @@
           <div class="scale-controls">
             <SliderInput
               :model-value="scaleY"
-              @input="setScaleY"
+              @input="setScaleYDeferred"
+              @change="commitDeferredUpdates"
               :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
@@ -175,7 +178,7 @@
             />
             <NumberInput
               :model-value="scaleY"
-              @change="setScaleY"
+              @change="setScaleYDirectly"
               :disabled="!canOperateTransforms"
               :min="0.01"
               :max="5"
@@ -206,7 +209,8 @@
         <div class="rotation-controls">
           <SliderInput
             :model-value="rotation"
-            @input="setRotation"
+            @input="setRotationDeferred"
+            @change="commitDeferredUpdates"
             :disabled="!canOperateTransforms"
             :min="-180"
             :max="180"
@@ -215,7 +219,7 @@
           />
           <NumberInput
             :model-value="rotation"
-            @change="setRotation"
+            @change="setRotationDirectly"
             :disabled="!canOperateTransforms"
             :step="1"
             :precision="1"
@@ -231,7 +235,8 @@
         <div class="opacity-controls">
           <SliderInput
             :model-value="opacity"
-            @input="setOpacity"
+            @input="setOpacityDeferred"
+            @change="commitDeferredUpdates"
             :disabled="!canOperateTransforms"
             :min="0"
             :max="1"
@@ -240,7 +245,7 @@
           />
           <NumberInput
             :model-value="opacity"
-            @change="setOpacity"
+            @change="setOpacityDirectly"
             :disabled="!canOperateTransforms"
             :min="0"
             :max="1"
@@ -287,13 +292,25 @@ const {
   uniformScale,
   elementWidth,
   elementHeight,
-  updateTransform,
   toggleProportionalScale,
-  updateUniformScale,
-  setScaleX,
-  setScaleY,
-  setRotation,
-  setOpacity,
+
+  // 延迟更新方法（用于 SliderInput）
+  updateUniformScaleDeferred,
+  setScaleXDeferred,
+  setScaleYDeferred,
+  setRotationDeferred,
+  setOpacityDeferred,
+  commitDeferredUpdates,
+
+  // 直接更新方法（用于 NumberInput）
+  setTransformXDirectly,
+  setTransformYDirectly,
+  setScaleXDirectly,
+  setScaleYDirectly,
+  setRotationDirectly,
+  setOpacityDirectly,
+  updateUniformScaleDirectly,
+
   alignHorizontal,
   alignVertical,
 } = useUnifiedKeyframeTransformControls({
@@ -326,8 +343,8 @@ const handleFitToCanvas = () => {
   console.log(
     `适应画布：元素尺寸 ${elementWidth.value}x${elementHeight.value}, 画布尺寸 ${canvasWidth}x${canvasHeight}, 缩放比例 ${scale}`,
   )
-  
-  updateUniformScale(scale)
+
+  updateUniformScaleDirectly(scale)
 }
 
 // 填满画布
@@ -347,8 +364,8 @@ const handleFillCanvas = () => {
   console.log(
     `填满画布：元素尺寸 ${elementWidth.value}x${elementHeight.value}, 画布尺寸 ${canvasWidth}x${canvasHeight}, 缩放比例 ${scale}`,
   )
-  
-  updateUniformScale(scale)
+
+  updateUniformScaleDirectly(scale)
 }
 </script>
 

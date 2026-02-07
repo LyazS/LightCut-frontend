@@ -198,7 +198,7 @@ export function getKeyframeUIState(
  * 在指定帧位置查找关键帧
  * ✅ 直接使用 cachedFrame，无需重新计算
  */
-function findKeyframeAtFrame(
+export function findKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
 ): AnimateKeyframe<MediaType> | undefined {
