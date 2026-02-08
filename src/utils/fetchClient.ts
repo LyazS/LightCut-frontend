@@ -6,7 +6,7 @@ import type { RequestConfig, ApiResponse } from '@/utils/types'
 export type { RequestConfig, ApiResponse } from '@/utils/types'
 
 // API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 // 调试标记
 const DEBUG_FETCH = true
