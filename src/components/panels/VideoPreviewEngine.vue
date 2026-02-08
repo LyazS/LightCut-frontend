@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import PreviewWindow from '@/components/panels/PreviewWindow.vue'
 import VirtualDirectory from '@/components/panels/VirtualDirectory.vue'
 import UnifiedTimeline from '@/components/timeline/UnifiedTimeline.vue'
@@ -100,51 +100,17 @@ const SPLITTER_WIDTH = 8
 // 注册全局快捷键
 useKeyboardShortcuts()
 
-// 窗口大小变化时调整面板宽度
-const adjustPanelWidths = () => {
-  const container = document.querySelector('.video-preview-engine')
-  const containerWidth = container ? container.clientWidth : window.innerWidth
-
-  // 计算最大允许宽度
-  const totalPanelWidth = leftPanelWidth.value + rightPanelWidth.value
-  const availableWidth = containerWidth - 220 // 减去分割器和最小预览区域宽度
-
-  if (totalPanelWidth > availableWidth) {
-    // 按比例缩小两个面板
-    const ratio = availableWidth / totalPanelWidth
-    leftPanelWidth.value = Math.max(100, leftPanelWidth.value * ratio)
-    rightPanelWidth.value = Math.max(100, rightPanelWidth.value * ratio)
-  }
-}
-
 onMounted(() => {
-  // 初始化百分比宽度（基于当前像素宽度）
+  // 初始化百分比宽度
   initializePanelPercentages()
-
-  // 添加窗口大小变化监听器
-  window.addEventListener('resize', adjustPanelWidths)
 })
 
 // 初始化百分比宽度
 const initializePanelPercentages = () => {
-  // 等待DOM渲染完成后计算
-  nextTick(() => {
-    const previewSection = document.querySelector('.preview-section')
-    if (previewSection) {
-      // 直接设置为40-40-20的比例
-      leftPanelPercent.value = 40
-      centerPanelPercent.value = 40
-      rightPanelPercent.value = 20
-
-      // 更新像素宽度以便后续调整使用
-      const containerWidth = previewSection.clientWidth
-      const availableWidth = containerWidth - SPLITTER_WIDTH * 2
-      if (availableWidth > 0) {
-        leftPanelWidth.value = (availableWidth * 40) / 100
-        rightPanelWidth.value = (availableWidth * 20) / 100
-      }
-    }
-  })
+  // 直接设置初始比例为40-30-30
+  leftPanelPercent.value = 40
+  centerPanelPercent.value = 30
+  rightPanelPercent.value = 30
 }
 
 // 响应式数据
@@ -153,17 +119,15 @@ const timelineHeight = ref(34)
 const isDragging = ref(false)
 
 // 垂直分割器相关
-const leftPanelWidth = ref(600)   // 增加到600px以接近40%
-const rightPanelWidth = ref(300)  // 减少到300px以接近20%
 const leftPanelPercent = ref(40)
-const centerPanelPercent = ref(40)
-const rightPanelPercent = ref(20)
+const centerPanelPercent = ref(30)
+const rightPanelPercent = ref(30)
 const isLeftDragging = ref(false)
 const isRightDragging = ref(false)
 
 // 主内容区域分割相关
-const leftContentWidth = ref(60) // 左侧内容宽度从75%改为60%
-const rightPanelWidthPercent = ref(40) // 右侧面板宽度从25%改为40%
+const leftContentWidth = ref(70) // 左侧内容宽度 70%
+const rightPanelWidthPercent = ref(30) // 右侧面板宽度 30%
 const isMainDragging = ref(false)
 
 // 计算属性：根据聊天面板显示状态调整左侧宽度
@@ -382,7 +346,6 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopRightResize)
   document.removeEventListener('mousemove', handleMainResize)
   document.removeEventListener('mouseup', stopMainResize)
-  window.removeEventListener('resize', adjustPanelWidths)
 })
 </script>
 
