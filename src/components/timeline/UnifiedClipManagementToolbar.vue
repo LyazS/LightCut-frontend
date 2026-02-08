@@ -78,13 +78,6 @@
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
 
-      <!-- <HoverButton @click="debugTimeline" title="在控制台打印时间轴配置信息"> 调试 </HoverButton> -->
-      <!-- <HoverButton @click="debugHistory" title="在控制台打印历史操作记录信息">
-        <template #icon>
-          <RemixIcon name="history-line" size="1x" />
-        </template>
-        历史
-      </HoverButton> -->
     </div>
   </div>
 </template>
@@ -439,6 +432,7 @@ function debugHistory() {
 
   console.groupEnd()
 }
+
 </script>
 
 <style scoped>

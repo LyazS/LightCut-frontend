@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { computed, type CSSProperties } from 'vue'
-import { frameToPixel } from '@/core/utils/coordinateUtils'
+import { frameToPixel } from '@/core/utils/timelineScaleUtils'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { SnapPoint } from '@/types/snap'
 

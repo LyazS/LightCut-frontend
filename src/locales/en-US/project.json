@@ -1,6 +1,7 @@
 {
   "project": {
     "new": "New Project",
+    "newName": "New Project",
     "edit": "Edit",
     "delete": {
       "title": "Delete",

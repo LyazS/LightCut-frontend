@@ -15,12 +15,13 @@ import { createUnifiedSnapModule } from '@/core/modules/UnifiedSnapModule'
 import { createUnifiedUserModule } from '@/core/modules/UnifiedUserModule'
 import { createUnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
 import { createUnifiedMediaBunnyModule } from '@/core/modules/UnifiedMediaBunnyModule'
+import { createUnifiedUIModule } from '@/core/modules/UnifiedUIModule'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
-import { useEditSDK } from '@/aipanel'
+import { useEditSDK } from '@/aipanel/agent/composables/useEditSDK'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
-import { frameToPixel, pixelToFrame } from '@/core/utils/coordinateUtils'
+import { frameToPixel, pixelToFrame } from '@/core/utils/timelineScaleUtils'
 import {
   getTimelineItemsByTrack,
   isPlayheadInTimelineItem,
@@ -100,6 +101,9 @@ export const useUnifiedStore = defineStore('unified', () => {
 
   const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, unifiedViewportModule.contentEndTimeFrames)
   registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
+
+  const unifiedUIModule = createUnifiedUIModule(registry)
+  registry.register(MODULE_NAMES.UI, unifiedUIModule)
 
   // 创建历史记录操作模块
   const historyOperations = useHistoryOperations(
@@ -197,7 +201,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 工厂函数和查询函数
     createUnifiedMediaItemData: unifiedMediaModule.createUnifiedMediaItemData,
-    UnifiedMediaItemQueries: unifiedMediaModule.UnifiedMediaItemQueries,
+    MediaItemQueries: unifiedMediaModule.MediaItemQueries,
     UnifiedMediaItemActions: unifiedMediaModule.UnifiedMediaItemActions,
 
     // ==================== 统一轨道模块状态和方法 ====================
@@ -376,6 +380,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 加载弹窗方法
     createLoading: unifiedUseNaiveUIModule.createLoading,
 
+    // 系统通知方法
+    notifySystem: unifiedUseNaiveUIModule.notifySystem,
+
     initApi: unifiedUseNaiveUIModule.initApi,
 
     // ==================== 历史模块状态和方法 ====================
@@ -395,6 +402,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // ==================== 统一选择模块状态和方法 ====================
     selectedMediaItemIds: unifiedSelectionModule.selectedMediaItemIds,
+    selectedMediaItemId: unifiedSelectionModule.selectedMediaItemId,
     hasMediaSelection: unifiedSelectionModule.hasMediaSelection,
     isMediaMultiSelectMode: unifiedSelectionModule.isMediaMultiSelectMode,
     selectMediaItems: unifiedSelectionModule.selectMediaItems,
@@ -412,6 +420,7 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 兼容性选择方法
     selectTimelineItem: unifiedSelectionModule.selectTimelineItem,
+    clearTimelineSelection: unifiedSelectionModule.clearTimelineSelection,
     clearAllSelections: unifiedSelectionModule.clearAllSelections,
     toggleTimelineItemSelection: unifiedSelectionModule.toggleTimelineItemSelection,
     isTimelineItemSelected: unifiedSelectionModule.isTimelineItemSelected,
@@ -484,6 +493,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     isLoggingIn: unifiedUserModule.isLoggingIn,
     isRegistering: unifiedUserModule.isRegistering,
     isUsingActivationCode: unifiedUserModule.isUsingActivationCode,
+    bizyairApiKey: unifiedUserModule.bizyairApiKey,
 
     // 用户认证方法
     login: unifiedUserModule.login,
@@ -497,6 +507,12 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 激活码功能
     useActivationCode: unifiedUserModule.useActivationCode,
+
+    // BizyAir API Key 管理
+    saveBizyAirApiKey: unifiedUserModule.saveBizyAirApiKey,
+    getBizyAirApiKey: unifiedUserModule.getBizyAirApiKey,
+    clearBizyAirApiKey: unifiedUserModule.clearBizyAirApiKey,
+    hasBizyAirApiKey: unifiedUserModule.hasBizyAirApiKey,
 
     // ==================== 工具函数导出 ====================
     getThumbnailUrl: unifiedVideoThumbnailModule.getThumbnailUrl,
@@ -533,10 +549,13 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 目录管理方法
     createDirectory: unifiedDirectoryModule.createDirectory,
+    createCharacterDirectory: unifiedDirectoryModule.createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory: unifiedDirectoryModule.renameDirectory,
     deleteDirectory: unifiedDirectoryModule.deleteDirectory, // 🆕 新增删除文件夹方法
     deleteMediaItem: unifiedDirectoryModule.deleteMediaItem, // 🆕 新增删除媒体项方法
     getDirectory: unifiedDirectoryModule.getDirectory,
+    getCharacterDirectory: unifiedDirectoryModule.getCharacterDirectory, // 🆕 新增获取角色文件夹方法
+    isCharacterDirectory: unifiedDirectoryModule.isCharacterDirectory, // 🆕 新增类型守卫方法
     addMediaToDirectory: unifiedDirectoryModule.addMediaToDirectory,
     removeMediaFromDirectory: unifiedDirectoryModule.removeMediaFromDirectory,
     getDirectoryContent: unifiedDirectoryModule.getDirectoryContent,
@@ -589,6 +608,26 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 拖拽查询方法
     getSourceHandler: dragManager.getSourceHandler,
     getTargetHandler: dragManager.getTargetHandler,
+
+    // ==================== UI 模块状态和方法 ====================
+
+    // AI 面板状态
+    isChatPanelVisible: unifiedUIModule.isChatPanelVisible,
+    aiPanelActiveTab: unifiedUIModule.aiPanelActiveTab,
+
+    // 角色编辑器状态
+    characterEditorState: unifiedUIModule.characterEditorState,
+
+    // 角色编辑器计算属性
+    curCharacterDir: unifiedUIModule.curCharacterDir,
+    canShowCharacterEditor: unifiedUIModule.canShowCharacterEditor,
+
+    // AI 面板状态管理方法
+    setChatPanelVisible: unifiedUIModule.setChatPanelVisible,
+
+    // 角色编辑器方法
+    openCharacterEditor: unifiedUIModule.openCharacterEditor,
+    closeCharacterEditor: unifiedUIModule.closeCharacterEditor,
 
     // ==================== 执行系统集成 ====================
     executeUserScript,

@@ -3,7 +3,7 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { fileSystemService } from '@/core/managers/filesystem/fileSystemService'
 import { generateThumbnailForUnifiedMediaItemBunny } from '@/core/bunnyUtils/thumbGenerator'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 
 /**
  * 项目缩略图服务
@@ -44,7 +44,7 @@ export function useProjectThumbnailService() {
         const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
         return (
           mediaItem &&
-          (UnifiedMediaItemQueries.isVideo(mediaItem) || UnifiedMediaItemQueries.isImage(mediaItem))
+          (MediaItemQueries.isVideo(mediaItem) || MediaItemQueries.isImage(mediaItem))
         )
       })
       .sort((a, b) => a.timeRange.timelineStartTime - b.timeRange.timelineStartTime)
@@ -82,18 +82,32 @@ export function useProjectThumbnailService() {
   }
 
   /**
-   * 获取缩略图URL
+   * 获取缩略图URL（如果缩略图不存在则返回 undefined）
    */
-  const getThumbnailUrl = async (projectId: string): Promise<string> => {
+  const getThumbnailUrl = async (projectId: string): Promise<string | undefined> => {
     try {
-      // 获取缩略图文件
+      // 检查工作空间权限
+      const permissionResult = await fileSystemService.checkPermission()
+      if (!permissionResult.hasAccess) {
+        return undefined
+      }
+
+      // 获取缩略图文件路径
       const thumbnailPath = fileSystemService.paths.getThumbnailPath(projectId)
+
+      // 检查文件是否存在
+      const fileExists = await fileSystemService.fileExists(thumbnailPath)
+      if (!fileExists) {
+        return undefined
+      }
+
+      // 读取缩略图文件
       const thumbnailBlob = await fileSystemService.readFileAsBlob(thumbnailPath)
 
       return URL.createObjectURL(thumbnailBlob)
     } catch (error) {
-      console.warn('获取缩略图URL失败:', error)
-      throw error
+      // 静默处理错误，返回 undefined
+      return undefined
     }
   }
 

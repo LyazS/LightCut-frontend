@@ -86,6 +86,16 @@ export interface LoadingInstance {
 }
 
 /**
+ * 系统通知选项（精简版）
+ */
+export interface SystemNotificationOptions {
+  /** 通知标题（必填） */
+  title: string
+  /** 通知内容（可选） */
+  body?: string
+}
+
+/**
  * 统一通知管理模块
  * 负责管理应用内的通知显示和管理
  */
@@ -487,6 +497,63 @@ export function createUnifiedUseNaiveUIModule() {
     }
   }
 
+  // ==================== 系统通知管理（极简版） ====================
+
+  /**
+   * 发送系统通知（极简版）
+   * - 静默推送（不发出声音）
+   * - 5秒后自动关闭
+   * - 点击通知聚焦回网页
+   *
+   * @param title 通知标题
+   * @param body 通知内容（可选）
+   * @returns Promise<boolean> 是否发送成功
+   */
+  async function notifySystem(title: string, body?: string): Promise<boolean> {
+    // 检查浏览器支持
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return false
+    }
+
+    // 检查权限
+    let permission = Notification.permission
+
+    // 如果权限未决定，尝试请求
+    if (permission === 'default') {
+      try {
+        permission = await Notification.requestPermission()
+      } catch (error) {
+        console.error('请求系统通知权限失败:', error)
+        return false
+      }
+    }
+
+    // 如果没有权限，静默失败
+    if (permission !== 'granted') {
+      return false
+    }
+
+    try {
+      // 创建通知
+      const notification = new Notification(title, {
+        body: body,
+        silent: true,  // 静默推送，不发出声音
+        icon: '/logo-ok/favicon-96x96.png',  // 使用应用图标
+      })
+
+      // 点击通知时聚焦回网页
+      notification.onclick = () => {
+        window.focus()
+        notification.close()
+      }
+
+      return true
+    } catch (error) {
+      console.error('发送系统通知失败:', error)
+      return false
+    }
+  }
+
   function initApi(api: {
     message: ReturnType<typeof useMessage>
     t?: (key: string) => string
@@ -515,6 +582,8 @@ export function createUnifiedUseNaiveUIModule() {
     destroyAllModals,
     // 加载弹窗方法
     createLoading,
+    // 系统通知方法
+    notifySystem,
   }
 }
 

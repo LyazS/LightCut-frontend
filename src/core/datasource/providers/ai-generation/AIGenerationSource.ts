@@ -3,7 +3,10 @@
  * 基于"核心数据与行为分离"的重构方案
  */
 
-import type { BaseDataSourceData, DataSourceRuntimeState } from '@/core/datasource/core/BaseDataSource'
+import type {
+  BaseDataSourceData,
+  DataSourceRuntimeState,
+} from '@/core/datasource/core/BaseDataSource'
 import { reactive } from 'vue'
 import { RuntimeStateFactory, SourceOrigin } from '@/core/datasource/core/BaseDataSource'
 
@@ -11,16 +14,9 @@ import { RuntimeStateFactory, SourceOrigin } from '@/core/datasource/core/BaseDa
 export * from './types'
 
 // 导入枚举（作为值）和类型
-import {
-  AITaskType,
-  ContentType,
-  TaskStatus,
-  TaskStreamEventType,
-} from './types'
+import { AITaskType, ContentType, TaskStatus, TaskStreamEventType } from './types'
 
-import type {
-  MediaGenerationRequest,
-} from './types'
+import type { MediaGenerationRequest, TaskResultData } from './types'
 
 // ==================== 数据源接口定义 ====================
 
@@ -31,21 +27,16 @@ export interface BaseAIGenerationSourceData extends BaseDataSourceData {
   type: 'ai-generation'
   aiTaskId: string
   requestParams: MediaGenerationRequest
-  estimatedCost?: number
-  actualCost?: number
-  resultPath?: string // 远程任务完成后的结果路径
+  resultData?: TaskResultData // 远程任务完成后的结果数据
   taskStatus: TaskStatus // 🌟 新增：持久化任务状态（必填）
 }
 
 /**
  * AI生成数据源 - 继承基类型和运行时状态
  */
-export interface AIGenerationSourceData extends BaseAIGenerationSourceData, DataSourceRuntimeState {
-  estimatedTime?: number
-  streamConnected?: boolean
-  currentStage?: string
-  metadata?: Record<string, any>
-}
+export interface AIGenerationSourceData
+  extends BaseAIGenerationSourceData,
+    DataSourceRuntimeState {}
 
 // ==================== 工厂函数 ====================
 
@@ -65,10 +56,6 @@ export const AIGenerationSourceFactory = {
     return reactive({
       ...param,
       ...RuntimeStateFactory.createRuntimeState(origin),
-      estimatedTime: undefined,
-      currentStage: undefined,
-      streamConnected: false,
-      metadata: {},
     }) as AIGenerationSourceData
   },
 }
@@ -97,7 +84,6 @@ export const AIGenerationQueries = {
     return AIGenerationTypeGuards.isAIGenerationSource(source) ? source.aiTaskId : null
   },
 
-
   /**
    * 获取任务状态
    */
@@ -106,38 +92,10 @@ export const AIGenerationQueries = {
   },
 
   /**
-   * 获取当前阶段描述
-   */
-  getCurrentStage(source: AIGenerationSourceData): string | undefined {
-    return source.currentStage
-  },
-
-  /**
-   * 是否已连接流
-   */
-  isStreamConnected(source: AIGenerationSourceData): boolean {
-    return source.streamConnected || false
-  },
-
-  /**
    * 获取请求参数
    */
   getRequestParams(source: AIGenerationSourceData): MediaGenerationRequest {
     return source.requestParams
-  },
-
-  /**
-   * 获取预估成本
-   */
-  getEstimatedCost(source: AIGenerationSourceData): number | undefined {
-    return source.estimatedCost
-  },
-
-  /**
-   * 获取实际成本
-   */
-  getActualCost(source: AIGenerationSourceData): number | undefined {
-    return source.actualCost
   },
 }
 
@@ -157,16 +115,13 @@ export function extractAIGenerationSourceData(
     // 特定字段
     aiTaskId: source.aiTaskId,
     requestParams: source.requestParams,
-    estimatedCost: source.estimatedCost,
-    actualCost: source.actualCost,
-    resultPath: source.resultPath, // 保存结果路径
+    resultData: source.resultData, // 保存结果数据
     taskStatus: source.taskStatus, // 🌟 新增：保存任务状态
 
     // 不需要保存运行时状态
     // estimatedTime: source.estimatedTime, // 运行时状态
     // streamConnected: source.streamConnected, // 运行时状态
     // currentStage: source.currentStage, // 运行时状态
-    // metadata: source.metadata, // 运行时状态
     // progress: source.progress, // 重新加载时会重置
     // errorMessage: source.errorMessage, // 重新加载时会重置
     // sourceOrigin: source.sourceOrigin, // 重新加载时会重新设置

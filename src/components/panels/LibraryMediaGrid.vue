@@ -55,7 +55,7 @@
             <!-- 文件夹项目 -->
             <template v-if="item.type === 'directory'">
               <div class="item-icon directory-icon">
-                <component :is="IconComponents.FOLDER" :size="getIconSize()" />
+                <FolderIcon :folder-id="item.id" :size="getIconSize()" :is-list-view="false" />
               </div>
             </template>
 
@@ -111,11 +111,7 @@
           <!-- 图标列 -->
           <div class="list-item-icon">
             <template v-if="item.type === 'directory'">
-              <component
-                :is="IconComponents.FOLDER"
-                size="20px"
-                style="color: var(--color-accent-primary)"
-              />
+              <FolderIcon :folder-id="item.id" size="20px" :is-list-view="true" />
             </template>
             <template v-else>
               <MediaItemThumbnail :media-id="item.id" />
@@ -198,6 +194,14 @@
         @confirm="handleRenameConfirm"
       />
 
+      <!-- 媒体预览模态框 -->
+      <MediaPreviewModal
+        :show="showMediaPreviewModal"
+        :media-item-id="previewMediaItemId"
+        @update:show="showMediaPreviewModal = $event"
+        @close="showMediaPreviewModal = false"
+      />
+
       <!-- 隐藏的文件输入 -->
       <input
         ref="fileInput"
@@ -217,8 +221,7 @@ import { ref, computed } from 'vue'
 import { NScrollbar } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import type { DisplayItem, VirtualDirectory, ClipboardItem } from '@/core/types/directory'
-import type { ViewMode, SortBy, SortOrder } from '@/core/directory/types'
+import type { DisplayItem, VirtualDirectory, ClipboardItem, ViewMode, SortBy, SortOrder } from '@/core/directory/types'
 import {
   DragSourceType,
   DropTargetType,
@@ -249,6 +252,8 @@ import {
 import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
 import RenameModal from '@/components/modals/RenameModal.vue'
 import MediaItemThumbnail from '@/components/panels/MediaItemThumbnail.vue'
+import MediaPreviewModal from '@/components/modals/MediaPreviewModal.vue'
+import FolderIcon from '@/components/utils/FolderIcon.vue'
 import type { TaskSubmitResponse } from '@/types/taskApi'
 import { TaskSubmitErrorCode } from '@/types/taskApi'
 import {
@@ -275,8 +280,6 @@ function isFileDrag(event: DragEvent): boolean {
 
 // 组件状态
 const isDragOver = ref(false)
-const selectedItems = ref<DisplayItem[]>([])
-const lastSelectedItem = ref<DisplayItem | null>(null)
 const fileInput = ref<HTMLInputElement>()
 const showCreateDirModal = ref(false)
 
@@ -284,6 +287,10 @@ const showCreateDirModal = ref(false)
 const showRenameModal = ref(false)
 const renameCurrentName = ref('')
 const renameTarget = ref<DisplayItem | null>(null)
+
+// 预览模态框状态
+const showMediaPreviewModal = ref(false)
+const previewMediaItemId = ref<string>('')
 
 
 // 文件夹拖拽状态（每个文件夹独立状态）
@@ -446,6 +453,24 @@ const currentMenuItems = computed((): MenuItem[] => {
               showContextMenu.value = false
             },
           },
+          // 🆕 新增：创建角色
+          {
+            label: t('media.character.character'),
+            icon: IconComponents.USER,
+            onClick: () => {
+              // 检查是否选择了目录
+              if (!currentDir.value) {
+                unifiedStore.messageError(t('media.selectDirectoryFirst'))
+                return
+              }
+
+              // 打开角色编辑器（创建模式）
+              unifiedStore.openCharacterEditor('create')
+              // 打开 AI 面板
+              unifiedStore.setChatPanelVisible(true)
+              showContextMenu.value = false
+            },
+          },
           {
             label: t('media.importFiles'),
             icon: IconComponents.UPLOAD,
@@ -453,6 +478,11 @@ const currentMenuItems = computed((): MenuItem[] => {
               triggerFileInput()
               showContextMenu.value = false
             },
+          },
+          {
+            label: t('media.pasteImport'),
+            icon: IconComponents.CLIPBOARD,
+            onClick: handlePasteFromClipboard,
           },
         ],
       },
@@ -552,7 +582,7 @@ const currentMenuItems = computed((): MenuItem[] => {
   }
 
   // 检查是否为多选状态
-  if (selectedItems.value.length > 1) {
+  if (unifiedStore.selectedMediaItemIds.size > 1) {
     // 多选状态菜单
     return [
       {
@@ -735,7 +765,7 @@ function isDraggable(item: DisplayItem): boolean {
 
 // 检查项目是否被选中
 function isItemSelected(item: DisplayItem): boolean {
-  return selectedItems.value.some((selected) => selected.id === item.id)
+  return unifiedStore.isMediaItemSelected(item.id)
 }
 
 // ==================== 交互处理 ====================
@@ -743,45 +773,45 @@ function isItemSelected(item: DisplayItem): boolean {
 // 双击项目处理
 function onItemDoubleClick(item: DisplayItem): void {
   if (item.type === 'directory') {
-    unifiedStore.navigateToDir(item.id)
+    const dir = unifiedStore.getDirectory(item.id)
+    
+    // 判断是否为角色文件夹
+    if (dir && unifiedStore.isCharacterDirectory(dir)) {
+      unifiedStore.openCharacterEditor('edit', item.id)  // 打开角色编辑器
+    } else {
+      unifiedStore.navigateToDir(item.id)  // 普通文件夹导航
+    }
   } else {
-    // TODO: 实现媒体项双击处理（如预览）
-    console.log('双击媒体项:', item.id)
+    // 检查媒体是否已经ready
+    const mediaItem = getMediaItem(item.id)
+    if (!mediaItem) {
+      unifiedStore.messageError(t('media.mediaNotFound'))
+      return
+    }
+
+    // 只有ready状态的媒体才能预览
+    if (mediaItem.mediaStatus !== 'ready') {
+      unifiedStore.messageWarning(t('media.previewNotReady', { name: mediaItem.name }))
+      return
+    }
+
+    // 打开媒体预览
+    previewMediaItemId.value = item.id
+    showMediaPreviewModal.value = true
   }
 }
 
 // 单击项目处理
 function onItemClick(item: DisplayItem, event: MouseEvent): void {
-  // 更新选中状态
   if (event.ctrlKey || event.metaKey) {
     // Ctrl+点击：切换选择状态
-    const index = selectedItems.value.findIndex((selected) => selected.id === item.id)
-    if (index > -1) {
-      selectedItems.value.splice(index, 1)
-    } else {
-      selectedItems.value.push(item)
-    }
-    lastSelectedItem.value = item
-  } else if (event.shiftKey && lastSelectedItem.value) {
+    unifiedStore.selectMediaItems([item.id], 'toggle')
+  } else if (event.shiftKey) {
     // Shift+点击：范围选择
-    handleRangeSelection(lastSelectedItem.value, item)
+    unifiedStore.selectMediaItems([item.id], 'range')
   } else {
     // 普通点击：单选
-    selectedItems.value = [item]
-    lastSelectedItem.value = item
-  }
-}
-
-// 范围选择处理
-function handleRangeSelection(startItem: DisplayItem, endItem: DisplayItem): void {
-  const allItems = displayItems.value
-  const startIndex = allItems.findIndex((item: DisplayItem) => item.id === startItem.id)
-  const endIndex = allItems.findIndex((item: DisplayItem) => item.id === endItem.id)
-
-  if (startIndex !== -1 && endIndex !== -1) {
-    const [minIndex, maxIndex] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)]
-    const rangeItems = allItems.slice(minIndex, maxIndex + 1)
-    selectedItems.value = rangeItems
+    unifiedStore.selectMediaItems([item.id], 'replace')
   }
 }
 
@@ -792,7 +822,7 @@ function onItemContextMenu(item: DisplayItem, event: MouseEvent): void {
 
   // 如果右键的项目不在选中列表中，则将其设为唯一选中项
   if (!isItemSelected(item)) {
-    selectedItems.value = [item]
+    unifiedStore.selectMediaItems([item.id], 'replace')
   }
 
   contextMenuOptions.value.x = event.clientX
@@ -814,7 +844,7 @@ function handleContextMenu(event: MouseEvent): void {
 // 点击空白区域
 function handleContainerClick(event: MouseEvent): void {
   if (!event.target || !(event.target as Element).closest('.content-item')) {
-    selectedItems.value = []
+    unifiedStore.clearMediaSelection()
   }
 }
 
@@ -1093,11 +1123,6 @@ async function handleCreateFolder(folderName: string): Promise<void> {
 
 // ==================== 文件导入 ====================
 
-// 显示导入菜单
-function showImportMenu(): void {
-  triggerFileInput()
-}
-
 // 触发文件选择
 function triggerFileInput(): void {
   fileInput.value?.click()
@@ -1132,6 +1157,67 @@ async function processFiles(files: File[]): Promise<void> {
 
   console.log(t('media.fileProcessComplete', { success: successful, failed: failed }))
 }
+
+// 从系统剪贴板粘贴图片
+async function handlePasteFromClipboard(): Promise<void> {
+  if (!currentDir.value) {
+    unifiedStore.messageError(t('media.selectDirectoryFirst'))
+    return
+  }
+
+  showContextMenu.value = false
+
+  try {
+    // 检查浏览器是否支持 Clipboard API
+    if (!navigator.clipboard || !navigator.clipboard.read) {
+      unifiedStore.messageError(t('media.pasteImportNotSupported'))
+      return
+    }
+
+    // 读取剪贴板内容
+    const clipboardItems = await navigator.clipboard.read()
+    const imageFiles: File[] = []
+
+    // 遍历剪贴板项目
+    for (const item of clipboardItems) {
+      // 查找图片类型
+      const imageType = item.types.find(type => type.startsWith('image/'))
+
+      if (imageType) {
+        // 获取图片 Blob
+        const blob = await item.getType(imageType)
+
+        // 生成文件名
+        const timestamp = Date.now()
+        const extension = imageType.split('/')[1] || 'png'
+        const fileName = `Clipboard_Image_${timestamp}.${extension}`
+
+        // 将 Blob 转换为 File
+        const file = new File([blob], fileName, { type: imageType })
+        imageFiles.push(file)
+      }
+    }
+
+    // 检查是否找到图片
+    if (imageFiles.length === 0) {
+      unifiedStore.messageWarning(t('media.pasteImportNoImage'))
+      return
+    }
+
+    // 处理图片文件
+    await processFiles(imageFiles)
+    unifiedStore.messageSuccess(t('media.pasteImportSuccess', { count: imageFiles.length }))
+
+  } catch (error) {
+    console.error('从剪贴板粘贴图片失败:', error)
+    unifiedStore.messageError(
+      t('media.pasteImportFailed', {
+        error: error instanceof Error ? error.message : '未知错误'
+      })
+    )
+  }
+}
+
 
 // 添加媒体项
 async function addMediaItem(file: File): Promise<void> {
@@ -1312,13 +1398,11 @@ async function retryAIGeneration(mediaItem: UnifiedMediaItemData): Promise<void>
   // 2. 更新任务ID和状态
   aiSource.aiTaskId = submitResult.task_id
   aiSource.taskStatus = TaskStatus.PENDING
-  aiSource.actualCost = undefined
-  aiSource.resultPath = undefined
+  aiSource.resultData = undefined
 
   // 3. 重置数据源状态
   aiSource.progress = 0
   aiSource.errorMessage = undefined
-  aiSource.streamConnected = false
 
   // 4. 重置媒体状态
   mediaItem.mediaStatus = 'pending'
@@ -1458,17 +1542,25 @@ async function deleteFolder(folderId: string): Promise<void> {
 
 // ==================== 剪贴板操作 ====================
 
+// 获取选中的显示项列表
+function getSelectedDisplayItems(): DisplayItem[] {
+  const selectedIds = Array.from(unifiedStore.selectedMediaItemIds)
+  return displayItems.value.filter(item => selectedIds.includes(item.id))
+}
+
 // 剪切操作
 function handleCut(): void {
-  if (selectedItems.value.length === 0) return
-  unifiedStore.cut(selectedItems.value)
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
+  unifiedStore.cut(selectedItems)
   showContextMenu.value = false
 }
 
 // 复制操作
 function handleCopy(): void {
-  if (selectedItems.value.length === 0) return
-  unifiedStore.copy(selectedItems.value)
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
+  unifiedStore.copy(selectedItems)
   showContextMenu.value = false
 }
 
@@ -1489,7 +1581,7 @@ async function handlePaste(): Promise<void> {
   }
 
   // 清空选择
-  selectedItems.value = []
+  unifiedStore.clearMediaSelection()
 }
 
 // 粘贴到指定文件夹
@@ -1519,9 +1611,10 @@ function handleClearClipboard(): void {
 // 批量删除处理
 async function handleBatchDelete(): Promise<void> {
   showContextMenu.value = false
-  if (selectedItems.value.length === 0) return
+  const selectedItems = getSelectedDisplayItems()
+  if (selectedItems.length === 0) return
 
-  const itemCount = selectedItems.value.length
+  const itemCount = selectedItems.length
 
   unifiedStore.dialogWarning({
     title: t('media.batchDelete'),
@@ -1534,8 +1627,8 @@ async function handleBatchDelete(): Promise<void> {
       let failedCount = 0
       let hasDirectoryDeleted = false
 
-      // 复制选中项列表，因为删除过程中会修改 selectedItems
-      const itemsToDelete = [...selectedItems.value]
+      // 复制选中项列表
+      const itemsToDelete = [...selectedItems]
 
       for (const item of itemsToDelete) {
         try {
@@ -1571,7 +1664,7 @@ async function handleBatchDelete(): Promise<void> {
       }
 
       // 清空选择
-      selectedItems.value = []
+      unifiedStore.clearMediaSelection()
 
       // 显示结果消息
       if (failedCount === 0) {
@@ -1591,6 +1684,7 @@ async function handleBatchDelete(): Promise<void> {
     },
   })
 }
+
 </script>
 
 <style scoped>

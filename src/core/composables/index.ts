@@ -11,9 +11,6 @@ export { useKeyboardShortcuts } from './useKeyboardShortcuts'
 // 重新导出 useUnifiedKeyframeTransformControls 函数
 export { useUnifiedKeyframeTransformControls } from './useKeyframeTransformControls'
 
-// 重新导出 useUnifiedKeyframeUI 函数
-export { useUnifiedKeyframeUI } from './useUnifiedKeyframeUI'
-
 // 重新导出 useTimelineTimeScale 函数
 export { useTimelineTimeScale } from './useTimelineTimeScale'
 

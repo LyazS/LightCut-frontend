@@ -19,7 +19,7 @@ import {
   drawImageOnCanvas,
 } from '@/core/bunnyUtils/thumbUtils'
 import { ThumbnailMode, THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem/queries'
+import { MediaItemQueries } from '@/core/mediaitem/queries'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
@@ -146,7 +146,7 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
     const sortedLayout = [...thumbnailLayout].sort((a, b) => a.framePosition - b.framePosition)
 
     // ==================== 视频处理 ====================
-    if (UnifiedMediaItemQueries.isVideo(mediaItem) && timelineItem.runtime.bunnyClip) {
+    if (MediaItemQueries.isVideo(mediaItem) && timelineItem.runtime.bunnyClip) {
       const bunnyClip = timelineItem.runtime.bunnyClip
       let sharedCanvas: HTMLCanvasElement | null = null
       let sharedCtx: CanvasRenderingContext2D | null = null
@@ -221,7 +221,7 @@ export function createUnifiedVideoThumbnailModule(registry: ModuleRegistry) {
     }
     
     // ==================== 图片处理 ====================
-    else if (UnifiedMediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
+    else if (MediaItemQueries.isImage(mediaItem) && mediaItem.runtime.bunny?.imageClip) {
       try {
         const imageBitmap = mediaItem.runtime.bunny.imageClip
 

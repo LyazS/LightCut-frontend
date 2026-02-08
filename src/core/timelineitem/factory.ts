@@ -18,9 +18,8 @@ import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/type'
 import type { GetAnimation } from './bunnytype'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
-import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 // ==================== 克隆和复制函数 ====================
@@ -267,7 +266,7 @@ export async function rebuildTimelineItemForCmd(
 
     // 3. 同时考虑原始数据的初始化状态和媒体状态
     const isOriginalInitialized = originalTimelineItemData.runtime.isInitialized
-    const isMediaReady = UnifiedMediaItemQueries.isReady(mediaItem)
+    const isMediaReady = MediaItemQueries.isReady(mediaItem)
 
     // 只有当原始数据已初始化 AND 媒体已就绪时，才返回 ready 状态
     if (isOriginalInitialized && isMediaReady) {

@@ -3,7 +3,7 @@
  */
 
 import type { ThumbnailLayoutItem } from '@/core/types/thumbnail'
-import { calculateVisibleFrameRange } from '@/core/utils/coordinateUtils'
+import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
 import { THUMBNAIL_CONSTANTS } from '@/constants/ThumbnailConstants'
 
 /**

@@ -11,7 +11,7 @@
 
 import { watch } from 'vue'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { TimelineItemTransitioner } from './TimelineItemTransitioner'
 import { sleep } from '@/utils/fetchClient'
@@ -55,7 +55,7 @@ export class MediaSync {
       }
 
       // 2. 检查是否需要同步
-      if (UnifiedMediaItemQueries.isReady(mediaItem)) {
+      if (MediaItemQueries.isReady(mediaItem)) {
         console.log(`[MediaSync] 媒体已就绪，直接处理: ${this.syncId}`)
         await this.handleReadyMedia(mediaItem)
         return

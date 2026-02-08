@@ -1,82 +1,90 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div
-        v-if="show"
-        class="modal-overlay"
-        :class="overlayClass"
-        :style="overlayStyle"
-        @click="handleOverlayClick"
-      >
-        <div class="modal-container" :class="containerClass" :style="containerStyle" @click.stop>
-          <!-- 头部区域 -->
-          <div v-if="showHeader" class="modal-header" :class="headerClass">
-            <slot name="header">
-              <h3 v-if="title" class="modal-title">{{ title }}</h3>
-              <div v-if="showClose" class="modal-header-actions">
-                <slot name="closeIcon">
-                  <button
-                    class="modal-close-btn"
-                    :class="closeBtnClass"
-                    @click="handleClose"
-                  >
-                    <component :is="IconComponents.CLOSE" size="16px" />
-                  </button>
-                </slot>
-              </div>
+  <ModalOverlay
+    :show="show"
+    :closable="closable && !loading"
+    :mask-closable="maskClosable && !loading"
+    :esc-closable="escClosable && !loading"
+    :z-index="zIndex"
+    :overlay-class="customClass"
+    :overlay-style="overlayStyle"
+    @update:show="handleUpdateShow"
+    @close="emit('close')"
+    @open="emit('open')"
+  >
+    <BaseModal
+      :width="width"
+      :height="height"
+      :max-width="maxWidth"
+      :max-height="maxHeight"
+      :centered="centered"
+      :class-name="className"
+      :custom-style="customStyle"
+    >
+      <!-- 头部区域 -->
+      <div v-if="showHeader" class="modal-header">
+        <slot name="header">
+          <h3 v-if="title" class="modal-title">{{ title }}</h3>
+          <div v-if="showClose" class="modal-header-actions">
+            <slot name="closeIcon">
+              <button class="modal-close-btn" @click="handleClose">
+                <component :is="IconComponents.CLOSE" size="16px" />
+              </button>
             </slot>
           </div>
-
-          <!-- 内容区域 -->
-          <div class="modal-content" :class="contentClass">
-            <slot>
-              <div class="modal-body">
-                <slot name="body"></slot>
-              </div>
-            </slot>
-          </div>
-
-          <!-- 底部区域 -->
-          <div v-if="showFooter" class="modal-footer" :class="footerClass">
-            <slot name="footer">
-              <div class="modal-actions">
-                <slot name="actions">
-                  <HoverButton
-                    v-if="showCancel"
-                    variant="large"
-                    @click="handleCancel"
-                    :disabled="loading"
-                  >
-                    {{ props.cancelText }}
-                  </HoverButton>
-                  <HoverButton
-                    v-if="showConfirm"
-                    variant="large"
-                    @click="handleConfirm"
-                    :disabled="confirmDisabled || loading"
-                    :loading="loading"
-                  >
-                    {{ props.confirmText }}
-                  </HoverButton>
-                </slot>
-              </div>
-            </slot>
-          </div>
-        </div>
+        </slot>
       </div>
-    </Transition>
-  </Teleport>
+
+      <!-- 内容区域 -->
+      <div class="modal-content">
+        <slot>
+          <div class="modal-body">
+            <slot name="body"></slot>
+          </div>
+        </slot>
+      </div>
+
+      <!-- 底部区域 -->
+      <div v-if="showFooter" class="modal-footer">
+        <slot name="footer">
+          <div class="modal-actions">
+            <slot name="actions">
+              <HoverButton
+                v-if="showCancel"
+                variant="large"
+                @click="handleCancel"
+                :disabled="loading"
+              >
+                {{ props.cancelText }}
+              </HoverButton>
+              <HoverButton
+                v-if="showConfirm"
+                variant="large"
+                @click="handleConfirm"
+                :disabled="confirmDisabled || loading"
+                :loading="loading"
+              >
+                {{ props.confirmText }}
+              </HoverButton>
+            </slot>
+          </div>
+        </slot>
+      </div>
+    </BaseModal>
+  </ModalOverlay>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { computed } from 'vue'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
+import ModalOverlay from './ModalOverlay.vue'
+import BaseModal from './BaseModal.vue'
 
 interface Props {
   show: boolean
   title?: string
   width?: string | number
+  height?: string | number
   maxWidth?: string | number
   maxHeight?: string | number
   closable?: boolean
@@ -128,54 +136,14 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-// 计算属性
-const overlayClass = computed(() => ['modal-overlay', props.customClass])
-
+// 计算属性 - 映射到新组件的 props
 const overlayStyle = computed(() => ({
   zIndex: props.zIndex,
 }))
 
-const containerClass = computed(() => [
-  'modal-container',
-  {
-    'modal-centered': props.centered,
-  },
-  props.className,
-])
-
-const containerStyle = computed(() => {
-  const style: Record<string, any> = {
-    width: typeof props.width === 'number' ? `${props.width}px` : props.width,
-    maxWidth: typeof props.maxWidth === 'number' ? `${props.maxWidth}px` : props.maxWidth,
-    maxHeight: typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight,
-    ...props.customStyle,
-  }
-  return style
-})
-
-const headerClass = computed(() => 'modal-header')
-const contentClass = computed(() => 'modal-content')
-const footerClass = computed(() => 'modal-footer')
-const closeBtnClass = computed(() => 'modal-close-btn')
-
-// 键盘事件处理
-const handleKeydown = (event: KeyboardEvent) => {
-  if (
-    event.key === 'Escape' &&
-    props.escClosable &&
-    props.closable &&
-    props.show &&
-    !props.loading
-  ) {
-    handleClose()
-  }
-}
-
 // 事件处理函数
-const handleOverlayClick = () => {
-  if (props.maskClosable && props.closable && !props.loading) {
-    handleClose()
-  }
+const handleUpdateShow = (value: boolean) => {
+  emit('update:show', value)
 }
 
 const handleClose = () => {
@@ -195,68 +163,9 @@ const handleCancel = () => {
 const handleConfirm = () => {
   emit('confirm')
 }
-
-// 监听显示状态变化
-watch(
-  () => props.show,
-  (newShow) => {
-    if (newShow) {
-      nextTick(() => {
-        emit('open')
-        // 防止背景滚动
-        document.body.style.overflow = 'hidden'
-      })
-    } else {
-      document.body.style.overflow = ''
-    }
-  },
-)
-
-// 生命周期
-onMounted(() => {
-  document.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeydown)
-  document.body.style.overflow = ''
-})
 </script>
 
 <style scoped>
-/* 遮罩层样式 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-}
-
-/* 容器样式 */
-.modal-container {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--border-radius-xlarge);
-  width: 500px;
-  max-width: 90%;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-container.modal-centered {
-  margin: auto;
-}
-
 /* 头部样式 */
 .modal-header {
   display: flex;
@@ -323,30 +232,8 @@ onUnmounted(() => {
   justify-content: flex-end;
 }
 
-/* 过渡动画 */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: all 0.2s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-}
-
-.modal-fade-enter-to,
-.modal-fade-leave-from {
-  opacity: 1;
-}
-
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .modal-container {
-    width: 95%;
-    max-width: 95%;
-    margin: var(--spacing-lg);
-  }
-
   .modal-header {
     padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md);
   }
@@ -365,11 +252,7 @@ onUnmounted(() => {
 }
 
 /* 可访问性 */
-.modal-overlay:focus {
-  outline: none;
-}
-
-.modal-container:focus {
+.modal-close-btn:focus {
   outline: 2px solid var(--color-accent-primary);
   outline-offset: 2px;
 }

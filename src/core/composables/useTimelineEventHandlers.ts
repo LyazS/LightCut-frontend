@@ -29,14 +29,8 @@ export function useTimelineEventHandlers(
       target.classList.contains('grid-line') ||
       target.classList.contains('track-row')
     ) {
-      try {
-        // 使用带历史记录的清除选择
-        unifiedStore.selectTimelineItemsWithHistory([], 'replace')
-      } catch (error) {
-        console.error('❌ 清除选择操作失败:', error)
-        // 如果历史记录清除失败，回退到普通清除
-        unifiedStore.clearAllSelections()
-      }
+      // 清除时间轴选择（不记录历史记录）
+      unifiedStore.clearTimelineSelection()
     }
   }
 
@@ -51,14 +45,8 @@ export function useTimelineEventHandlers(
       // 阻止事件冒泡，避免触发容器的点击事件
       event.stopPropagation()
 
-      try {
-        // 使用带历史记录的清除选择
-        await unifiedStore.selectTimelineItemsWithHistory([], 'replace')
-      } catch (error) {
-        console.error('❌ 清除选择操作失败:', error)
-        // 如果历史记录清除失败，回退到普通清除
-        unifiedStore.clearAllSelections()
-      }
+      // 清除时间轴选择（不记录历史记录）
+      unifiedStore.clearAllSelections()
     }
   }
 
@@ -72,16 +60,12 @@ export function useTimelineEventHandlers(
       'Ctrl按下:',
       event.ctrlKey || event.metaKey,
     )
-    try {
-      if (event.ctrlKey || event.metaKey) {
-        // Ctrl/Cmd+点击：切换选择状态（多选模式）
-        await unifiedStore.selectTimelineItemsWithHistory([clipId], 'toggle')
-      } else {
-        // 普通点击：替换选择（单选模式）
-        await unifiedStore.selectTimelineItemsWithHistory([clipId], 'replace')
-      }
-    } catch (error) {
-      console.error('❌ 选中clip失败:', error)
+    if (event.ctrlKey || event.metaKey) {
+      // Ctrl/Cmd+点击：切换选择状态（多选模式）
+      unifiedStore.selectTimelineItems([clipId], 'toggle')
+    } else {
+      // 普通点击：替换选择（单选模式）
+      unifiedStore.selectTimelineItems([clipId], 'replace')
     }
   }
 
@@ -114,7 +98,7 @@ export function useTimelineEventHandlers(
 
     // 确保项目被选中（如果还没有选中的话）
     if (!unifiedStore.isTimelineItemSelected(itemId)) {
-      unifiedStore.selectTimelineItemsWithHistory([itemId], 'replace')
+      unifiedStore.selectTimelineItems([itemId], 'replace')
     }
   }
 
@@ -133,7 +117,7 @@ export function useTimelineEventHandlers(
 
     // 按 Escape 键取消选中
     if (event.key === 'Escape') {
-      unifiedStore.selectTimelineItemsWithHistory([], 'replace')
+      unifiedStore.clearTimelineSelection()
     }
 
     // 按 Delete 键删除选中的项目

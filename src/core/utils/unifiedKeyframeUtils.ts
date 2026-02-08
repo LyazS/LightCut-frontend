@@ -17,7 +17,6 @@ import {
   isAudioTimelineItem,
   TimelineItemQueries,
 } from '@/core/timelineitem/queries'
-import { projectToWebavCoords } from '@/core/utils/coordinateUtils'
 import type { MediaType } from '../mediaitem'
 import {
   percentageToFrame,
@@ -198,7 +197,7 @@ export function getKeyframeUIState(
  * 在指定帧位置查找关键帧
  * ✅ 直接使用 cachedFrame，无需重新计算
  */
-function findKeyframeAtFrame(
+export function findKeyframeAtFrame(
   item: UnifiedTimelineItemData,
   absoluteFrame: number,
 ): AnimateKeyframe<MediaType> | undefined {

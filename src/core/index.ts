@@ -88,7 +88,7 @@ export {
   createUnifiedMediaItemData,
 
   // 查询函数
-  UnifiedMediaItemQueries,
+  MediaItemQueries,
 
   // 行为函数
   UnifiedMediaItemActions,

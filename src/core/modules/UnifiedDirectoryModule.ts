@@ -9,9 +9,16 @@ import type {
   ClipboardItem,
   ClipboardOperation,
   PasteResult,
-} from '@/core/types/directory'
-import { ClipboardOperation as ClipboardOp } from '@/core/types/directory'
-import type { ViewMode, SortBy, SortOrder, UnifiedDirectoryConfig } from '@/core/directory/types'
+  ViewMode,
+  SortBy,
+  SortOrder,
+  UnifiedDirectoryConfig,
+  CharacterInfo,
+  CharacterDirectory,
+} from '@/core/directory/types'
+import type { FileData } from '@/core/datasource/providers/ai-generation/types'
+import { DirectoryType } from '@/core/directory/types'
+import { ClipboardOperation as ClipboardOp } from '@/core/directory/types'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 
@@ -70,16 +77,13 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    */
   function createDirectory(name: string, parentId: string | null = null): VirtualDirectory {
     const newDir: VirtualDirectory = {
+      type: DirectoryType.BASE,
       id: generateDirectoryId(),
       name,
       parentId,
       createdAt: new Date().toISOString(),
       childDirIds: [],
       mediaItemIds: [],
-      extra: {
-        icon: 'folder-fill',
-        order: Date.now(),
-      },
     }
 
     directories.value.set(newDir.id, newDir)
@@ -93,6 +97,63 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     }
 
     return newDir
+  }
+
+  /**
+   * 创建角色文件夹
+   */
+  function createCharacterDirectory(
+    name: string,
+    remark: string,
+    refVideo: FileData[] = [],
+    parentId: string | null = null,
+    timestamps: { st: number; ed: number },
+  ): CharacterDirectory {
+    const characterDir: CharacterDirectory = {
+      type: DirectoryType.CHARACTER,
+      id: generateDirectoryId(),
+      name,
+      parentId,
+      createdAt: new Date().toISOString(),
+      childDirIds: [],
+      mediaItemIds: [],
+      character: {
+        remark,
+        refVideo,
+        timestamps,
+      },
+    }
+
+    directories.value.set(characterDir.id, characterDir)
+
+    // 如果有父目录，更新父目录的子目录列表
+    if (parentId) {
+      const parentDir = directories.value.get(parentId)
+      if (parentDir) {
+        parentDir.childDirIds.push(characterDir.id)
+      }
+    }
+
+    console.log('✅ 角色文件夹创建成功:', characterDir.name)
+    return characterDir
+  }
+
+  /**
+   * 类型守卫：判断是否为角色文件夹
+   */
+  function isCharacterDirectory(dir: VirtualDirectory): dir is CharacterDirectory {
+    return dir.type === DirectoryType.CHARACTER
+  }
+
+  /**
+   * 获取角色文件夹
+   */
+  function getCharacterDirectory(dirId: string): CharacterDirectory | undefined {
+    const dir = directories.value.get(dirId)
+    if (dir && isCharacterDirectory(dir)) {
+      return dir
+    }
+    return undefined
   }
 
   /**
@@ -245,9 +306,6 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     const newTab: DisplayTab = {
       id: generateTabId(),
       dirId,
-      extra: {
-        viewMode: 'grid',
-      },
     }
 
     openTabs.value.push(newTab)
@@ -287,6 +345,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
   /**
    * 启动目录中 pending 状态的媒体
+   * 包括当前目录的媒体项和角色类型子文件夹中的媒体项
    */
   function startPendingMediaInDirectory(dirId: string): void {
     const dir = directories.value.get(dirId)
@@ -294,11 +353,26 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     let startedCount = 0
 
+    // 处理当前目录的媒体项
     dir.mediaItemIds.forEach((mediaId) => {
       const mediaItem = mediaModule.getMediaItem(mediaId)
       if (mediaItem?.mediaStatus === 'pending') {
         mediaModule.startMediaProcessing(mediaItem)
         startedCount++
+      }
+    })
+
+    // 处理角色类型子文件夹中的媒体项
+    dir.childDirIds.forEach((childDirId) => {
+      const childDir = directories.value.get(childDirId)
+      if (childDir && isCharacterDirectory(childDir)) {
+        childDir.mediaItemIds.forEach((mediaId) => {
+          const mediaItem = mediaModule.getMediaItem(mediaId)
+          if (mediaItem?.mediaStatus === 'pending') {
+            mediaModule.startMediaProcessing(mediaItem)
+            startedCount++
+          }
+        })
       }
     })
 
@@ -1005,8 +1079,11 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     // 核心方法
     createDirectory,
+    createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory,
     getDirectory,
+    getCharacterDirectory, // 🆕 新增获取角色文件夹方法
+    isCharacterDirectory, // 🆕 新增类型守卫方法
     addMediaToDirectory,
     removeMediaFromDirectory,
     getDirectoryContent,
@@ -1061,10 +1138,15 @@ export type {
   ClipboardItem,
   PasteResult,
   PasteError,
-} from '@/core/types/directory'
+  ViewMode,
+  SortBy,
+  SortOrder,
+  UnifiedDirectoryConfig,
+  DirectoryType,
+} from '@/core/directory/types'
 
 // 导出枚举（不使用 type）
-export { ClipboardOperation } from '@/core/types/directory'
+export { ClipboardOperation } from '@/core/directory/types'
 
 /**
  * 导出模块类型

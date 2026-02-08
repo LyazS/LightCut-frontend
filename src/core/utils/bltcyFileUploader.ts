@@ -11,6 +11,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import type { MediaType } from '@/core/mediaitem'
 
 // API 配置
+// 无额度的key
 const API_KEY = 'sk-VtfYTW3bkuY6F4gUwlDvZzjWFnnXXh9XQZUhzpHqDeWJlXkP'
 const BASE_URL = 'https://api.bltcy.ai'
 

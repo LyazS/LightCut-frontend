@@ -21,7 +21,7 @@ export class BunnyMedia {
   private audioTrack: InputAudioTrack | null = null
   private videoSink: VideoSampleSink | null = null
   private audioSink: AudioBufferSink | null = null
-  // 视频相关属性
+  private oriFile: File
 
   // 公开属性
   public readonly ready: Promise<void>
@@ -34,6 +34,7 @@ export class BunnyMedia {
   public clockwiseRotation: number = 0
 
   constructor(file: File) {
+    this.oriFile = file
     this.ready = this.loadFile(file)
   }
 
@@ -150,15 +151,27 @@ export class BunnyMedia {
   }
 
   /**
+   * 获取原始文件
+   * @returns 原始文件对象
+   */
+  getOriFile(): File {
+    return this.oriFile
+  }
+
+  
+  /**
    * 释放所有资源
    */
   async dispose(): Promise<void> {
-    console.log('🧹 清理 BunnyClip 资源')
+    console.log('🧹 清理 BunnyMedia 资源')
 
     // 清理 Input
     this.input?.dispose()
     this.input = null
 
-    console.log('✅ BunnyClip 资源清理完成')
+    // 清理原始文件引用
+    this.oriFile = null as any
+
+    console.log('✅ BunnyMedia 资源清理完成')
   }
 }

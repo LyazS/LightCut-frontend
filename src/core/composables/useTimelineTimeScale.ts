@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
-import { calculateVisibleFrameRange } from '@/core/utils/coordinateUtils'
+import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 

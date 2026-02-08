@@ -26,6 +26,9 @@ export type {
 const DEBUG_USER = true
 const debugPrefix = '[TOKEN]'
 
+// LocalStorage 键名常量
+const BIZYAIR_API_KEY_STORAGE_KEY = 'bizyair_api_key'
+
 /**
  * 统一用户管理模块
  * 基于新架构统一类型系统的用户管理，提供用户认证和状态管理功能
@@ -50,6 +53,9 @@ export function createUnifiedUserModule(registry: ModuleRegistry) {
 
   // 激活码使用加载状态
   const isUsingActivationCode = ref(false)
+
+  // BizyAir API Key（响应式状态，初始化时从 localStorage 加载）
+  const bizyairApiKey = ref<string>(getBizyAirApiKey())
 
   // ==================== 计算属性 ====================
 
@@ -366,6 +372,50 @@ export function createUnifiedUserModule(registry: ModuleRegistry) {
     }
   }
 
+  // ==================== BizyAir API Key 管理 ====================
+
+  /**
+   * 保存 BizyAir API Key 到 localStorage
+   * 注意：这个方法只保存到 localStorage，不更新响应式状态
+   * 因为 v-model 已经直接修改了 bizyairApiKey.value
+   */
+  function saveBizyAirApiKey(apiKey: string): void {
+    const trimmedKey = apiKey.trim()
+    localStorage.setItem(BIZYAIR_API_KEY_STORAGE_KEY, trimmedKey)
+    if (DEBUG_USER) {
+      console.log(`${debugPrefix} BizyAir API Key 已保存到 localStorage:`, trimmedKey.substring(0, 8) + '...')
+    }
+  }
+
+  /**
+   * 从 localStorage 获取 BizyAir API Key
+   */
+  function getBizyAirApiKey(): string {
+    const apiKey = localStorage.getItem(BIZYAIR_API_KEY_STORAGE_KEY) || ''
+    if (DEBUG_USER && apiKey) {
+      console.log(`${debugPrefix} BizyAir API Key 已加载:`, apiKey.substring(0, 8) + '...')
+    }
+    return apiKey
+  }
+
+  /**
+   * 清除 BizyAir API Key
+   */
+  function clearBizyAirApiKey(): void {
+    localStorage.removeItem(BIZYAIR_API_KEY_STORAGE_KEY)
+    bizyairApiKey.value = ''
+    if (DEBUG_USER) {
+      console.log(`${debugPrefix} BizyAir API Key 已清除`)
+    }
+  }
+
+  /**
+   * 检查 BizyAir API Key 是否已配置
+   */
+  function hasBizyAirApiKey(): boolean {
+    return bizyairApiKey.value.length > 0
+  }
+
   // ==================== 初始化 ====================
 
   // 模块初始化时加载用户数据
@@ -392,6 +442,7 @@ export function createUnifiedUserModule(registry: ModuleRegistry) {
     isLoggingIn,
     isRegistering,
     isUsingActivationCode,
+    bizyairApiKey,
 
     // 计算属性
     isLoggedIn,
@@ -409,6 +460,12 @@ export function createUnifiedUserModule(registry: ModuleRegistry) {
 
     // 激活码功能
     useActivationCode,
+
+    // BizyAir API Key 管理
+    saveBizyAirApiKey,
+    getBizyAirApiKey,
+    clearBizyAirApiKey,
+    hasBizyAirApiKey,
 
     // 令牌管理
     refreshToken: () => tokenManager.refreshToken(),

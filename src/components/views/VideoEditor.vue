@@ -1,14 +1,14 @@
 <template>
   <div class="video-editor-view">
     <!-- 顶部栏组件 -->
-    <EditorTopBar @toggle-chat-panel="toggleChatPanel" />
+    <EditorTopBar />
 
     <!-- 视频编辑器主体 -->
     <div
       class="editor-content"
       :class="{ 'loading-hidden': unifiedStore.showProjectLoadingProgress }"
     >
-      <VideoPreviewEngine v-model:isAIChatPanelVisible="isAiChatPanelVisible" />
+      <VideoPreviewEngine :isAIChatPanelVisible="unifiedStore.isChatPanelVisible" @update:isAIChatPanelVisible="unifiedStore.setChatPanelVisible" />
     </div>
 
     <!-- 加载进度覆盖层 -->
@@ -41,20 +41,12 @@ const route = useRoute()
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 
-// 响应式数据
-const isAiChatPanelVisible = ref(false) // 控制聊天气泡面板显示/隐藏
-
-// 方法
-function toggleChatPanel() {
-  isAiChatPanelVisible.value = !isAiChatPanelVisible.value
-}
-
 // 键盘快捷键（兼容 Windows/Linux 的 Ctrl+B 和 Mac 的 Cmd+B 切换聊天面板）
 function handleKeydown(event: KeyboardEvent) {
-  // Ctrl+B (Windows/Linux) 或 Cmd+B (Mac) 切换聊天面板（暂时隐藏）
+  // Ctrl+B (Windows/Linux) 或 Cmd+B (Mac) 切换聊天面板
   if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
     event.preventDefault()
-    toggleChatPanel()
+    unifiedStore.setChatPanelVisible(!unifiedStore.isChatPanelVisible)
   }
 }
 

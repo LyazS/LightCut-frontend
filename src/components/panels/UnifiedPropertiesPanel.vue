@@ -1,8 +1,32 @@
 <template>
   <div class="properties-panel">
     <n-scrollbar>
-      <!-- 多选状态 -->
-      <div v-if="multiSelectInfo" class="multi-select-state">
+      <!-- 媒体多选状态 -->
+      <div v-if="mediaMultiSelectInfo" class="media-multi-select-state">
+        <component :is="IconComponents.CHECKBOX_MULTIPLE" size="32px" />
+        <p>{{ t('properties.multiSelect.title', { count: mediaMultiSelectInfo.count }) }}</p>
+        <p class="hint">{{ t('properties.multiSelect.hint') }}</p>
+
+        <!-- 选中项目列表 -->
+        <div class="selected-items-list">
+          <div v-for="item in mediaMultiSelectInfo.items" :key="item?.id" class="selected-item">
+            <span class="item-name">
+              {{ item?.name || t('properties.multiSelect.unknownMedia') }}
+            </span>
+            <span class="item-type">{{
+              t('properties.mediaTypes.' + (item?.mediaType || 'unknown'))
+            }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 媒体单选状态 -->
+      <div v-else-if="selectedMediaItem" class="media-properties-content">
+        <MediaItemProperties :media-item="selectedMediaItem" />
+      </div>
+
+      <!-- 时间轴多选状态 -->
+      <div v-else-if="multiSelectInfo" class="multi-select-state">
         <component :is="IconComponents.CHECKBOX_MULTIPLE" size="32px" />
         <p>{{ t('properties.multiSelect.title', { count: multiSelectInfo.count }) }}</p>
         <p class="hint">{{ t('properties.multiSelect.hint') }}</p>
@@ -20,7 +44,7 @@
         </div>
       </div>
 
-      <!-- 单选状态 -->
+      <!-- 时间轴单选状态 -->
       <div v-else-if="selectedTimelineItem" class="properties-content">
         <!-- 只在ready状态时显示完整属性面板 -->
         <template v-if="selectedTimelineItem.timelineStatus === 'ready'">
@@ -68,6 +92,7 @@ import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { IconComponents } from '@/constants/iconComponents'
 
 import UnifiedClipProperties from '@/components/properties/unified/UnifiedClipProperties.vue'
+import MediaItemProperties from '@/components/properties/MediaItemProperties.vue'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -85,6 +110,18 @@ const selectedTimelineItem = computed(() => {
   return unifiedStore.getTimelineItem(firstSelectedId) || null
 })
 
+// 选中的媒体项目
+const selectedMediaItem = computed(() => {
+  // 多选模式时返回null，显示占位内容
+  if (unifiedStore.isMediaMultiSelectMode) return null
+
+  // 单选模式时返回选中项
+  const selectedId = unifiedStore.selectedMediaItemId
+  if (!selectedId) return null
+
+  return unifiedStore.getMediaItem(selectedId) || null
+})
+
 // 当前播放帧数
 const currentFrame = computed(() => unifiedStore.currentFrame)
 
@@ -97,6 +134,19 @@ const multiSelectInfo = computed(() => {
     count: selectedIds.size,
     items: Array.from(selectedIds)
       .map((id) => unifiedStore.getTimelineItem(id))
+      .filter(Boolean),
+  }
+})
+
+// 媒体多选状态信息
+const mediaMultiSelectInfo = computed(() => {
+  if (!unifiedStore.isMediaMultiSelectMode) return null
+
+  const selectedIds = unifiedStore.selectedMediaItemIds
+  return {
+    count: selectedIds.size,
+    items: Array.from(selectedIds)
+      .map((id) => unifiedStore.getMediaItem(id))
       .filter(Boolean),
   }
 })
@@ -131,6 +181,11 @@ const getItemDisplayName = (item: any) => {
 
 .properties-content {
   padding: var(--spacing-md) var(--spacing-lg);
+}
+
+/* 媒体属性内容 */
+.media-properties-content {
+  padding: 0;
 }
 
 /* 多选状态样式 */

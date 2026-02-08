@@ -8,13 +8,13 @@ import {
 import {
   calculateContentEndTimeFrames,
   calculateMaxVisibleDurationFrames,
-} from '@/core/utils/durationUtils'
+  calculateTotalDurationFrames,
+} from '@/core/utils/timelineScaleUtils'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedConfigModule } from './UnifiedConfigModule'
-import { calculateTotalDurationFrames } from '@/core/utils/durationUtils'
 
 /**
  * 统一缩放滚动管理模块

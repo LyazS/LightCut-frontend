@@ -3,14 +3,27 @@
  * 提供关键帧动画、位置、大小、旋转、透明度等变换属性的统一管理
  */
 
-import { computed, type Ref } from 'vue'
+import { computed, readonly, type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { uiDegreesToWebAVRadians, webAVRadiansToUIDegrees } from '@/core/utils/rotationTransform'
-import { useUnifiedKeyframeUI } from '@/core/composables/useUnifiedKeyframeUI'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import type {
+  KeyframeUIState,
+  KeyframeButtonState,
+} from '@/core/timelineitem/animationtypes'
+import {
+  getKeyframeButtonState,
+  getKeyframeUIState,
+  getPreviousKeyframeFrame,
+  getNextKeyframeFrame,
+  findKeyframeAtFrame,
+} from '@/core/utils/unifiedKeyframeUtils'
 import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import { debugKeyframes } from '@/core/utils/unifiedKeyframeUtils'
+import { UpdatePropertyCommand } from '@/core/modules/commands/keyframes'
+import { BatchUpdatePropertiesCommand } from '@/core/modules/commands/batchCommands'
+import { useDeferredPropertyUpdate } from './useDeferredPropertyUpdate'
 
 interface UnifiedKeyframeTransformControlsOptions {
   selectedTimelineItem: Ref<UnifiedTimelineItemData | null>
@@ -26,23 +39,47 @@ export function useUnifiedKeyframeTransformControls(
   const { selectedTimelineItem, currentFrame } = options
   const unifiedStore = useUnifiedStore()
 
-  // 统一关键帧UI管理
-  const {
-    buttonState: unifiedKeyframeButtonState,
-    toggleKeyframe: toggleUnifiedKeyframe,
-    handlePropertyChange: handleUnifiedPropertyChange,
-    updateUnifiedPropertyBatch,
-    goToPreviousKeyframe: goToPreviousUnifiedKeyframe,
-    goToNextKeyframe: goToNextUnifiedKeyframe,
-    hasPreviousKeyframe: hasUnifiedPreviousKeyframe,
-    hasNextKeyframe: hasUnifiedNextKeyframe,
-    canOperateKeyframes: canOperateUnifiedKeyframes,
-  } = useUnifiedKeyframeUI(selectedTimelineItem, currentFrame)
+  // ==================== 延迟更新工具（滑块拖动优化）====================
+  const deferredUpdate = useDeferredPropertyUpdate({
+    selectedTimelineItem,
+    currentFrame,
+  })
 
-  // 添加播放头检测计算属性（用于变换控制UI状态）
-  const canOperateTransforms = computed(() => {
+  // ==================== 关键帧UI状态 ====================
+
+  const keyframeUIState = computed<KeyframeUIState>(() => {
+    if (!selectedTimelineItem.value) {
+      return { hasAnimation: false, isOnKeyframe: false }
+    }
+    selectedTimelineItem.value.animation?.keyframes.length
+    return getKeyframeUIState(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const buttonState = computed<KeyframeButtonState>(() => {
+    if (!selectedTimelineItem.value) {
+      return 'none'
+    }
+    selectedTimelineItem.value.animation?.keyframes.length
+    return getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const hasPreviousKeyframe = computed(() => {
+    if (!selectedTimelineItem.value) return false
+    return getPreviousKeyframeFrame(selectedTimelineItem.value, currentFrame.value) !== null
+  })
+
+  const hasNextKeyframe = computed(() => {
+    if (!selectedTimelineItem.value) return false
+    return getNextKeyframeFrame(selectedTimelineItem.value, currentFrame.value) !== null
+  })
+
+  const isPlayheadInClip = computed(() => {
     if (!selectedTimelineItem.value) return false
     return isPlayheadInTimelineItem(selectedTimelineItem.value, currentFrame.value)
+  })
+
+  const canOperateKeyframes = computed(() => {
+    return isPlayheadInClip.value
   })
 
   // ==================== 变换属性计算 ====================
@@ -188,15 +225,55 @@ export function useUnifiedKeyframeTransformControls(
   // ==================== 关键帧控制方法 ====================
 
   /**
+   * 批量更新属性（使用现有的命令系统）
+   * 🎯 正确方案：利用现有的批量操作架构，而不是重新实现
+   */
+  const updateUnifiedPropertyBatch = async (properties: Record<string, any>) => {
+    if (!selectedTimelineItem.value || currentFrame.value == null) return
+
+    try {
+      // 创建多个属性更新命令
+      const updateCommands = Object.entries(properties).map(([property, value]) => {
+        return new UpdatePropertyCommand(
+          selectedTimelineItem.value!.id,
+          currentFrame.value!,
+          property,
+          value,
+          {
+            getTimelineItem: (id: string) => unifiedStore.getTimelineItem(id),
+          },
+          { seekTo: unifiedStore.seekToFrame }, // 播放头控制器
+        )
+      })
+
+      // 创建批量命令
+      const batchCommand = new BatchUpdatePropertiesCommand([selectedTimelineItem.value.id], updateCommands)
+
+      // 通过历史模块执行批量命令
+      await unifiedStore.executeBatchCommand(batchCommand)
+
+      console.log('🎬 [Keyframe Transform Controls] Batch property update completed via command system:', {
+        itemId: selectedTimelineItem.value.id,
+        properties: Object.keys(properties),
+        currentFrame: currentFrame.value,
+        buttonState: buttonState.value,
+        commandCount: updateCommands.length,
+      })
+    } catch (error) {
+      console.error('🎬 [Keyframe Transform Controls] Failed to batch update properties:', error)
+    }
+  }
+
+  /**
    * 获取统一关键帧按钮的提示文本
    */
   const getUnifiedKeyframeTooltip = () => {
     // 如果播放头不在clip时间范围内，显示相应提示
-    if (!canOperateUnifiedKeyframes.value) {
+    if (!canOperateKeyframes.value) {
       return '播放头不在当前clip时间范围内，无法操作关键帧'
     }
 
-    switch (unifiedKeyframeButtonState.value) {
+    switch (buttonState.value) {
       case 'none':
         return '点击创建关键帧动画'
       case 'on-keyframe':
@@ -240,6 +317,18 @@ export function useUnifiedKeyframeTransformControls(
   }) => {
     if (!selectedTimelineItem.value) return
 
+    // 检查播放头是否在clip时间范围内
+    if (!canOperateKeyframes.value) {
+      unifiedStore.messageWarning(
+        '播放头不在当前视频片段的时间范围内。请将播放头移动到片段内再尝试修改属性。',
+      )
+      console.warn('🎬 [Keyframe Transform Controls] 播放头不在当前clip时间范围内，无法操作关键帧属性:', {
+        itemId: selectedTimelineItem.value.id,
+        currentFrame: currentFrame.value,
+      })
+      return
+    }
+
     // 如果没有提供transform参数，使用当前的响应式值（类型安全版本）
     const finalTransform = transform || {
       x: transformX.value,
@@ -255,9 +344,6 @@ export function useUnifiedKeyframeTransformControls(
       volume: volume.value,      // 新增：音量
     }
 
-    // 统一关键帧系统处理 - 根据当前状态自动处理关键帧创建/更新
-    // 注意：updateUnifiedProperty 已经包含了实时渲染更新，所以不需要再调用 updateTimelineItemTransformWithHistory
-
     // 🎯 特殊处理：如果同时设置了width和height，使用批量更新避免重复位置计算
     if (finalTransform.width !== undefined && finalTransform.height !== undefined) {
       await updateUnifiedPropertyBatch({
@@ -267,52 +353,66 @@ export function useUnifiedKeyframeTransformControls(
     } else {
       // 单独处理尺寸属性
       if (finalTransform.width !== undefined) {
-        await updateUnifiedProperty('width', finalTransform.width)
+        await unifiedStore.updatePropertyWithHistory(
+          selectedTimelineItem.value.id,
+          currentFrame.value,
+          'width',
+          finalTransform.width,
+        )
       }
       if (finalTransform.height !== undefined) {
-        await updateUnifiedProperty('height', finalTransform.height)
+        await unifiedStore.updatePropertyWithHistory(
+          selectedTimelineItem.value.id,
+          currentFrame.value,
+          'height',
+          finalTransform.height,
+        )
       }
     }
 
     // 处理其他属性
     if (finalTransform.x !== undefined) {
-      await updateUnifiedProperty('x', finalTransform.x)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'x',
+        finalTransform.x,
+      )
     }
     if (finalTransform.y !== undefined) {
-      await updateUnifiedProperty('y', finalTransform.y)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'y',
+        finalTransform.y,
+      )
     }
     if (finalTransform.rotation !== undefined) {
-      await updateUnifiedProperty('rotation', finalTransform.rotation)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'rotation',
+        finalTransform.rotation,
+      )
     }
     if (finalTransform.opacity !== undefined) {
-      await updateUnifiedProperty('opacity', finalTransform.opacity)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'opacity',
+        finalTransform.opacity,
+      )
     }
     if (finalTransform.volume !== undefined) {
-      await updateUnifiedProperty('volume', finalTransform.volume)
+      await unifiedStore.updatePropertyWithHistory(
+        selectedTimelineItem.value.id,
+        currentFrame.value,
+        'volume',
+        finalTransform.volume,
+      )
     }
 
     console.log('✅ 统一关键帧变换属性更新完成')
-  }
-
-  /**
-   * 更新属性值（统一关键帧版本）
-   * 根据当前状态自动处理关键帧创建，同时确保实时渲染更新
-   */
-  const updateUnifiedProperty = async (property: string, value: any) => {
-    if (!selectedTimelineItem.value) return
-
-    try {
-      // 使用统一关键帧处理逻辑
-      await handleUnifiedPropertyChange(property, value)
-
-      console.log('🎬 [Unified Property] Property updated via unified keyframe system:', {
-        property,
-        value,
-        buttonState: unifiedKeyframeButtonState.value,
-      })
-    } catch (error) {
-      console.error('🎬 [Unified Property] Failed to update property:', error)
-    }
   }
 
   // ==================== 缩放控制方法 ====================
@@ -345,88 +445,423 @@ export function useUnifiedKeyframeTransformControls(
   }
 
   /**
-   * 更新统一缩放
+   * 更新统一缩放（延迟更新 - 用于 SliderInput @input）
    */
-  const updateUniformScale = (newScale: number) => {
+  const updateUniformScaleDeferred = (newScale: number) => {
     if (
-      proportionalScale.value &&
-      selectedTimelineItem.value &&
-      TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
-    ) {
-      // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-      const config = selectedTimelineItem.value.config
-      // 从 mediaItem 的 bunny 对象中获取原始尺寸
-      const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-      const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
-      const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
-      const newSize = {
-        width: originalWidth * newScale,
-        height: originalHeight * newScale,
-      }
-      updateTransform({ width: newSize.width, height: newSize.height })
+      !proportionalScale.value ||
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    const newWidth = originalWidth * newScale
+    const newHeight = originalHeight * newScale
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 记录初始值（width 和 height 同时记录）
+      deferredUpdate.startDrag({
+        width: config.width,
+        height: config.height,
+      })
     }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).width = newWidth
+      ;(selectedTimelineItem.value.config as any).height = newHeight
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        ;(keyframe.properties as any).width = newWidth
+        ;(keyframe.properties as any).height = newHeight
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const props = deferredUpdate.dragState.value.createdKeyframe!.properties as any
+      if ('width' in props) props.width = newWidth
+      if ('height' in props) props.height = newHeight
+    }
+
+    // 记录当前值（两个属性）
+    deferredUpdate.updateDuringDrag('width', newWidth)
+    deferredUpdate.updateDuringDrag('height', newHeight)
   }
 
   /**
-   * 设置X缩放绝对值的方法
+   * 设置X缩放绝对值的方法（延迟更新 - 用于 SliderInput @input）
    */
-  const setScaleX = (value: number) => {
+  const setScaleXDeferred = (value: number) => {
     if (
       !selectedTimelineItem.value ||
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
     const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
     const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
     const newScaleX = Math.max(0.01, Math.min(5, value))
-    const newSize = {
-      width: originalWidth * newScaleX,
-      height: config.height, // 保持Y尺寸不变
+    const newWidth = originalWidth * newScaleX
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 第一次 @input，记录初始值并开始拖动
+      deferredUpdate.startDrag({ width: config.width })
     }
-    updateTransform({ width: newSize.width, height: newSize.height })
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      // 无动画：直接修改 config
+      ;(selectedTimelineItem.value.config as any).width = newWidth
+    } else if (buttonState === 'on-keyframe') {
+      // 在关键帧上：修改关键帧的值
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        ;(keyframe.properties as any).width = newWidth
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      // 关键帧之间：修改新创建的关键帧
+      ;(deferredUpdate.dragState.value.createdKeyframe.properties as any).width = newWidth
+    }
+
+    // 记录当前值并更新状态
+    deferredUpdate.updateDuringDrag('width', newWidth)
   }
 
   /**
-   * 设置Y缩放绝对值的方法
+   * 设置Y缩放绝对值的方法（延迟更新 - 用于 SliderInput @input）
    */
-  const setScaleY = (value: number) => {
+  const setScaleYDeferred = (value: number) => {
     if (
       !selectedTimelineItem.value ||
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return
 
-    // hasVisualProperties 类型守卫确保了 config 具有视觉属性
     const config = selectedTimelineItem.value.config
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
     const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
     const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
     const newScaleY = Math.max(0.01, Math.min(5, value))
-    const newSize = {
-      width: config.width, // 保持X尺寸不变
-      height: originalHeight * newScaleY,
+    const newHeight = originalHeight * newScaleY
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      deferredUpdate.startDrag({ height: config.height })
     }
-    updateTransform({ width: newSize.width, height: newSize.height })
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).height = newHeight
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        ;(keyframe.properties as any).height = newHeight
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      ;(deferredUpdate.dragState.value.createdKeyframe.properties as any).height = newHeight
+    }
+
+    deferredUpdate.updateDuringDrag('height', newHeight)
   }
 
   /**
    * 设置旋转绝对值的方法（输入角度，转换为弧度）
    */
-  const setRotation = (value: number) => {
+  const setRotationDeferred = (value: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
     const newRotationRadians = uiDegreesToWebAVRadians(value)
-    updateTransform({ rotation: newRotationRadians })
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      deferredUpdate.startDrag({ rotation: config.rotation })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).rotation = newRotationRadians
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe && 'rotation' in keyframe.properties) {
+        ;(keyframe.properties as any).rotation = newRotationRadians
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      if ('rotation' in deferredUpdate.dragState.value.createdKeyframe!.properties) {
+        ;(deferredUpdate.dragState.value.createdKeyframe.properties as any).rotation = newRotationRadians
+      }
+    }
+
+    deferredUpdate.updateDuringDrag('rotation', newRotationRadians)
   }
 
   /**
    * 设置透明度绝对值的方法
    */
-  const setOpacity = (value: number) => {
+  const setOpacityDeferred = (value: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
     const newOpacity = Math.max(0, Math.min(1, value))
-    updateTransform({ opacity: newOpacity })
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      deferredUpdate.startDrag({ opacity: config.opacity })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).opacity = newOpacity
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe && 'opacity' in keyframe.properties) {
+        ;(keyframe.properties as any).opacity = newOpacity
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      if ('opacity' in deferredUpdate.dragState.value.createdKeyframe!.properties) {
+        ;(deferredUpdate.dragState.value.createdKeyframe.properties as any).opacity = newOpacity
+      }
+    }
+
+    deferredUpdate.updateDuringDrag('opacity', newOpacity)
+  }
+
+  /**
+   * 设置位置坐标的方法（延迟更新 - 用于拖拽操作）
+   * 同时更新 x 和 y，类似等比缩放的批量更新模式
+   */
+  const setTransformPositionDeferred = (x: number, y: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    const newX = x
+    const newY = y
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 同时记录 x 和 y 的初始值
+      deferredUpdate.startDrag({
+        x: config.x,
+        y: config.y,
+      })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).x = newX
+      ;(selectedTimelineItem.value.config as any).y = newY
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        if ('x' in keyframe.properties) {
+          ;(keyframe.properties as any).x = newX
+        }
+        if ('y' in keyframe.properties) {
+          ;(keyframe.properties as any).y = newY
+        }
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const keyframe = deferredUpdate.dragState.value.createdKeyframe!
+      if ('x' in keyframe.properties) {
+        ;(keyframe.properties as any).x = newX
+      }
+      if ('y' in keyframe.properties) {
+        ;(keyframe.properties as any).y = newY
+      }
+    }
+
+    // 同时更新 x 和 y 的待提交值
+    deferredUpdate.updateDuringDrag('x', newX)
+    deferredUpdate.updateDuringDrag('y', newY)
+  }
+
+  /**
+   * 设置尺寸的延迟更新方法（用于拖拽缩放）
+   * 同时更新 width 和 height，支持等比缩放
+   */
+  const setTransformSizeDeferred = (width: number, height: number, x?: number, y?: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+
+    // 应用最小尺寸限制
+    const MIN_SIZE = 10
+    const newWidth = Math.max(MIN_SIZE, width)
+    const newHeight = Math.max(MIN_SIZE, height)
+
+    // 检查是否第一次拖动
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 记录初始值
+      const initialValues: Record<string, any> = {
+        width: config.width,
+        height: config.height,
+      }
+      if (x !== undefined) initialValues.x = config.x
+      if (y !== undefined) initialValues.y = config.y
+      deferredUpdate.startDrag(initialValues)
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).width = newWidth
+      ;(selectedTimelineItem.value.config as any).height = newHeight
+      if (x !== undefined) (selectedTimelineItem.value.config as any).x = x
+      if (y !== undefined) (selectedTimelineItem.value.config as any).y = y
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        ;(keyframe.properties as any).width = newWidth
+        ;(keyframe.properties as any).height = newHeight
+        if (x !== undefined && 'x' in keyframe.properties) {
+          ;(keyframe.properties as any).x = x
+        }
+        if (y !== undefined && 'y' in keyframe.properties) {
+          ;(keyframe.properties as any).y = y
+        }
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const props = deferredUpdate.dragState.value.createdKeyframe!.properties as any
+      if ('width' in props) props.width = newWidth
+      if ('height' in props) props.height = newHeight
+      if (x !== undefined && 'x' in props) props.x = x
+      if (y !== undefined && 'y' in props) props.y = y
+    }
+
+    // 记录当前值并更新状态
+    deferredUpdate.updateDuringDrag('width', newWidth)
+    deferredUpdate.updateDuringDrag('height', newHeight)
+    if (x !== undefined) deferredUpdate.updateDuringDrag('x', x)
+    if (y !== undefined) deferredUpdate.updateDuringDrag('y', y)
+  }
+
+  /**
+   * 设置旋转角度的延迟更新方法（用于拖拽旋转）
+   * 输入弧度值
+   */
+  const setTransformRotationDeferred = (rotationRadians: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+
+    // 标准化角度到 -π 到 π
+    const normalizedRotation = normalizeRadians(rotationRadians)
+
+    // 检查是否第一次拖动
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      deferredUpdate.startDrag({ rotation: config.rotation })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).rotation = normalizedRotation
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe && 'rotation' in keyframe.properties) {
+        ;(keyframe.properties as any).rotation = normalizedRotation
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const props = deferredUpdate.dragState.value.createdKeyframe!.properties as any
+      if ('rotation' in props) {
+        props.rotation = normalizedRotation
+      }
+    }
+
+    deferredUpdate.updateDuringDrag('rotation', normalizedRotation)
+  }
+
+  /**
+   * 角度标准化工具函数
+   */
+  function normalizeRadians(radians: number): number {
+    // 标准化到 -π 到 π
+    let normalized = radians % (2 * Math.PI)
+    if (normalized > Math.PI) {
+      normalized -= 2 * Math.PI
+    } else if (normalized < -Math.PI) {
+      normalized += 2 * Math.PI
+    }
+    return normalized
+  }
+
+  /**
+   * 提交延迟更新（由 SliderInput @change 触发）
+   * 创建历史记录并清理拖动状态
+   */
+  const commitDeferredUpdates = async () => {
+    console.log('🚠️ [useKeyframeTransformControls] commitDeferredUpdates 被调用')
+    await deferredUpdate.commitDrag(async (updates) => {
+      // 如果只有一个属性，使用单属性更新
+      const entries = Object.entries(updates)
+      if (entries.length === 1) {
+        const [property, value] = entries[0]
+        await unifiedStore.updatePropertyWithHistory(
+          selectedTimelineItem.value!.id,
+          currentFrame.value,
+          property,
+          value
+        )
+      } else {
+        // 多个属性（如等比缩放的 width + height），使用批量更新
+        await updateUnifiedPropertyBatch(updates)
+      }
+    })
   }
 
   /**
@@ -516,56 +951,198 @@ export function useUnifiedKeyframeTransformControls(
     }
   }
 
+  // ==================== 直接更新方法（用于 NumberInput） ====================
+  // 这些方法直接记录历史，不使用延迟更新机制
+
+  /**
+   * 直接设置宽度（用于 NumberInput）
+   * 接收比例值，转换为实际宽度后记录历史
+   */
+  const setScaleXDirectly = async (scale: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    const clampedScale = Math.max(0.01, Math.min(5, scale))
+    const newWidth = originalWidth * clampedScale
+
+    await unifiedStore.updatePropertyWithHistory(
+      selectedTimelineItem.value.id,
+      currentFrame.value,
+      'width',
+      newWidth
+    )
+  }
+
+  /**
+   * 直接设置高度（用于 NumberInput）
+   * 接收比例值，转换为实际高度后记录历史
+   */
+  const setScaleYDirectly = async (scale: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    const clampedScale = Math.max(0.01, Math.min(5, scale))
+    const newHeight = originalHeight * clampedScale
+
+    await unifiedStore.updatePropertyWithHistory(
+      selectedTimelineItem.value.id,
+      currentFrame.value,
+      'height',
+      newHeight
+    )
+  }
+
+  /**
+   * 直接设置旋转（用于 NumberInput）
+   * 接收UI角度值，转换为弧度后记录历史
+   */
+  const setRotationDirectly = async (degrees: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const newRotationRadians = uiDegreesToWebAVRadians(degrees)
+
+    await unifiedStore.updatePropertyWithHistory(
+      selectedTimelineItem.value.id,
+      currentFrame.value,
+      'rotation',
+      newRotationRadians
+    )
+  }
+
+  /**
+   * 直接设置透明度（用于 NumberInput）
+   */
+  const setOpacityDirectly = async (value: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const newOpacity = Math.max(0, Math.min(1, value))
+
+    await unifiedStore.updatePropertyWithHistory(
+      selectedTimelineItem.value.id,
+      currentFrame.value,
+      'opacity',
+      newOpacity
+    )
+  }
+
+  /**
+   * 直接设置等比缩放（用于 NumberInput）
+   * 接收比例值，同时设置宽度和高度
+   */
+  const updateUniformScaleDirectly = async (scale: number) => {
+    if (
+      !proportionalScale.value ||
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    const clampedScale = Math.max(0.01, Math.min(5, scale))
+    const newWidth = originalWidth * clampedScale
+    const newHeight = originalHeight * clampedScale
+
+    // 使用批量更新，确保 width 和 height 在一个历史记录中
+    await updateUnifiedPropertyBatch({
+      width: newWidth,
+      height: newHeight,
+    })
+  }
+
+  /**
+   * 直接设置 X 坐标（用于 NumberInput）
+   */
+  const setTransformXDirectly = async (x: number) => {
+    await updateTransform({ x })
+  }
+
+  /**
+   * 直接设置 Y 坐标（用于 NumberInput）
+   */
+  const setTransformYDirectly = async (y: number) => {
+    await updateTransform({ y })
+  }
+
   return {
-    // 关键帧状态
-    unifiedKeyframeButtonState,
-    canOperateUnifiedKeyframes,
-    hasUnifiedPreviousKeyframe,
-    hasUnifiedNextKeyframe,
+    // ✅ 保留：关键帧UI状态
+    buttonState: readonly(buttonState),
+    keyframeUIState: readonly(keyframeUIState),
+    hasPreviousKeyframe: readonly(hasPreviousKeyframe),
+    hasNextKeyframe: readonly(hasNextKeyframe),
+    isPlayheadInClip: readonly(isPlayheadInClip),
+    canOperateKeyframes: readonly(canOperateKeyframes),
 
-    // 变换操作状态
-    canOperateTransforms,
-
-    // 变换属性
+    // ✅ 保留：变换属性
     transformX,
     transformY,
     scaleX,
     scaleY,
     rotation,
     opacity,
-    volume,      // 新增：音量属性
+    volume,
     proportionalScale,
     uniformScale,
     elementWidth,
     elementHeight,
 
-    // 关键帧控制方法
-    toggleUnifiedKeyframe,
-    goToPreviousUnifiedKeyframe,
-    goToNextUnifiedKeyframe,
-    getUnifiedKeyframeTooltip,
-    debugUnifiedKeyframes,
+    // ✅ 保留：变换操作状态（canOperateTransforms 是 canOperateKeyframes 的别名）
+    canOperateTransforms: readonly(canOperateKeyframes),
 
-    // 变换更新方法
+    // ✅ 保留：内部方法（不导出）
     updateTransform,
-    updateUnifiedProperty,
     updateUnifiedPropertyBatch,
 
-    // 缩放控制方法
     toggleProportionalScale,
-    updateUniformScale,
-    setScaleX,
-    setScaleY,
 
-    // 旋转和透明度控制方法
-    setRotation,
-    setOpacity,
-    setVolume,   // 新增：音量控制方法
+    // ✨ 延迟更新方法（用于 SliderInput @input + @change）
+    updateUniformScaleDeferred,
+    setScaleXDeferred,
+    setScaleYDeferred,
+    setRotationDeferred,
+    setOpacityDeferred,
+    setTransformPositionDeferred,
+    setTransformSizeDeferred,
+    setTransformRotationDeferred,
+    commitDeferredUpdates,
 
-    // 对齐控制方法
+    // ✨ 直接更新方法（用于 NumberInput @change）
+    setTransformXDirectly,
+    setTransformYDirectly,
+    setScaleXDirectly,
+    setScaleYDirectly,
+    setRotationDirectly,
+    setOpacityDirectly,
+    updateUniformScaleDirectly,
+
+    setVolume,
     alignHorizontal,
     alignVertical,
-    
-    // 注意：isMuted 和 toggleMute 不导出，保持在组件中独立处理
+
+    // ✅ 保留：辅助方法
+    getUnifiedKeyframeTooltip,
+    debugUnifiedKeyframes,
   }
 }

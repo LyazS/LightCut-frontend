@@ -138,7 +138,7 @@ export class TimelineItemsBufferManager {
       this.state.backBufferReady = true
       this.state.lastUpdateFrame = currentFrame
       
-      console.log(`🔄 后台缓冲更新完成: ${bufferedItems.length}/${allItems.length} items, 窗口 [${startFrame}, ${endFrame}]`)
+      // console.log(`🔄 后台缓冲更新完成: ${bufferedItems.length}/${allItems.length} items, 窗口 [${startFrame}, ${endFrame}]`)
     } catch (error) {
       console.error('❌ 后台缓冲更新失败:', error)
       this.state.backBuffer = null
@@ -211,7 +211,7 @@ export class TimelineItemsBufferManager {
     // 重置后台缓冲状态
     this.state.backBufferReady = false
     
-    console.log(`🔀 缓冲交换完成: 前台缓冲 ${this.state.frontBuffer.items.length} items`)
+    // console.log(`🔀 缓冲交换完成: 前台缓冲 ${this.state.frontBuffer.items.length} items`)
   }
   
   /**
@@ -238,7 +238,7 @@ export class TimelineItemsBufferManager {
     }
     
     // 3. 缓冲无效或不在窗口内，降级为全量遍历
-    console.warn(`⚠️ 缓冲无效，使用全量遍历 (frame: ${currentFrame})`)
+    // console.warn(`⚠️ 缓冲无效，使用全量遍历 (frame: ${currentFrame})`)
     return allItems
   }
   

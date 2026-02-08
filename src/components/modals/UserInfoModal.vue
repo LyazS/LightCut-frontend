@@ -307,4 +307,59 @@ async function handleUseActivationCode() {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* BizyAir API Key 配置区域样式 */
+.bizyair-apikey-section {
+  width: 100%;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+
+.apikey-input-full {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-small);
+  font-size: var(--font-size-sm);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.apikey-input-full:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.apikey-input-full::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.apikey-hint {
+  margin-top: var(--spacing-sm);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.apikey-status {
+  margin-top: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+}
 </style>

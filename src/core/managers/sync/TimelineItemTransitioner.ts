@@ -13,7 +13,7 @@
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/type'
 import type { TransitionOptions } from './types'
-import { UnifiedMediaItemQueries } from '@/core/mediaitem'
+import { MediaItemQueries } from '@/core/mediaitem'
 import { TimelineItemFactory, TimelineItemQueries } from '@/core/timelineitem'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
@@ -104,7 +104,7 @@ export class TimelineItemTransitioner {
     }
 
     // 获取媒体的原始尺寸
-    const originalSize = UnifiedMediaItemQueries.getOriginalSize(this.mediaItem)
+    const originalSize = MediaItemQueries.getOriginalSize(this.mediaItem)
 
     // 更新config中的宽高 - 仅对视频和图片类型，并且有原始尺寸时才更新
     if (

@@ -18,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
 /**
@@ -36,12 +36,6 @@ interface VideoResolution {
 interface ExtendedHTMLElement extends HTMLElement {
   _resizeObserver?: ResizeObserver
 }
-
-// 暴露方法
-defineExpose({
-  getCanvas: () => canvasRef.value,
-  initializeMediaBunnyCanvas,
-})
 
 const unifiedStore = useUnifiedStore()
 
@@ -168,6 +162,13 @@ onMounted(async () => {
 onUnmounted(async () => {
   cleanupResizeObserver()
   await unifiedStore.destroyMediaBunny()
+})
+
+// 暴露方法和属性
+defineExpose({
+  getCanvas: () => canvasRef.value,
+  initializeMediaBunnyCanvas,
+  canvasDisplaySize,
 })
 </script>
 
