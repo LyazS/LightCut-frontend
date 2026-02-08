@@ -660,6 +660,187 @@ export function useUnifiedKeyframeTransformControls(
   }
 
   /**
+   * 设置位置坐标的方法（延迟更新 - 用于拖拽操作）
+   * 同时更新 x 和 y，类似等比缩放的批量更新模式
+   */
+  const setTransformPositionDeferred = (x: number, y: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+    const newX = x
+    const newY = y
+
+    // 检查是否第一次 @input（拖动开始）
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 同时记录 x 和 y 的初始值
+      deferredUpdate.startDrag({
+        x: config.x,
+        y: config.y,
+      })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).x = newX
+      ;(selectedTimelineItem.value.config as any).y = newY
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        if ('x' in keyframe.properties) {
+          ;(keyframe.properties as any).x = newX
+        }
+        if ('y' in keyframe.properties) {
+          ;(keyframe.properties as any).y = newY
+        }
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const keyframe = deferredUpdate.dragState.value.createdKeyframe!
+      if ('x' in keyframe.properties) {
+        ;(keyframe.properties as any).x = newX
+      }
+      if ('y' in keyframe.properties) {
+        ;(keyframe.properties as any).y = newY
+      }
+    }
+
+    // 同时更新 x 和 y 的待提交值
+    deferredUpdate.updateDuringDrag('x', newX)
+    deferredUpdate.updateDuringDrag('y', newY)
+  }
+
+  /**
+   * 设置尺寸的延迟更新方法（用于拖拽缩放）
+   * 同时更新 width 和 height，支持等比缩放
+   */
+  const setTransformSizeDeferred = (width: number, height: number, x?: number, y?: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = selectedTimelineItem.value.config
+
+    // 应用最小尺寸限制
+    const MIN_SIZE = 10
+    const newWidth = Math.max(MIN_SIZE, width)
+    const newHeight = Math.max(MIN_SIZE, height)
+
+    // 检查是否第一次拖动
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      // 记录初始值
+      const initialValues: Record<string, any> = {
+        width: config.width,
+        height: config.height,
+      }
+      if (x !== undefined) initialValues.x = config.x
+      if (y !== undefined) initialValues.y = config.y
+      deferredUpdate.startDrag(initialValues)
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).width = newWidth
+      ;(selectedTimelineItem.value.config as any).height = newHeight
+      if (x !== undefined) (selectedTimelineItem.value.config as any).x = x
+      if (y !== undefined) (selectedTimelineItem.value.config as any).y = y
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe) {
+        ;(keyframe.properties as any).width = newWidth
+        ;(keyframe.properties as any).height = newHeight
+        if (x !== undefined && 'x' in keyframe.properties) {
+          ;(keyframe.properties as any).x = x
+        }
+        if (y !== undefined && 'y' in keyframe.properties) {
+          ;(keyframe.properties as any).y = y
+        }
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const props = deferredUpdate.dragState.value.createdKeyframe!.properties as any
+      if ('width' in props) props.width = newWidth
+      if ('height' in props) props.height = newHeight
+      if (x !== undefined && 'x' in props) props.x = x
+      if (y !== undefined && 'y' in props) props.y = y
+    }
+
+    // 记录当前值并更新状态
+    deferredUpdate.updateDuringDrag('width', newWidth)
+    deferredUpdate.updateDuringDrag('height', newHeight)
+    if (x !== undefined) deferredUpdate.updateDuringDrag('x', x)
+    if (y !== undefined) deferredUpdate.updateDuringDrag('y', y)
+  }
+
+  /**
+   * 设置旋转角度的延迟更新方法（用于拖拽旋转）
+   * 输入弧度值
+   */
+  const setTransformRotationDeferred = (rotationRadians: number) => {
+    if (
+      !selectedTimelineItem.value ||
+      !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
+    )
+      return
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+
+    // 标准化角度到 -π 到 π
+    const normalizedRotation = normalizeRadians(rotationRadians)
+
+    // 检查是否第一次拖动
+    const isFirstInput = deferredUpdate.dragState.value.pendingUpdates.size === 0
+
+    if (isFirstInput) {
+      deferredUpdate.startDrag({ rotation: config.rotation })
+    }
+
+    // 拖动中：直接修改关键帧或 config
+    const buttonState = getKeyframeButtonState(selectedTimelineItem.value, currentFrame.value)
+
+    if (buttonState === 'none') {
+      ;(selectedTimelineItem.value.config as any).rotation = normalizedRotation
+    } else if (buttonState === 'on-keyframe') {
+      const keyframe = findKeyframeAtFrame(selectedTimelineItem.value, currentFrame.value)
+      if (keyframe && 'rotation' in keyframe.properties) {
+        ;(keyframe.properties as any).rotation = normalizedRotation
+      }
+    } else if (buttonState === 'between-keyframes' && deferredUpdate.dragState.value.createdKeyframe) {
+      const props = deferredUpdate.dragState.value.createdKeyframe!.properties as any
+      if ('rotation' in props) {
+        props.rotation = normalizedRotation
+      }
+    }
+
+    deferredUpdate.updateDuringDrag('rotation', normalizedRotation)
+  }
+
+  /**
+   * 角度标准化工具函数
+   */
+  function normalizeRadians(radians: number): number {
+    // 标准化到 -π 到 π
+    let normalized = radians % (2 * Math.PI)
+    if (normalized > Math.PI) {
+      normalized -= 2 * Math.PI
+    } else if (normalized < -Math.PI) {
+      normalized += 2 * Math.PI
+    }
+    return normalized
+  }
+
+  /**
    * 提交延迟更新（由 SliderInput @change 触发）
    * 创建历史记录并清理拖动状态
    */
@@ -942,6 +1123,9 @@ export function useUnifiedKeyframeTransformControls(
     setScaleYDeferred,
     setRotationDeferred,
     setOpacityDeferred,
+    setTransformPositionDeferred,
+    setTransformSizeDeferred,
+    setTransformRotationDeferred,
     commitDeferredUpdates,
 
     // ✨ 直接更新方法（用于 NumberInput @change）
