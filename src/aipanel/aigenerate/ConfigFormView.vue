@@ -44,17 +44,17 @@
               @click="handleGenerate"
             >
               <component :is="IconComponents.SPARKLING" size="16px" class="button-icon" />
-              <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }} ({{ calculatedCost }}$)</span>
+              <span>{{ isGenerating ? t('aiPanel.generating') : t('aiPanel.generate') }}<template v-if="shouldShowCost"> ({{ calculatedCost }}$)</template></span>
             </button>
           </template>
           {{ generateButtonTooltip }}
         </n-tooltip>
 
         <!-- 调试输出按钮 -->
-        <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
+        <!-- <button v-if="aiConfig" class="generate-button" @click="handleDebugOutput">
           <component :is="IconComponents.DEBUG" size="16px" class="button-icon" />
           <span>调试输出</span>
-        </button>
+        </button> -->
       </div>
     </n-scrollbar>
   </div>
@@ -71,6 +71,7 @@ import type { Component } from 'vue'
 import type { UIConfig, ValidationResult } from '@/aipanel/aigenerate/types'
 import { calculateTotalCost } from './utils/costCalculator'
 import { validateAiConfig } from './utils/validator'
+import { useUnifiedStore } from '@/core/unifiedStore'
 
 interface Props {
   selectedConfig: ConfigKey | ''
@@ -92,6 +93,12 @@ const emit = defineEmits<Emits>()
 
 // 使用全局 i18n 获取翻译函数
 const { t } = useAppI18n()
+
+// 获取 unified store 实例
+const unifiedStore = useUnifiedStore()
+
+// 是否显示成本（有 BizyAir API Key 时不显示）
+const shouldShowCost = computed(() => !unifiedStore.hasBizyAirApiKey())
 
 // 获取选中的配置数据
 const selectedConfigData = computed(() => {
