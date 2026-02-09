@@ -24,35 +24,64 @@
         />
       </div>
 
-      <!-- 帧率选择 -->
+      <!-- 导出类型 -->
       <div class="form-group">
-        <label>{{ t('editor.frameRate') }}</label>
-        <select v-model="form.frameRate" class="form-select">
-          <option :value="8">{{ t('editor.frameRate8') }}</option>
-          <option :value="12">{{ t('editor.frameRate12') }}</option>
-          <option :value="16">{{ t('editor.frameRate16') }}</option>
-          <option :value="20">{{ t('editor.frameRate20') }}</option>
-          <option :value="24">{{ t('editor.frameRate24') }}</option>
-          <option :value="25">{{ t('editor.frameRate25') }}</option>
-          <option :value="30">{{ t('editor.frameRate30') }}</option>
-          <option :value="50">{{ t('editor.frameRate50') }}</option>
-          <option :value="60">{{ t('editor.frameRate60') }}</option>
-        </select>
-        <div class="quality-hint">{{ getFrameRateHint(form.frameRate) }}</div>
+        <label>{{ t('editor.exportType') }}</label>
+        <div class="radio-group">
+          <label class="radio-option" :class="{ active: form.exportType === 'video' }">
+            <input
+              type="radio"
+              v-model="form.exportType"
+              value="video"
+              name="exportType"
+            />
+            <span class="radio-label">{{ t('editor.exportTypeVideo') }}</span>
+          </label>
+          <label class="radio-option" :class="{ active: form.exportType === 'audio' }">
+            <input
+              type="radio"
+              v-model="form.exportType"
+              value="audio"
+              name="exportType"
+            />
+            <span class="radio-label">{{ t('editor.exportTypeAudio') }}</span>
+          </label>
+        </div>
+        <div class="quality-hint">{{ getExportTypeHint(form.exportType) }}</div>
       </div>
 
-      <!-- 视频质量 -->
-      <div class="form-group">
-        <label>{{ t('editor.videoQuality') }}</label>
-        <select v-model="form.videoQuality" class="form-select">
-          <option value="very_low">{{ t('editor.qualityVeryLow') }}</option>
-          <option value="low">{{ t('editor.qualityLow') }}</option>
-          <option value="medium">{{ t('editor.qualityMedium') }}</option>
-          <option value="high">{{ t('editor.qualityHigh') }}</option>
-          <option value="very_high">{{ t('editor.qualityVeryHigh') }}</option>
-        </select>
-        <div class="quality-hint">{{ getVideoQualityHint(form.videoQuality) }}</div>
-      </div>
+      <!-- 视频相关设置：仅在导出视频时显示 -->
+      <template v-if="form.exportType === 'video'">
+        <!-- 帧率选择 -->
+        <div class="form-group">
+          <label>{{ t('editor.frameRate') }}</label>
+          <select v-model="form.frameRate" class="form-select">
+            <option :value="8">{{ t('editor.frameRate8') }}</option>
+            <option :value="12">{{ t('editor.frameRate12') }}</option>
+            <option :value="16">{{ t('editor.frameRate16') }}</option>
+            <option :value="20">{{ t('editor.frameRate20') }}</option>
+            <option :value="24">{{ t('editor.frameRate24') }}</option>
+            <option :value="25">{{ t('editor.frameRate25') }}</option>
+            <option :value="30">{{ t('editor.frameRate30') }}</option>
+            <option :value="50">{{ t('editor.frameRate50') }}</option>
+            <option :value="60">{{ t('editor.frameRate60') }}</option>
+          </select>
+          <div class="quality-hint">{{ getFrameRateHint(form.frameRate) }}</div>
+        </div>
+
+        <!-- 视频质量 -->
+        <div class="form-group">
+          <label>{{ t('editor.videoQuality') }}</label>
+          <select v-model="form.videoQuality" class="form-select">
+            <option value="very_low">{{ t('editor.qualityVeryLow') }}</option>
+            <option value="low">{{ t('editor.qualityLow') }}</option>
+            <option value="medium">{{ t('editor.qualityMedium') }}</option>
+            <option value="high">{{ t('editor.qualityHigh') }}</option>
+            <option value="very_high">{{ t('editor.qualityVeryHigh') }}</option>
+          </select>
+          <div class="quality-hint">{{ getVideoQualityHint(form.videoQuality) }}</div>
+        </div>
+      </template>
 
       <!-- 音频质量 -->
       <div class="form-group">
@@ -82,6 +111,7 @@ import {
   QUALITY_VERY_HIGH,
   type Quality,
 } from 'mediabunny'
+import type { ExportType } from '@/core/utils/projectExporter'
 
 const { t } = useAppI18n()
 
@@ -94,6 +124,7 @@ interface Props {
 
 interface ExportSettings {
   title: string
+  exportType: ExportType
   videoQuality: Quality
   audioQuality: Quality
   frameRate: number
@@ -113,11 +144,13 @@ const emit = defineEmits<Emits>()
 // 表单数据（内部使用字符串）
 const form = ref<{
   title: string
+  exportType: ExportType
   videoQuality: QualityLevel
   audioQuality: QualityLevel
   frameRate: number
 }>({
   title: props.defaultTitle || '',
+  exportType: 'video',
   videoQuality: 'medium',
   audioQuality: 'medium',
   frameRate: 30,
@@ -163,6 +196,7 @@ function handleExport() {
 
   emit('export', {
     title: form.value.title.trim(),
+    exportType: form.value.exportType,
     videoQuality: qualityLevelToQuality(form.value.videoQuality),
     audioQuality: qualityLevelToQuality(form.value.audioQuality),
     frameRate: form.value.frameRate,
@@ -207,6 +241,13 @@ function getAudioQualityHint(level: QualityLevel): string {
     very_high: t('editor.audioQualityVeryHighHint'),
   }
   return hints[level]
+}
+
+// 获取导出类型提示
+function getExportTypeHint(type: ExportType): string {
+  return type === 'audio'
+    ? t('editor.exportTypeAudioHint')
+    : t('editor.exportTypeVideoHint')
 }
 </script>
 
@@ -264,5 +305,44 @@ function getAudioQualityHint(level: QualityLevel): string {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   line-height: 1.4;
+}
+
+.radio-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.radio-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-primary);
+  border: 2px solid transparent;
+  border-radius: var(--border-radius-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.radio-option:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.radio-option.active {
+  background: var(--color-accent);
+  border-color: #22c55e;
+  color: white;
+}
+
+.radio-option input[type="radio"] {
+  display: none;
+}
+
+.radio-label {
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 </style>

@@ -7,6 +7,7 @@
 import {
   Output,
   Mp4OutputFormat,
+  Mp3OutputFormat,
   BufferTarget,
   CanvasSource,
   AudioSampleSource,
@@ -45,9 +46,16 @@ import {
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 /**
+ * 导出类型
+ */
+export type ExportType = 'video' | 'audio'
+
+/**
  * 导出项目参数接口
  */
 export interface ExportProjectOptions {
+  /** 导出类型（视频或仅音频） */
+  exportType?: ExportType
   /** 视频分辨率宽度 */
   videoWidth: number
   /** 视频分辨率高度 */
@@ -310,6 +318,70 @@ export class ExportManager {
   }
 
   /**
+   * 仅收集音频（不渲染 Canvas）
+   * 用于音频导出模式
+   */
+  private async collectAudioOnly(
+    currentTimeN: number,
+  ): Promise<Map<string, AudioBufferWithVolume>> {
+    const audioBuffersMap = new Map<string, AudioBufferWithVolume>()
+
+    // 🔴 关键转换：目标帧率 → 30fps
+    const frameIn30fps = Math.round(currentTimeN * (RENDERER_FPS / this.frameRate))
+
+    // 更新所有 clips 的帧数据并收集音频
+    await Promise.all(
+      this.clonedTimelineItems.map(async (item) => {
+        // 应用动画插值（使用 30fps 的帧数）
+        applyAnimationToConfig(item, frameIn30fps)
+
+        // 处理视频/音频项目
+        if (
+          TimelineItemQueries.isVideoTimelineItem(item) ||
+          TimelineItemQueries.isAudioTimelineItem(item)
+        ) {
+          const bunnyClip = item.runtime.bunnyClip
+          if (!bunnyClip) return
+
+          // 检查是否在时间范围内（使用 30fps 的帧数）
+          if (
+            frameIn30fps < item.timeRange.timelineStartTime ||
+            frameIn30fps > item.timeRange.timelineEndTime
+          ) {
+            return
+          }
+
+          // 获取轨道静音状态
+          const track = this.config.tracks.find((t) => t.id === item.trackId)
+          const isTrackMuted = track?.isMuted ?? false
+          const isItemMuted = item.config.isMuted ?? false
+          const shouldRequestAudio = !isTrackMuted && !isItemMuted
+
+          // 调用 tickN 获取音频数据（不请求视频）
+          const { audio, state } = await bunnyClip.tickN(
+            BigInt(frameIn30fps),
+            true,  // 需要音频
+            false, // 不需要视频
+            0n,
+          )
+
+          if (state === 'success' && shouldRequestAudio && audio && audio.length > 0) {
+            // 获取当前音量值（应用了动画插值）
+            const config = TimelineItemQueries.getRenderConfig(item)
+            const currentVolume = config.volume ?? 1.0
+            audioBuffersMap.set(item.id, {
+              buffers: audio,
+              volume: currentVolume,
+            })
+          }
+        }
+      }),
+    )
+
+    return audioBuffersMap
+  }
+
+  /**
    * 初始化音频渲染器
    */
   private async initializeAudioRenderer(): Promise<void> {
@@ -371,9 +443,17 @@ export class ExportManager {
       this.isExporting = true
       this.shouldCancel = false
 
+      const exportType = this.config.exportType ?? 'video'
+      const isAudioOnly = exportType === 'audio'
+
       // 阶段 1: 初始化
-      this.reportProgress('初始化', 0, '创建 Canvas...')
-      this.createCanvas(this.config.videoWidth, this.config.videoHeight)
+      if (isAudioOnly) {
+        this.reportProgress('初始化', 0, '准备音频导出...')
+        // 音频导出不需要 Canvas
+      } else {
+        this.reportProgress('初始化', 0, '创建 Canvas...')
+        this.createCanvas(this.config.videoWidth, this.config.videoHeight)
+      }
 
       // 阶段 2: 克隆项目
       this.reportProgress('准备', 5, '克隆时间轴项目...')
@@ -385,15 +465,23 @@ export class ExportManager {
       // 阶段 3: 创建 MediaBunny 组件
       this.reportProgress('准备', 10, '初始化编码器...')
 
+      // 根据导出类型选择格式
+      const outputFormat = isAudioOnly
+        ? new Mp3OutputFormat()
+        : new Mp4OutputFormat()
+
       this.output = new Output({
-        format: new Mp4OutputFormat(),
+        format: outputFormat,
         target: new BufferTarget(),
       })
 
-      this.canvasSource = new CanvasSource(this.canvas!, {
-        codec: 'avc',
-        bitrate: this.config.videoQuality,
-      })
+      // 只在视频导出时创建 CanvasSource
+      if (!isAudioOnly) {
+        this.canvasSource = new CanvasSource(this.canvas!, {
+          codec: 'avc',
+          bitrate: this.config.videoQuality,
+        })
+      }
 
       this.audioSource = new AudioSampleSource({
         codec: 'mp3',
@@ -404,9 +492,11 @@ export class ExportManager {
       await this.initializeAudioRenderer()
 
       // 阶段 5: 添加轨道并启动
-      this.output.addVideoTrack(this.canvasSource, {
-        frameRate: this.frameRate,
-      })
+      if (!isAudioOnly && this.canvasSource) {
+        this.output.addVideoTrack(this.canvasSource, {
+          frameRate: this.frameRate,
+        })
+      }
       this.output.addAudioTrack(this.audioSource)
 
       await this.output.start()
@@ -423,12 +513,16 @@ export class ExportManager {
           throw new ExportCancelledError()
         }
 
-        // 渲染当前帧并收集音频
-        const audioBuffersMap = await this.renderFrameAndCollectAudio(frameN)
+        // 渲染当前帧并收集音频（音频导出时跳过渲染，只收集音频）
+        const audioBuffersMap = isAudioOnly
+          ? await this.collectAudioOnly(frameN)
+          : await this.renderFrameAndCollectAudio(frameN)
 
-        // 添加视频帧
-        const timestamp = frameN / this.frameRate
-        await this.canvasSource.add(timestamp, frameDuration)
+        // 添加视频帧（仅在视频导出时）
+        if (!isAudioOnly && this.canvasSource) {
+          const timestamp = frameN / this.frameRate
+          await this.canvasSource.add(timestamp, frameDuration)
+        }
 
         // 收集音频缓冲到缓冲区
         for (const [itemId, audioBufferWithVolume] of audioBuffersMap.entries()) {
@@ -487,7 +581,9 @@ export class ExportManager {
       // 音频渲染已经在主循环中处理完成
 
       // 阶段 8: 关闭并完成
-      this.canvasSource.close()
+      if (this.canvasSource) {
+        this.canvasSource.close()
+      }
       this.audioSource.close()
       await this.output.finalize()
 
@@ -576,17 +672,24 @@ export function exportProjectWithCancel(
   // 执行导出并保存文件
   manager
     .export()
-    .then(async (videoData) => {
+    .then(async (data) => {
+      // 根据导出类型确定文件扩展名和 MIME 类型
+      const exportType = options.exportType ?? 'video'
+      const isAudioOnly = exportType === 'audio'
+
+      const mimeType = isAudioOnly ? 'audio/mpeg' : 'video/mp4'
+      const fileExtension = isAudioOnly ? 'mp3' : 'mp4'
+
       // 保存文件
-      const blob = new Blob([videoData.buffer as ArrayBuffer], { type: 'video/mp4' })
+      const blob = new Blob([data.buffer as ArrayBuffer], { type: mimeType })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${options.projectName}.mp4`
+      a.download = `${options.projectName}.${fileExtension}`
       a.click()
       URL.revokeObjectURL(url)
 
-      console.log('✅ 项目导出成功（传统方式）')
+      console.log(`✅ 项目导出成功（${isAudioOnly ? '音频' : '视频'}）`)
       onSuccess?.()
     })
     .catch((error) => {

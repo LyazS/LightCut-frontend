@@ -210,6 +210,7 @@ function exportProject() {
 
 async function handleExportWithSettings(settings: {
   title: string
+  exportType: 'video' | 'audio'
   videoQuality: Quality
   audioQuality: Quality
   frameRate: number
@@ -239,6 +240,7 @@ async function handleExportWithSettings(settings: {
     // 使用可取消的导出函数
     cancelExport = exportProjectWithCancel(
       {
+        exportType: settings.exportType,
         videoWidth: unifiedStore.videoResolution.width,
         videoHeight: unifiedStore.videoResolution.height,
         projectName: settings.title,
