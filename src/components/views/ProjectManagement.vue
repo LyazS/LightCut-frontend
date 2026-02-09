@@ -22,6 +22,15 @@
           </HoverButton>
           <LanguageSelector />
           <HoverButton
+            @click="showProviderConfigDialog = true"
+            :title="t('app.apiConfigCenter')"
+          >
+            <template #icon>
+              <img src="/logo-3rd/logo-bizyair-only.webp" alt="BizyAir" style="width: 16px; height: 16px;" />
+            </template>
+            <span v-if="!hasBizyAirKey" class="bizyair-key-text">Key</span>
+          </HoverButton>
+          <HoverButton
             @click="handleUserClick"
             :title="isUserLogin ? t('user.userInfo') : t('user.login')"
           >
@@ -46,143 +55,168 @@
     <!-- 主要内容区域 -->
     <main class="main-content">
       <div class="content-container">
-        <!-- 权限检测和设置区域 -->
-        <section v-if="!hasWorkspaceAccess" class="workspace-setup">
-          <div
-            class="setup-card"
-            :class="{ 'clickable-card': isApiSupported && !permissionError }"
-            @click="isApiSupported && !permissionError && !isLoading ? setupWorkspace() : null"
-          >
-            <div class="setup-icon">
-              <component :is="IconComponents.FOLDER_LINE" size="48px" />
-            </div>
-            <h2>{{ t('workspace.setup.title') }}</h2>
-            <p>{{ t('workspace.setup.description') }}</p>
-
-            <div v-if="!isApiSupported" class="error-message">
-              <component :is="IconComponents.WARNING" size="16px" />
-              <span>{{ t('workspace.error.unsupported') }}</span>
-            </div>
-
-            <!-- 权限丢失提示 -->
-            <div v-else-if="permissionError" class="error-message">
-              <component :is="IconComponents.ERROR" size="16px" />
-              <span>{{ t('workspace.error.permission') }}</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- 项目列表区域 -->
-        <section v-if="hasWorkspaceAccess" class="recent-projects">
-          <div class="section-header">
-            <h2>{{ t('project.list.title') }}</h2>
-            <div class="header-actions">
-              <HoverButton
-                @click="loadProjects"
-                :disabled="isLoading"
-                :title="t('project.list.refresh')"
+        <div class="content-wrapper">
+          <!-- 左侧内容区域 -->
+          <div class="main-section">
+            <!-- 权限检测和设置区域 -->
+            <section v-if="!hasWorkspaceAccess" class="workspace-setup">
+              <div
+                class="setup-card"
+                :class="{ 'clickable-card': isApiSupported && !permissionError }"
+                @click="isApiSupported && !permissionError && !isLoading ? setupWorkspace() : null"
               >
-                <template #icon>
-                  <component
-                    :is="IconComponents.REFRESH"
-                    size="20px"
-                    :class="{ spinning: isLoading }"
-                  />
-                </template>
-              </HoverButton>
-              <div class="view-options">
-                <HoverButton
-                  v-if="viewMode !== 'grid'"
-                  @click="viewMode = 'grid'"
-                  :title="t('project.view.grid')"
-                >
-                  <template #icon>
-                    <component :is="IconComponents.GRID" size="20px" />
-                  </template>
-                </HoverButton>
-                <HoverButton
-                  v-if="viewMode !== 'list'"
-                  @click="viewMode = 'list'"
-                  :title="t('project.view.list')"
-                >
-                  <template #icon>
-                    <component :is="IconComponents.LIST_CHECK" size="20px" />
-                  </template>
-                </HoverButton>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="isLoading && projects.length === 0" class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>{{ t('project.loading') }}</p>
-          </div>
-
-          <div v-else-if="projects.length === 0" class="empty-state-container">
-            <div
-              class="setup-card clickable-card"
-              @click="!isLoading && createNewProject()"
-            >
-              <div class="setup-icon">
-                <component :is="IconComponents.ADD" size="48px" />
-              </div>
-              <h2>{{ t('project.empty.title') }}</h2>
-              <p>{{ t('project.empty.description') }}</p>
-            </div>
-          </div>
-
-          <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
-            <!-- 固定的创建新项目卡片 -->
-            <div
-              class="project-card create-project-card"
-              @click="!isLoading && createNewProject()"
-            >
-              <div class="create-thumbnail">
-                <div class="create-icon-wrapper">
-                  <component :is="IconComponents.ADD" size="48px" />
+                <div class="setup-icon">
+                  <component :is="IconComponents.FOLDER_LINE" size="48px" />
                 </div>
-                <h3 class="create-title">{{ t('project.new') }}</h3>
-              </div>
-            </div>
+                <h2>{{ t('workspace.setup.title') }}</h2>
+                <p>{{ t('workspace.setup.description') }}</p>
 
-            <!-- 现有项目卡片 -->
-            <div
-              v-for="project in projects"
-              :key="project.id"
-              class="project-card"
-              @click="openProjectById(project.id)"
-              @contextmenu="showProjectMenu($event, project)"
-            >
-              <div class="project-thumbnail">
-                <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
-                <div v-else class="thumbnail-placeholder">
-                  <component :is="IconComponents.VIDEO" size="20px" />
+                <div v-if="!isApiSupported" class="error-message">
+                  <component :is="IconComponents.WARNING" size="16px" />
+                  <span>{{ t('workspace.error.unsupported') }}</span>
                 </div>
-                <!-- 设置按钮移到缩略图右上角 -->
-                <HoverButton
-                  variant="small"
-                  class="settings-btn-overlay"
-                  @click.stop="showProjectMenu($event, project)"
-                  :title="t('common.settings')"
-                >
-                  <template #icon>
-                    <component :is="IconComponents.MORE" size="20px" />
-                  </template>
-                </HoverButton>
-              </div>
-              <div class="project-info">
-                <h3 class="project-name">{{ project.name }}</h3>
-                <p class="project-description">
-                  {{ project.description || t('project.noDescription') }}
-                </p>
-                <div class="project-meta">
-                  <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
-                  <span class="project-duration">{{ formatDuration(project.duration) }}</span>
+
+                <!-- 权限丢失提示 -->
+                <div v-else-if="permissionError" class="error-message">
+                  <component :is="IconComponents.ERROR" size="16px" />
+                  <span>{{ t('workspace.error.permission') }}</span>
                 </div>
               </div>
-            </div>
+            </section>
+
+            <!-- 项目列表区域 -->
+            <section v-if="hasWorkspaceAccess" class="recent-projects">
+              <div class="section-header">
+                <h2>{{ t('project.list.title') }}</h2>
+                <div class="header-actions">
+                  <HoverButton
+                    @click="loadProjects"
+                    :disabled="isLoading"
+                    :title="t('project.list.refresh')"
+                  >
+                    <template #icon>
+                      <component
+                        :is="IconComponents.REFRESH"
+                        size="20px"
+                        :class="{ spinning: isLoading }"
+                      />
+                    </template>
+                  </HoverButton>
+                  <div class="view-options">
+                    <HoverButton
+                      v-if="viewMode !== 'grid'"
+                      @click="viewMode = 'grid'"
+                      :title="t('project.view.grid')"
+                    >
+                      <template #icon>
+                        <component :is="IconComponents.GRID" size="20px" />
+                      </template>
+                    </HoverButton>
+                    <HoverButton
+                      v-if="viewMode !== 'list'"
+                      @click="viewMode = 'list'"
+                      :title="t('project.view.list')"
+                    >
+                      <template #icon>
+                        <component :is="IconComponents.LIST_CHECK" size="20px" />
+                      </template>
+                    </HoverButton>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="isLoading && projects.length === 0" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>{{ t('project.loading') }}</p>
+              </div>
+
+              <div v-else-if="projects.length === 0" class="empty-state-container">
+                <div
+                  class="setup-card clickable-card"
+                  @click="!isLoading && createNewProject()"
+                >
+                  <div class="setup-icon">
+                    <component :is="IconComponents.ADD" size="48px" />
+                  </div>
+                  <h2>{{ t('project.empty.title') }}</h2>
+                  <p>{{ t('project.empty.description') }}</p>
+                </div>
+              </div>
+
+              <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
+                <!-- 固定的创建新项目卡片 -->
+                <div
+                  class="project-card create-project-card"
+                  @click="!isLoading && createNewProject()"
+                >
+                  <div class="create-thumbnail">
+                    <div class="create-icon-wrapper">
+                      <component :is="IconComponents.ADD" size="48px" />
+                    </div>
+                    <h3 class="create-title">{{ t('project.new') }}</h3>
+                  </div>
+                </div>
+
+                <!-- 现有项目卡片 -->
+                <div
+                  v-for="project in projects"
+                  :key="project.id"
+                  class="project-card"
+                  @click="openProjectById(project.id)"
+                  @contextmenu="showProjectMenu($event, project)"
+                >
+                  <div class="project-thumbnail">
+                    <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
+                    <div v-else class="thumbnail-placeholder">
+                      <component :is="IconComponents.VIDEO" size="20px" />
+                    </div>
+                    <!-- 设置按钮移到缩略图右上角 -->
+                    <HoverButton
+                      variant="small"
+                      class="settings-btn-overlay"
+                      @click.stop="showProjectMenu($event, project)"
+                      :title="t('common.settings')"
+                    >
+                      <template #icon>
+                        <component :is="IconComponents.MORE" size="20px" />
+                      </template>
+                    </HoverButton>
+                  </div>
+                  <div class="project-info">
+                    <h3 class="project-name">{{ project.name }}</h3>
+                    <p class="project-description">
+                      {{ project.description || t('project.noDescription') }}
+                    </p>
+                    <div class="project-meta">
+                      <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
+                      <span class="project-duration">{{ formatDuration(project.duration) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </section>
+
+          <!-- 右侧通知栏 -->
+          <aside class="notification-sidebar">
+            <n-scrollbar style="max-height: calc(100vh - 8rem)">
+              <div class="announcement-list">
+                <div
+                  v-for="(announcement, index) in announcements"
+                  :key="index"
+                  class="announcement-card"
+                >
+                  <div class="announcement-header">
+                    <h3 class="announcement-title">{{ announcement.title }}</h3>
+                    <div class="announcement-date">{{ announcement.date }}</div>
+                  </div>
+
+                  <div class="announcement-content" v-html="md.render(announcement.content)"></div>
+                </div>
+              </div>
+            </n-scrollbar>
+          </aside>
+        </div>
       </div>
     </main>
   </div>
@@ -224,11 +258,19 @@
     :user="currentUser"
     @close="showUserInfoDialog = false"
   />
+
+  <!-- Provider配置对话框 -->
+  <ProviderConfigModal
+    :show="showProviderConfigDialog"
+    @close="showProviderConfigDialog = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { NScrollbar } from 'naive-ui'
+import MarkdownIt from 'markdown-it'
 import { fileSystemService, unifiedProjectManager } from '@/core/managers'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { UnifiedProjectConfig } from '@/core/project'
@@ -240,10 +282,29 @@ import HoverButton from '@/components/base/HoverButton.vue'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
 import LoginModal from '@/components/modals/LoginModal.vue'
 import UserInfoModal from '@/components/modals/UserInfoModal.vue'
+import ProviderConfigModal from '@/components/modals/ProviderConfigModal.vue'
 import { useAppI18n } from '@/core/composables/useI18n'
+import announcementsConfig from '@/config/announcements.json'
+
+// 初始化 markdown-it
+const md = new MarkdownIt()
+
+// 公告类型定义
+interface Announcement {
+  title: string
+  date: string
+  content: string
+}
+
+interface AnnouncementsConfig {
+  announcements: Announcement[]
+}
 
 const router = useRouter()
 const { t } = useAppI18n()
+
+// 公告数据
+const announcements = ref<Announcement[]>(announcementsConfig.announcements)
 
 // 响应式数据
 const viewMode = ref<'grid' | 'list'>('grid')
@@ -256,6 +317,7 @@ const permissionError = ref(false)
 // 用户相关状态
 const showLoginDialog = ref(false)
 const showUserInfoDialog = ref(false)
+const showProviderConfigDialog = ref(false)
 
 // 上下文菜单相关
 const showContextMenu = ref(false)
@@ -276,6 +338,7 @@ const unifiedStore = useUnifiedStore()
 // 计算属性
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
+const hasBizyAirKey = computed(() => unifiedStore.hasBizyAirApiKey())
 const isApiSupported = computed(() => fileSystemService.isSupported())
 
 // 权限和工作目录管理
@@ -568,9 +631,8 @@ onMounted(async () => {
 }
 
 .header-content {
-  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -611,9 +673,19 @@ onMounted(async () => {
 }
 
 .content-container {
-  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 40px;
+}
+
+.content-wrapper {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.main-section {
+  flex: 1;
+  min-width: 0;
 }
 
 .workspace-setup,
@@ -1021,5 +1093,121 @@ onMounted(async () => {
 .list-view .create-icon-wrapper svg {
   width: 24px !important;
   height: 24px !important;
+}
+
+/* ==================== 通知侧边栏 ==================== */
+.notification-sidebar {
+  width: 400px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 2rem;
+}
+
+.announcement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-right: 0.5rem;
+}
+
+.announcement-card {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: var(--border-radius-large);
+  padding: 1.5rem;
+}
+
+.announcement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.announcement-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.announcement-date {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-style: italic;
+}
+
+.announcement-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
+}
+
+.announcement-text strong {
+  color: var(--color-accent-primary);
+  font-weight: 600;
+}
+
+.announcement-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .content-wrapper {
+    flex-direction: column;
+  }
+
+  .notification-sidebar {
+    width: 100%;
+    position: static;
+    order: -1;
+  }
+
+  .announcement-card {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-container {
+    padding: 0 1rem;
+  }
+
+  .notification-sidebar {
+    margin-bottom: 1.5rem;
+  }
+
+  .announcement-card {
+    padding: 1.25rem;
+  }
+
+  .announcement-title {
+    font-size: 1.25rem;
+  }
+
+  .announcement-text {
+    font-size: 1rem;
+  }
+
+  .feature-item {
+    font-size: 0.85rem;
+    padding: 0.625rem 0.875rem;
+  }
+}
+
+.bizyair-key-text {
+  font-size: var(--font-size-xs);
+  color: #ff4444;
+  font-weight: 600;
+  margin-left: 2px;
 }
 </style>
