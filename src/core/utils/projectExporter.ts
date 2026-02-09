@@ -55,7 +55,7 @@ export type ExportType = 'video' | 'audio'
  */
 export interface ExportProjectOptions {
   /** 导出类型（视频或仅音频） */
-  exportType?: ExportType
+  exportType: ExportType
   /** 视频分辨率宽度 */
   videoWidth: number
   /** 视频分辨率高度 */
@@ -100,6 +100,8 @@ export interface ExportTimelineItemOptions {
   getMediaItem: (id: string) => UnifiedMediaItemData | undefined
   /** 进度更新回调（可选） */
   onProgress?: (progress: number) => void
+  /** 导出类型（可选，仅视频时间轴项目支持音频导出） */
+  exportType?: ExportType
   /** 导出帧率（可选，默认 30fps，仅视频有效） */
   frameRate?: number
 }
@@ -443,7 +445,7 @@ export class ExportManager {
       this.isExporting = true
       this.shouldCancel = false
 
-      const exportType = this.config.exportType ?? 'video'
+      const exportType = this.config.exportType
       const isAudioOnly = exportType === 'audio'
 
       // 阶段 1: 初始化
@@ -674,7 +676,7 @@ export function exportProjectWithCancel(
     .export()
     .then(async (data) => {
       // 根据导出类型确定文件扩展名和 MIME 类型
-      const exportType = options.exportType ?? 'video'
+      const exportType = options.exportType
       const isAudioOnly = exportType === 'audio'
 
       const mimeType = isAudioOnly ? 'audio/mpeg' : 'video/mp4'
@@ -801,6 +803,7 @@ async function exportVideoMediaItem(
 
   // 3. 构造 ExportProjectOptions
   const exportOptions: ExportProjectOptions = {
+    exportType: 'video',
     videoWidth: bunnyMedia.width,
     videoHeight: bunnyMedia.height,
     projectName: 'temp-export',
@@ -943,6 +946,7 @@ async function exportVideoTimelineItem(
 
   // 4. 构造 ExportProjectOptions
   const exportOptions: ExportProjectOptions = {
+    exportType: 'video',
     videoWidth: bunnyMedia.width,
     videoHeight: bunnyMedia.height,
     projectName: 'temp-export',
@@ -964,10 +968,88 @@ async function exportVideoTimelineItem(
 }
 
 /**
+ * 导出视频/音频时间轴项目为音频 MP3 Blob
+ */
+async function exportAudioTimelineItem(
+  timelineItem: UnifiedTimelineItemData<'video' | 'audio'>,
+  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  // 1. 获取媒体项目
+  const mediaItem = getMediaItem(timelineItem.mediaItemId)
+  if (!mediaItem) {
+    throw new Error(`找不到媒体项目: ${timelineItem.mediaItemId}`)
+  }
+
+  // 2. 验证媒体项目状态
+  if (mediaItem.mediaStatus !== 'ready') {
+    throw new Error('媒体项目未就绪')
+  }
+
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+  await bunnyMedia.ready
+
+  // 3. 创建新的时间轴项目（只保留时间范围，重置其他配置）
+  const cleanTimelineItem: UnifiedTimelineItemData<'video' | 'audio'> = {
+    ...timelineItem,
+    id: 'temp-export-item',
+    trackId: 'temp-track',
+    timelineStatus: 'ready',
+    timeRange: {
+      timelineStartTime: 0,
+      timelineEndTime:
+        timelineItem.timeRange.timelineEndTime - timelineItem.timeRange.timelineStartTime,
+      clipStartTime: timelineItem.timeRange.clipStartTime,
+      clipEndTime: timelineItem.timeRange.clipEndTime,
+    },
+    config: {
+      // 重置为默认配置
+      x: 0,
+      y: 0,
+      width: timelineItem.mediaType === 'video' ? bunnyMedia.width : 0,
+      height: timelineItem.mediaType === 'video' ? bunnyMedia.height : 0,
+      rotation: 0,
+      opacity: 1,
+      proportionalScale: true,
+      volume: 1,
+      isMuted: false,
+    },
+    runtime: {
+      isInitialized: true,
+    },
+  }
+
+  // 4. 构造 ExportProjectOptions - 使用音频导出
+  const exportOptions: ExportProjectOptions = {
+    exportType: 'audio',
+    videoWidth: timelineItem.mediaType === 'video' ? bunnyMedia.width : 1920,
+    videoHeight: timelineItem.mediaType === 'video' ? bunnyMedia.height : 1080,
+    projectName: 'temp-export',
+    timelineItems: [cleanTimelineItem],
+    tracks: [{ id: 'temp-track', isVisible: true, isMuted: false }],
+    getMediaItem: (id: string) => (id === mediaItem.id ? mediaItem : undefined),
+    onProgress: onProgress ? (stage, progress) => onProgress(progress) : undefined,
+    videoQuality: QUALITY_MEDIUM,
+    audioQuality: QUALITY_MEDIUM,
+    frameRate: 30,
+  }
+
+  // 5. 使用 ExportManager 导出
+  const manager = new ExportManager(exportOptions)
+  const audioData = await manager.export()
+
+  // 6. 返回 Blob
+  return new Blob([audioData.buffer as ArrayBuffer], { type: 'audio/mpeg' })
+}
+
+/**
  * 导出单个时间轴项目为 Blob（使用原始尺寸）
  */
 export async function exportTimelineItem(options: ExportTimelineItemOptions): Promise<Blob> {
-  const { timelineItem, onProgress, getMediaItem, frameRate } = options
+  const { timelineItem, onProgress, getMediaItem, frameRate, exportType } = options
 
   // 1. 类型检查
   if (timelineItem.mediaType === 'image') {
@@ -975,7 +1057,16 @@ export async function exportTimelineItem(options: ExportTimelineItemOptions): Pr
   }
 
   if (timelineItem.mediaType === 'video') {
+    // 如果指定了音频导出类型，导出为音频
+    if (exportType === 'audio') {
+      return await exportAudioTimelineItem(timelineItem as UnifiedTimelineItemData<'video'>, getMediaItem, onProgress)
+    }
     return await exportVideoTimelineItem(timelineItem, getMediaItem, onProgress, frameRate)
+  }
+
+  if (timelineItem.mediaType === 'audio') {
+    // 音频时间轴项目只能导出为音频
+    return await exportAudioTimelineItem(timelineItem as UnifiedTimelineItemData<'audio'>, getMediaItem, onProgress)
   }
 
   throw new Error(`不支持导出 ${timelineItem.mediaType} 类型的时间轴项目`)
