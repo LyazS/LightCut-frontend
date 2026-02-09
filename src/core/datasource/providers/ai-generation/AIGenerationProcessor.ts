@@ -13,6 +13,7 @@ import { fetchClient, sleepWithAbortSignal } from '@/utils/fetchClient'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { DATA_SOURCE_CONCURRENCY } from '@/constants/ConcurrencyConstants'
+import { useUnifiedStore } from '@/core/unifiedStore'
 
 // 导入类型定义
 import { ContentType, TaskStreamEventType, TaskStatus } from './types'
@@ -319,9 +320,8 @@ export class AIGenerationProcessor extends DataSourceProcessor {
     }
 
     // 发送系统通知
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-    await store.notifySystem('AI 生成完成', '您的媒体文件已成功生成')
+    const unifiedStore = useUnifiedStore()
+    await unifiedStore.notifySystem('AI 生成完成', '您的媒体文件已成功生成')
 
     return file
   }

@@ -11,6 +11,7 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import type { MediaType } from '@/core/mediaitem'
 import { cloneDeep } from 'lodash'
+import { useUnifiedStore } from '@/core/unifiedStore'
 
 // ==================== 类型定义 ====================
 
@@ -338,7 +339,6 @@ export class BizyairFileUploader {
   ): Promise<UploadResult> {
     try {
       // 1. 获取用户 API Key（每次调用时从 unifiedStore 获取最新值）
-      const { useUnifiedStore } = await import('@/core/unifiedStore')
       const unifiedStore = useUnifiedStore()
       const userApiKey = unifiedStore.getBizyAirApiKey()
       

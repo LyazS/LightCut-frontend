@@ -31,8 +31,8 @@ export class TimelineItemTransitioner {
    */
   async transitionToReady(options: TransitionOptions): Promise<void> {
     const { commandId, description } = options
-    const store = useUnifiedStore()
-    const timelineItem = store.getTimelineItem(this.timelineItemId)
+    const unifiedStore = useUnifiedStore()
+    const timelineItem = unifiedStore.getTimelineItem(this.timelineItemId)
 
     if (!timelineItem) {
       console.log(

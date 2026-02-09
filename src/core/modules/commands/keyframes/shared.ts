@@ -92,10 +92,10 @@ export function isPlayheadInTimelineItem(item: UnifiedTimelineItemData, frame: n
  * 显示用户警告
  */
 export function showUserWarning(title: string, message: string): void {
-  const store = useUnifiedStore()
+  const unifiedStore = useUnifiedStore()
   // 假设新架构有类似的警告方法
-  if (typeof store.messageWarning === 'function') {
-    store.messageWarning(`${title}：${message}`)
+  if (typeof unifiedStore.messageWarning === 'function') {
+    unifiedStore.messageWarning(`${title}：${message}`)
   } else {
     console.warn(`${title}: ${message}`)
   }

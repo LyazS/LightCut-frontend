@@ -48,8 +48,8 @@ export class MediaSync {
       })
 
       // 1. 获取媒体项目
-      const store = useUnifiedStore()
-      const mediaItem = store.getMediaItem(this.mediaItemId)
+      const unifiedStore = useUnifiedStore()
+      const mediaItem = unifiedStore.getMediaItem(this.mediaItemId)
       if (!mediaItem) {
         throw new Error(`找不到媒体项目: ${this.mediaItemId}`)
       }
@@ -95,8 +95,8 @@ export class MediaSync {
 
     // 1. 根据配置决定是否更新命令数据
     if (this.options.shouldUpdateCommand && this.options.commandId) {
-      const store = useUnifiedStore()
-      const command = store.getCommand(this.options.commandId)
+      const unifiedStore = useUnifiedStore()
+      const command = unifiedStore.getCommand(this.options.commandId)
       if (command && !command.isDisposed) {
         // 为每个时间轴项目调用 updateMediaData
         for (const timelineItemId of this.options.timelineItemIds) {
@@ -120,8 +120,8 @@ export class MediaSync {
     timelineItemId: string,
   ): Promise<void> {
     // 检查时间轴项目是否还存在（可能已被删除）
-    const store = useUnifiedStore()
-    const timelineItem = store.getTimelineItem(timelineItemId)
+    const unifiedStore = useUnifiedStore()
+    const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
 
     if (!timelineItem) {
       console.log(`⏭️ [MediaSync] 时间轴项目不存在，跳过转换: ${timelineItemId}`)
@@ -169,9 +169,9 @@ export class MediaSync {
    * 处理媒体错误
    */
   private async handleMediaError(mediaItem: UnifiedMediaItemData, status: string): Promise<void> {
-    const store = useUnifiedStore()
+    const unifiedStore = useUnifiedStore()
     for (const timelineItemId of this.options.timelineItemIds) {
-      const timelineItem = store.getTimelineItem(timelineItemId)
+      const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
       if (timelineItem) {
         timelineItem.timelineStatus = 'error'
         console.log(`❌ [MediaSync] 时间轴项目状态已设置为错误: ${timelineItemId}`)

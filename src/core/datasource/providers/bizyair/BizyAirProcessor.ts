@@ -20,6 +20,7 @@ import { BizyAirConfigManager } from './BizyAirConfigManager'
 import { BizyAirTaskStatus } from './types'
 import { mapBizyAirContentTypeToMediaType } from './BizyAirSource'
 import { DataSourceHelpers } from '@/core/datasource/core/DataSourceHelpers'
+import { useUnifiedStore } from '@/core/unifiedStore'
 
 /**
  * 从 URL 推断文件扩展名
@@ -125,9 +126,8 @@ export class BizyAirProcessor extends DataSourceProcessor {
     signal: AbortSignal,
   ): Promise<File> {
     // 从统一Store获取 API Key
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-    const apiKey = await store.getBizyAirApiKey()
+    const unifiedStore = useUnifiedStore()
+    const apiKey = await unifiedStore.getBizyAirApiKey()
 
     if (!apiKey) {
       throw new Error('API Key 未设置，请在设置中配置 BizyAir API Key')
@@ -180,8 +180,8 @@ export class BizyAirProcessor extends DataSourceProcessor {
       bizyair_task_id: requestId,
     }
 
-    // 7. 发送系统通知（复用前面获取的 store）
-    await store.notifySystem('BizyAir 生成完成', '您的媒体文件已成功生成')
+    // 7. 发送系统通知（复用前面获取的 unifiedStore）
+    await unifiedStore.notifySystem('BizyAir 生成完成', '您的媒体文件已成功生成')
 
     return file
   }
@@ -483,9 +483,8 @@ export class BizyAirProcessor extends DataSourceProcessor {
     const bizyairTaskId = bizyAirSource.bizyairTaskId
 
     // 从统一Store获取 API Key
-    const { useUnifiedStore } = await import('@/core/unifiedStore')
-    const store = useUnifiedStore()
-    const apiKey = await store.getBizyAirApiKey()
+    const unifiedStore = useUnifiedStore()
+    const apiKey = await unifiedStore.getBizyAirApiKey()
 
     try {
       // 1. 先调用 BizyAir API 取消远程任务
