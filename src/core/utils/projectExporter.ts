@@ -719,6 +719,28 @@ async function exportVideoMediaItem(
 }
 
 /**
+ * 导出音频媒体项目为 Blob（直接返回原始文件）
+ */
+async function exportAudioMediaItem(
+  mediaItem: UnifiedMediaItemData,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  // 从 BunnyMedia 获取原始文件
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+
+  const oriFile = bunnyMedia.getOriFile()
+  if (!oriFile) {
+    throw new Error('无法获取原始音频文件')
+  }
+
+  onProgress?.(100)
+  return new Blob([oriFile], { type: oriFile.type })
+}
+
+/**
  * 导出单个媒体项目为 Blob（使用原始尺寸）
  */
 export async function exportMediaItem(options: ExportMediaItemOptions): Promise<Blob> {
@@ -731,6 +753,10 @@ export async function exportMediaItem(options: ExportMediaItemOptions): Promise<
 
   if (mediaItem.mediaType === 'video') {
     return await exportVideoMediaItem(mediaItem, onProgress, frameRate)
+  }
+
+  if (mediaItem.mediaType === 'audio') {
+    return await exportAudioMediaItem(mediaItem, onProgress)
   }
 
   throw new Error(`不支持导出 ${mediaItem.mediaType} 类型的媒体项目`)

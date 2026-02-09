@@ -222,6 +222,7 @@ export interface NumberInputConfig extends BaseUIConfig {
   max: number
   step: number
   precision: number
+  showSlider?: boolean // 是否显示滑块，默认为 true
 }
 
 /**

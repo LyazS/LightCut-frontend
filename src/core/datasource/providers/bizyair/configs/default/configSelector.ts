@@ -3,17 +3,24 @@
  */
 
 import qwenImage4stepConfig from './qwen-image-4step.json'
+import wanInfiniteTalkConfig from './wan-infinite-talk.json'
 import type { BizyAirAppConfig } from '../../types'
 
 // 使用对象缓存配置
 const configCache: Record<string, Record<string, BizyAirAppConfig>> = {}
 
 // 加载配置到缓存
-const loadedConfig: BizyAirAppConfig = qwenImage4stepConfig as BizyAirAppConfig
-if (!configCache[loadedConfig.id]) {
-  configCache[loadedConfig.id] = {}
+const configs: BizyAirAppConfig[] = [
+  qwenImage4stepConfig as BizyAirAppConfig,
+  wanInfiniteTalkConfig as BizyAirAppConfig,
+]
+
+for (const loadedConfig of configs) {
+  if (!configCache[loadedConfig.id]) {
+    configCache[loadedConfig.id] = {}
+  }
+  configCache[loadedConfig.id][loadedConfig.variant] = loadedConfig
 }
-configCache[loadedConfig.id][loadedConfig.variant] = loadedConfig
 
 export const SELECTOR_ID = 'default'
 
