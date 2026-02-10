@@ -54,8 +54,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
   const viewMode = ref<ViewMode>('medium-icon')
 
   // 排序状态
-  const sortBy = ref<SortBy>('name')
-  const sortOrder = ref<SortOrder>('asc')
+  const sortBy = ref<SortBy>('date')
+  const sortOrder = ref<SortOrder>('desc')
 
   // ==================== 计算属性 ====================
 

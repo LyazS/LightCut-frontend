@@ -1,19 +1,21 @@
 /**
  * 默认配置组的选择器
+ * 使用动态导入自动发现所有 JSON 配置文件
  */
 
-import qwenImage4stepConfig from './qwen-image-4step.json'
-import wanInfiniteTalkConfig from './wan-infinite-talk.json'
 import type { BizyAirAppConfig } from '../../types'
+
+/**
+ * 动态导入所有 JSON 配置文件
+ * Vite 的 import.meta.glob 会自动匹配当前目录下的所有 .json 文件
+ */
+const configModules = import.meta.glob('./*.json', { eager: true })
 
 // 使用对象缓存配置
 const configCache: Record<string, Record<string, BizyAirAppConfig>> = {}
 
 // 加载配置到缓存
-const configs: BizyAirAppConfig[] = [
-  qwenImage4stepConfig as BizyAirAppConfig,
-  wanInfiniteTalkConfig as BizyAirAppConfig,
-]
+const configs: BizyAirAppConfig[] = Object.values(configModules).map((module) => (module as any).default as BizyAirAppConfig)
 
 for (const loadedConfig of configs) {
   if (!configCache[loadedConfig.id]) {
