@@ -11,6 +11,7 @@ import type {
 } from '@/core/timelineitem/type'
 import type { GetConfigs } from '@/core/timelineitem/bunnytype'
 import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 /**
  * 时间轴项目操作模块
@@ -271,11 +272,24 @@ export function useTimelineItemOperations() {
       // 创建文本时间轴项目（使用工具函数，对齐旧架构）
       const textItem = await createTextTimelineItem(
         '默认文本', // 默认文本内容
-        { fontSize: 48, color: '#ffffff' }, // 默认样式
+        { fontSize: 64, color: '#ffffff' }, // 默认样式
         timePosition, // 开始时间（帧数）
         trackId, // 轨道ID
         150, // 默认时长（5秒@30fps）
       )
+
+      // ✅ 为文本项目设置 bunny 对象（创建 textBitmap）
+      await setupTimelineItemBunny(textItem)
+
+      // ✅ 从 textBitmap 获取实际宽高并设置到 config
+      if (textItem.runtime.textBitmap) {
+        textItem.config.width = textItem.runtime.textBitmap.width
+        textItem.config.height = textItem.runtime.textBitmap.height
+      }
+
+      // 设置状态为 ready（文本项目不依赖外部媒体，可直接就绪）
+      textItem.timelineStatus = 'ready'
+      textItem.runtime.isInitialized = true
 
       // 添加到时间轴（带历史记录）
       await unifiedStore.addTimelineItemWithHistory(textItem)

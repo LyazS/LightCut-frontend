@@ -79,13 +79,13 @@ export async function createTextTimelineItem(
   // 6. 创建统一时间轴项目（使用新架构，不包含sprite）
   const timelineItem: UnifiedTimelineItemData<'text'> = reactive({
     id: customId || generateTimelineItemId(),
-    mediaItemId: '', // 文本项目不需要媒体库项目，使用空字符串
+    mediaItemId: null, // 文本项目不需要媒体库项目，使用 null 表示无关联
     trackId,
     mediaType: 'text',
     timeRange,
     config: textConfig,
     animation: undefined, // 新创建的文本项目默认没有动画
-    timelineStatus: 'loading', // 文本项目创建后即为就绪状态
+    timelineStatus: 'ready', // 文本项目创建后即为就绪状态
     runtime: {
       // ✅ 文本项目不依赖外部媒体，直接完成初始化
       isInitialized: true,

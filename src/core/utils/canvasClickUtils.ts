@@ -95,6 +95,44 @@ export function isPointInBoundingBox(
 }
 
 /**
+ * 判断点是否在旋转后的矩形内
+ *
+ * 原理：将点击点坐标逆旋转到元素的局部坐标系，然后在局部坐标系中进行边界检测
+ *
+ * @param point 点击点（Canvas 中心坐标）
+ * @param elementBox 元素边界框（Canvas 中心坐标），包含旋转角度（弧度）
+ * @returns 是否在旋转后的边界框内
+ */
+export function isPointInRotatedBoundingBox(
+  point: Point2D,
+  elementBox: {
+    x: number
+    y: number
+    width: number
+    height: number
+    rotation: number // 弧度值
+  },
+): boolean {
+  // 1. 计算点击点相对于元素中心的偏移
+  const dx = point.x - elementBox.x
+  const dy = point.y - elementBox.y
+
+  // 2. 逆旋转：将点击点转换到元素的局部坐标系
+  // 逆旋转矩阵：[cos(-θ), -sin(-θ)]   [cos(θ),  sin(θ)]
+  //            [sin(-θ),  cos(-θ)] = [-sin(θ), cos(θ)]
+  const cos = Math.cos(-elementBox.rotation)
+  const sin = Math.sin(-elementBox.rotation)
+  const localX = dx * cos - dy * sin
+  const localY = dx * sin + dy * cos
+
+  // 3. 在局部坐标系中进行边界检测
+  const halfW = elementBox.width / 2
+  const halfH = elementBox.height / 2
+
+  return localX >= -halfW && localX <= halfW && localY >= -halfH && localY <= halfH
+}
+
+/**
  * 将 DOM 移动增量转换为 Canvas 位置增量
  *
  * @param domDeltaX DOM 坐标系 X 方向移动量

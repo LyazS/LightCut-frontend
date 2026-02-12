@@ -95,7 +95,7 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { framesToTimecodeCompact } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from '@imengyu/vue3-context-menu'
-import { domToCanvasCoordinates, isPointInBoundingBox, domDeltaToCanvasDelta } from '@/core/utils/canvasClickUtils'
+import { domToCanvasCoordinates, isPointInRotatedBoundingBox, domDeltaToCanvasDelta } from '@/core/utils/canvasClickUtils'
 import { getVisibleTimelineItems, sortTimelineItemsByTrackIndex } from '@/core/utils/timelineVisibilityUtils'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { useUnifiedKeyframeTransformControls } from '@/core/composables/useKeyframeTransformControls'
@@ -649,6 +649,11 @@ function handleCanvasClick(event: MouseEvent): void {
   // 执行选择操作
   if (clickedItemId) {
     unifiedStore.selectTimelineItem(clickedItemId)
+  } else {
+    // 如果没有点中任何项目，且当前只有一个时间轴项目被选中，则取消选中
+    if (unifiedStore.selectedTimelineItemIds.size === 1) {
+      unifiedStore.clearTimelineSelection()
+    }
   }
 }
 
@@ -712,12 +717,13 @@ function findTimelineItemAtPosition(
     // 获取渲染配置（包含动画插值）
     const renderConfig = TimelineItemQueries.getRenderConfig(item)
 
-    // 简化碰撞检测：不考虑旋转，只检测边界框
-    const isHit = isPointInBoundingBox(canvasPoint, {
+    // 碰撞检测：考虑旋转角度
+    const isHit = isPointInRotatedBoundingBox(canvasPoint, {
       x: renderConfig.x,
       y: renderConfig.y,
       width: renderConfig.width,
       height: renderConfig.height,
+      rotation: renderConfig.rotation,
     })
 
     if (isHit) {

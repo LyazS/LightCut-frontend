@@ -107,6 +107,35 @@ export function useUnifiedKeyframeTransformControls(
     return config.y
   })
 
+  /**
+   * 获取时间轴项目的原始尺寸
+   * - 视频/图片：从 mediaItem.runtime.bunny 获取
+   * - 文本：从 timelineItem.runtime.textBitmap 获取
+   */
+  const getOriginalDimensions = (): { width: number; height: number } => {
+    if (!selectedTimelineItem.value || !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)) {
+      return { width: 0, height: 0 }
+    }
+
+    const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
+
+    // 文本类型：从 textBitmap 获取原始尺寸（使用类型守卫）
+    if (TimelineItemQueries.isTextTimelineItem(selectedTimelineItem.value)) {
+      const textBitmap = selectedTimelineItem.value.runtime.textBitmap
+      return {
+        width: textBitmap?.width ?? config.width,
+        height: textBitmap?.height ?? config.height,
+      }
+    }
+
+    // 其他类型：从 mediaItem 的 bunny 对象获取原始尺寸
+    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
+    return {
+      width: mediaItem?.runtime.bunny?.originalWidth ?? config.width,
+      height: mediaItem?.runtime.bunny?.originalHeight ?? config.height,
+    }
+  }
+
   const scaleX = computed(() => {
     if (
       !selectedTimelineItem.value ||
@@ -116,9 +145,7 @@ export function useUnifiedKeyframeTransformControls(
 
     // ✅ 使用辅助函数获取渲染配置
     const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    const { width: originalWidth } = getOriginalDimensions()
     return config.width / originalWidth
   })
 
@@ -131,9 +158,7 @@ export function useUnifiedKeyframeTransformControls(
 
     // ✅ 使用辅助函数获取渲染配置
     const config = TimelineItemQueries.getRenderConfig(selectedTimelineItem.value)
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    const { height: originalHeight } = getOriginalDimensions()
     return config.height / originalHeight
   })
 
@@ -206,9 +231,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    return mediaItem?.runtime.bunny?.originalWidth ?? 0
+    // 使用统一的获取原始尺寸方法
+    const { width } = getOriginalDimensions()
+    return width
   })
 
   const elementHeight = computed(() => {
@@ -217,9 +242,9 @@ export function useUnifiedKeyframeTransformControls(
       !TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     )
       return 0
-    // 从 mediaItem 的 bunny 对象中获取原始尺寸
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    return mediaItem?.runtime.bunny?.originalHeight ?? 0
+    // 使用统一的获取原始尺寸方法
+    const { height } = getOriginalDimensions()
+    return height
   })
 
   // ==================== 关键帧控制方法 ====================
@@ -430,12 +455,8 @@ export function useUnifiedKeyframeTransformControls(
       selectedTimelineItem.value &&
       TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value)
     ) {
-      // hasVisualProperties 类型守卫确保了 config 具有视觉属性
-      const config = selectedTimelineItem.value.config
-      // 从 mediaItem 的 bunny 对象中获取原始尺寸
-      const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-      const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
-      const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+      // 使用统一的获取原始尺寸方法
+      const { width: originalWidth, height: originalHeight } = getOriginalDimensions()
       const newSize = {
         width: originalWidth * scaleX.value,
         height: originalHeight * scaleX.value, // 使用X缩放值保持等比
@@ -456,9 +477,8 @@ export function useUnifiedKeyframeTransformControls(
       return
 
     const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
-    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    // 使用统一的获取原始尺寸方法
+    const { width: originalWidth, height: originalHeight } = getOriginalDimensions()
     const newWidth = originalWidth * newScale
     const newHeight = originalHeight * newScale
 
@@ -507,8 +527,8 @@ export function useUnifiedKeyframeTransformControls(
       return
 
     const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    // 使用统一的获取原始尺寸方法
+    const { width: originalWidth } = getOriginalDimensions()
     const newScaleX = Math.max(0.01, Math.min(5, value))
     const newWidth = originalWidth * newScaleX
 
@@ -552,8 +572,8 @@ export function useUnifiedKeyframeTransformControls(
       return
 
     const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    // 使用统一的获取原始尺寸方法
+    const { height: originalHeight } = getOriginalDimensions()
     const newScaleY = Math.max(0.01, Math.min(5, value))
     const newHeight = originalHeight * newScaleY
 
@@ -965,9 +985,8 @@ export function useUnifiedKeyframeTransformControls(
     )
       return
 
-    const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
+    // 使用统一的获取原始尺寸方法
+    const { width: originalWidth } = getOriginalDimensions()
     const clampedScale = Math.max(0.01, Math.min(5, scale))
     const newWidth = originalWidth * clampedScale
 
@@ -990,9 +1009,8 @@ export function useUnifiedKeyframeTransformControls(
     )
       return
 
-    const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    // 使用统一的获取原始尺寸方法
+    const { height: originalHeight } = getOriginalDimensions()
     const clampedScale = Math.max(0.01, Math.min(5, scale))
     const newHeight = originalHeight * clampedScale
 
@@ -1057,10 +1075,8 @@ export function useUnifiedKeyframeTransformControls(
     )
       return
 
-    const config = selectedTimelineItem.value.config
-    const mediaItem = unifiedStore.getMediaItem(selectedTimelineItem.value.mediaItemId)
-    const originalWidth = mediaItem?.runtime.bunny?.originalWidth ?? config.width
-    const originalHeight = mediaItem?.runtime.bunny?.originalHeight ?? config.height
+    // 使用统一的获取原始尺寸方法
+    const { width: originalWidth, height: originalHeight } = getOriginalDimensions()
     const clampedScale = Math.max(0.01, Math.min(5, scale))
     const newWidth = originalWidth * clampedScale
     const newHeight = originalHeight * clampedScale
