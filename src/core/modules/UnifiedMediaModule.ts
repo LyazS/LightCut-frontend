@@ -158,10 +158,13 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
   /**
    * 根据ID获取媒体项目
-   * @param mediaItemId 媒体项目ID
+   * @param mediaItemId 媒体项目ID（可以为null，此时返回undefined）
    * @returns 媒体项目或undefined
    */
-  function getMediaItem(mediaItemId: string): UnifiedMediaItemData | undefined {
+  function getMediaItem(mediaItemId: string | null): UnifiedMediaItemData | undefined {
+    if (mediaItemId === null) {
+      return undefined
+    }
     return mediaItems.value.find((item: UnifiedMediaItemData) => item.id === mediaItemId)
   }
 
@@ -215,10 +218,10 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
   /**
    * 获取视频原始分辨率（从WebAV对象获取）
-   * @param mediaItemId 素材ID
+   * @param mediaItemId 素材ID（可以为null，此时返回默认分辨率）
    * @returns 视频分辨率对象
    */
-  function getVideoOriginalResolution(mediaItemId: string): { width: number; height: number } {
+  function getVideoOriginalResolution(mediaItemId: string | null): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
     if (mediaItem && mediaItem.mediaType === 'video' && mediaItem.runtime.bunny) {
       const size = MediaItemQueries.getOriginalSize(mediaItem)
@@ -232,10 +235,10 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
 
   /**
    * 获取图片原始分辨率（从WebAV对象获取）
-   * @param mediaItemId 素材ID
+   * @param mediaItemId 素材ID（可以为null，此时返回默认分辨率）
    * @returns 图片分辨率对象
    */
-  function getImageOriginalResolution(mediaItemId: string): { width: number; height: number } {
+  function getImageOriginalResolution(mediaItemId: string | null): { width: number; height: number } {
     const mediaItem = getMediaItem(mediaItemId)
     if (mediaItem && mediaItem.mediaType === 'image' && mediaItem.runtime.bunny) {
       const size = MediaItemQueries.getOriginalSize(mediaItem)

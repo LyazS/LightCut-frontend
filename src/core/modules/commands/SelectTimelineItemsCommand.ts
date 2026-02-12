@@ -29,7 +29,7 @@ export class SelectTimelineItemsCommand implements SimpleCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ) {
     this.id = generateCommandId()

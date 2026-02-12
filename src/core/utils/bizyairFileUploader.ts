@@ -307,7 +307,7 @@ export class BizyairFileUploader {
    */
   private static async exportFileDataToBlob(
     fileData: FileData,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
   ): Promise<Blob> {
     if (fileData.source === 'media-item') {
@@ -333,7 +333,7 @@ export class BizyairFileUploader {
    */
   static async uploadFile(
     fileData: FileData,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
     onProgress?: (stage: string, progress: number) => void,
   ): Promise<UploadResult> {
@@ -384,7 +384,7 @@ export class BizyairFileUploader {
    */
   static async uploadFiles(
     files: FileData[],
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
     onProgress?: (fileIndex: number, stage: string, progress: number) => void,
   ): Promise<Map<number, UploadResult>> {
@@ -409,7 +409,7 @@ export class BizyairFileUploader {
    */
   static async uploadFileWithRetry(
     fileData: FileData,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
     maxRetries: number = 3,
     onProgress?: (stage: string, progress: number) => void,
@@ -445,7 +445,7 @@ export class BizyairFileUploader {
    */
   static async processConfigUploads(
     config: Record<string, any>,
-    getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+    getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
     getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined,
     onProgress?: (fileIndex: number, stage: string, progress: number) => void,
     onSuccess?: () => void,

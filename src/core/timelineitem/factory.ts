@@ -168,7 +168,7 @@ export interface RebuildKnownTimelineItemOptions {
   /** 原始时间轴项目数据 */
   originalTimelineItemData: UnifiedTimelineItemData<MediaType>
   /** 获取媒体项目的函数 */
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+  getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
   /** 日志标识符，用于区分不同调用方的日志 */
   logIdentifier: string
 }

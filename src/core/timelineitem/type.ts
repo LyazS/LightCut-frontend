@@ -72,7 +72,7 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
   textBitmap?: ImageBitmap // 专门用于文本渲染的ImageBitmap
   /** 动画插值后的临时配置（运行时数据，不持久化） */
   renderConfig?: GetConfigs<T>
-  
+
   /**
    * 标识时间轴项目是否已经从 mediaItem 初始化过（必选字段）
    * - true: 已经初始化，不应该再从 mediaItem 同步数据
@@ -83,6 +83,13 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
 // ==================== 核心接口设计 ====================
 
 /**
+ * 条件类型：根据 MediaType 确定 mediaItemId 的类型
+ * - video/image/audio: mediaItemId 必须是 string
+ * - text: mediaItemId 可以是 string | null
+ */
+export type MediaItemIdType<T extends MediaType> = T extends 'text' ? string | null : string
+
+/**
  * 统一时间轴项目数据接口（泛型版本）
  *
  * 设计特点：
@@ -91,11 +98,12 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
  * 3. 保持与旧架构相同的精确性
  * 4. 纯数据对象，使用 reactive() 包装
  * 5. 除sprite之外都可以持久化保存
+ * 6. 使用条件类型确保不同 MediaType 下 mediaItemId 的类型正确
  */
 export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   // ==================== 核心属性 ====================
   readonly id: string
-  mediaItemId: string // 关联的统一媒体项目ID
+  mediaItemId: MediaItemIdType<T> // 关联的统一媒体项目ID，类型根据 MediaType 自动推断
   trackId?: string
 
   // ==================== 状态管理 ====================

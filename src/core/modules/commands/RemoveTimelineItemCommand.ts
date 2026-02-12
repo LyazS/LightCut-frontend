@@ -37,7 +37,7 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
     private configModule: {
       videoResolution: Ref<VideoResolution>
@@ -72,6 +72,11 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         if (this.mediaSync) {
           this.mediaSync.cleanup()
           this.mediaSync = undefined
+        }
+
+        // 确保 mediaItemId 不为 null
+        if (existingItem.mediaItemId === null) {
+          throw new Error('mediaItemId 不能为 null')
         }
 
         this.mediaSync = new MediaSync(existingItem.mediaItemId, {
@@ -126,6 +131,11 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
         if (this.mediaSync) {
           this.mediaSync.cleanup()
           this.mediaSync = undefined
+        }
+
+        // 确保 mediaItemId 不为 null
+        if (newTimelineItem.mediaItemId === null) {
+          throw new Error('mediaItemId 不能为 null')
         }
 
         // 🔧 关键：根据 isInitialized 决定是否需要更新命令数据

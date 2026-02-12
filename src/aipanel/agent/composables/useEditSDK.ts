@@ -466,7 +466,9 @@ export function useEditSDK(
       })
       .map((timelineItem) => {
         // 获取关联的媒体素材信息
-        const mediaItem = unifiedMediaModule.getMediaItem(timelineItem.mediaItemId)
+        const mediaItem = timelineItem.mediaItemId !== null
+          ? unifiedMediaModule.getMediaItem(timelineItem.mediaItemId)
+          : undefined
 
         // 根据媒体状态映射媒体类型（复用list_medias的逻辑）
         let agentMediaType: AgentTimelineItemInfo['mediaType']
@@ -507,7 +509,7 @@ export function useEditSDK(
 
         const baseInfo: AgentTimelineItemInfo = {
           id: timelineItem.id,
-          mediaItemId: timelineItem.mediaItemId,
+          mediaItemId: timelineItem.mediaItemId ?? '', // 如果为 null，使用空字符串
           mediaType: agentMediaType,
           timelineTimeRange: `${timelineStartTimecode} - ${timelineEndTimecode}`,
           clipTimeRange: `${clipStartTimecode} - ${clipEndTimecode}`,

@@ -97,7 +97,7 @@ export interface ExportTimelineItemOptions {
   /** 时间轴项目数据 */
   timelineItem: UnifiedTimelineItemData
   /** 获取媒体项目的函数 */
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+  getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
   /** 进度更新回调（可选） */
   onProgress?: (progress: number) => void
   /** 导出类型（可选，仅视频时间轴项目支持音频导出） */
@@ -873,7 +873,7 @@ export async function exportMediaItem(options: ExportMediaItemOptions): Promise<
  */
 async function exportImageTimelineItem(
   timelineItem: UnifiedTimelineItemData,
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+  getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
   onProgress?: (progress: number) => void,
 ): Promise<Blob> {
   // 1. 获取媒体项目
@@ -891,7 +891,7 @@ async function exportImageTimelineItem(
  */
 async function exportVideoTimelineItem(
   timelineItem: UnifiedTimelineItemData,
-  getMediaItem: (id: string) => UnifiedMediaItemData | undefined,
+  getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined,
   onProgress?: (progress: number) => void,
   frameRate?: number,
 ): Promise<Blob> {

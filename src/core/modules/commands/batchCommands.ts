@@ -36,7 +36,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
       removeTimelineItem: (id: string) => Promise<void>
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
     private configModule: {
       videoResolution: Ref<VideoResolution>
@@ -77,7 +77,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
       updateTimelineItemPosition: (id: string, positionFrames: number, trackId?: string) => void
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
     private trackModule: {
       getTrack: (trackId: string) => UnifiedTrackData | undefined

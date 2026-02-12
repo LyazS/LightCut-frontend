@@ -39,7 +39,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       timelineItems: Ref<UnifiedTimelineItemData<MediaType>[]>
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -97,7 +97,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       const loadingItemsByMedia = new Map<string, string[]>()
 
       for (const item of this.affectedTimelineItems) {
-        if (TimelineItemQueries.isLoading(item)) {
+        if (TimelineItemQueries.isLoading(item) && item.mediaItemId !== null) {
           const timelineIds = loadingItemsByMedia.get(item.mediaItemId) || []
           timelineIds.push(item.id)
           loadingItemsByMedia.set(item.mediaItemId, timelineIds)
@@ -176,7 +176,7 @@ export class RemoveTrackCommand implements SimpleCommand {
       const loadingItemsByMedia = new Map<string, string[]>()
 
       for (const item of newTimelineItems) {
-        if (TimelineItemQueries.isLoading(item)) {
+        if (TimelineItemQueries.isLoading(item) && item.mediaItemId !== null) {
           const timelineIds = loadingItemsByMedia.get(item.mediaItemId) || []
           timelineIds.push(item.id)
           loadingItemsByMedia.set(item.mediaItemId, timelineIds)

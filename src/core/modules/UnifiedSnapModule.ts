@@ -53,9 +53,6 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
 
   const timelineItems = timelineModule.timelineItems
   const currentFrame = playbackModule.currentFrame
-
-  // 获取媒体项目的getMediaItem方法
-  const getMediaItem = (id: string) => mediaModule.getMediaItem(id)
   
   // 延迟获取 viewport 模块（避免循环依赖）
   let viewportModule: any = null
@@ -125,7 +122,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
           }
 
           // 获取媒体项目名称
-          const mediaItem = getMediaItem(item.mediaItemId)
+          const mediaItem = mediaModule.getMediaItem(item.mediaItemId)
           const clipName = mediaItem?.name || `片段 ${item.id.slice(0, 8)}`
 
           // 添加开始位置吸附点

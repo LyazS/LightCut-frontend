@@ -41,7 +41,7 @@ export class UpdateTransformCommand implements SimpleCommand {
       updateTimelineItemPlaybackRate?: (id: string, rate: number) => void
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ) {
     this.id = generateCommandId()

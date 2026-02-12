@@ -38,7 +38,7 @@ export class AddTimelineItemCommand implements SimpleCommand {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
     private mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
     private configModule: {
       videoResolution: Ref<VideoResolution>
@@ -85,6 +85,11 @@ export class AddTimelineItemCommand implements SimpleCommand {
         if (this.mediaSync) {
           this.mediaSync.cleanup()
           this.mediaSync = undefined
+        }
+
+        // 确保 mediaItemId 不为 null（文本类型不会走到这里，因为文本类型不会是 loading 状态）
+        if (newTimelineItem.mediaItemId === null) {
+          throw new Error('mediaItemId 不能为 null')
         }
 
         this.mediaSync = new MediaSync(newTimelineItem.mediaItemId, {

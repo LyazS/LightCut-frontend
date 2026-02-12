@@ -35,7 +35,7 @@ export function useProjectThumbnailService() {
   const findThumbnailSource = (
     timelineItems: UnifiedTimelineItemData[],
     mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ): UnifiedTimelineItemData | null => {
     // 按时间位置排序，取第一个视频或图像项目
@@ -143,7 +143,7 @@ export function useProjectThumbnailService() {
     projectId: string,
     timelineItems: UnifiedTimelineItemData[],
     mediaModule: {
-      getMediaItem: (id: string) => UnifiedMediaItemData | undefined
+      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ): Promise<string | null> => {
     if (isGenerating.value) {

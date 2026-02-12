@@ -569,7 +569,7 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
       const loadingItemsByMedia = new Map<string, string[]>()
       
       for (const item of rebuiltTimelineItems) {
-        if (item.timelineStatus === 'loading') {
+        if (item.timelineStatus === 'loading' && item.mediaItemId !== null) {
           const timelineIds = loadingItemsByMedia.get(item.mediaItemId) || []
           timelineIds.push(item.id)
           loadingItemsByMedia.set(item.mediaItemId, timelineIds)
