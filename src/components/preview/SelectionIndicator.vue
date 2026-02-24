@@ -74,6 +74,7 @@ import { computed, ref, onMounted, onUnmounted, type CSSProperties } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { VisualProps } from '@/core/timelineitem/bunnytype'
+import type { MediaType } from '@/core/mediaitem'
 
 interface Props {
   selectedTimelineItemId: string | null
@@ -116,9 +117,17 @@ const isScaling = ref(false)
 const isRotating = ref(false)
 const activeHandle = ref<string | null>(null)
 
-// 是否显示指示器 (单选时显示)
+// 是否显示指示器 (单选时显示，但音频类型不显示)
 const shouldShowIndicator = computed(() => {
-  return !props.isMultiSelectMode && !!props.selectedTimelineItemId
+  if (!props.selectedTimelineItemId) return false
+  if (props.isMultiSelectMode) return false
+  
+  // 音频类型不显示指示器
+  if (selectedItem.value && TimelineItemQueries.isAudioTimelineItem(selectedItem.value)) {
+    return false
+  }
+  
+  return true
 })
 
 // 获取选中的时间轴项目
