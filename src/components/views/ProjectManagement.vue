@@ -143,57 +143,59 @@
                 </div>
               </div>
 
-              <div v-else class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
-                <!-- 固定的创建新项目卡片 -->
-                <div
-                  class="project-card create-project-card"
-                  @click="!isLoading && createNewProject()"
-                >
-                  <div class="create-thumbnail">
-                    <div class="create-icon-wrapper">
-                      <component :is="IconComponents.ADD" size="48px" />
+              <n-scrollbar v-else style="max-height: calc(100vh - 12rem)">
+                <div class="projects-grid" :class="{ 'list-view': viewMode === 'list' }">
+                  <!-- 固定的创建新项目卡片 -->
+                  <div
+                    class="project-card create-project-card"
+                    @click="!isLoading && createNewProject()"
+                  >
+                    <div class="create-thumbnail">
+                      <div class="create-icon-wrapper">
+                        <component :is="IconComponents.ADD" size="48px" />
+                      </div>
+                      <h3 class="create-title">{{ t('project.new') }}</h3>
                     </div>
-                    <h3 class="create-title">{{ t('project.new') }}</h3>
                   </div>
-                </div>
 
-                <!-- 现有项目卡片 -->
-                <div
-                  v-for="project in projects"
-                  :key="project.id"
-                  class="project-card"
-                  @click="openProjectById(project.id)"
-                  @contextmenu="showProjectMenu($event, project)"
-                >
-                  <div class="project-thumbnail">
-                    <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
-                    <div v-else class="thumbnail-placeholder">
-                      <component :is="IconComponents.VIDEO" size="20px" />
+                  <!-- 现有项目卡片 -->
+                  <div
+                    v-for="project in projects"
+                    :key="project.id"
+                    class="project-card"
+                    @click="openProjectById(project.id)"
+                    @contextmenu="showProjectMenu($event, project)"
+                  >
+                    <div class="project-thumbnail">
+                      <img v-if="project.thumbnail" :src="project.thumbnail" :alt="project.name" />
+                      <div v-else class="thumbnail-placeholder">
+                        <component :is="IconComponents.VIDEO" size="20px" />
+                      </div>
+                      <!-- 设置按钮移到缩略图右上角 -->
+                      <HoverButton
+                        variant="small"
+                        class="settings-btn-overlay"
+                        @click.stop="showProjectMenu($event, project)"
+                        :title="t('common.settings')"
+                      >
+                        <template #icon>
+                          <component :is="IconComponents.MORE" size="20px" />
+                        </template>
+                      </HoverButton>
                     </div>
-                    <!-- 设置按钮移到缩略图右上角 -->
-                    <HoverButton
-                      variant="small"
-                      class="settings-btn-overlay"
-                      @click.stop="showProjectMenu($event, project)"
-                      :title="t('common.settings')"
-                    >
-                      <template #icon>
-                        <component :is="IconComponents.MORE" size="20px" />
-                      </template>
-                    </HoverButton>
-                  </div>
-                  <div class="project-info">
-                    <h3 class="project-name">{{ project.name }}</h3>
-                    <p class="project-description">
-                      {{ project.description || t('project.noDescription') }}
-                    </p>
-                    <div class="project-meta">
-                      <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
-                      <span class="project-duration">{{ formatDuration(project.duration) }}</span>
+                    <div class="project-info">
+                      <h3 class="project-name">{{ project.name }}</h3>
+                      <p class="project-description">
+                        {{ project.description || t('project.noDescription') }}
+                      </p>
+                      <div class="project-meta">
+                        <span class="project-date">{{ formatDate(project.updatedAt) }}</span>
+                        <span class="project-duration">{{ formatDuration(project.duration) }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </n-scrollbar>
             </section>
           </div>
 
@@ -684,7 +686,7 @@ onMounted(async () => {
 }
 
 .main-section {
-  flex: 1;
+  flex: 3;
   min-width: 0;
 }
 
@@ -1097,8 +1099,7 @@ onMounted(async () => {
 
 /* ==================== 通知侧边栏 ==================== */
 .notification-sidebar {
-  width: 400px;
-  flex-shrink: 0;
+  flex: 1;
   position: sticky;
   top: 2rem;
 }
@@ -1157,51 +1158,6 @@ onMounted(async () => {
   color: var(--color-text-secondary);
   line-height: 1.6;
   margin: 0 0 1rem 0;
-}
-
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .content-wrapper {
-    flex-direction: column;
-  }
-
-  .notification-sidebar {
-    width: 100%;
-    position: static;
-    order: -1;
-  }
-
-  .announcement-card {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .content-container {
-    padding: 0 1rem;
-  }
-
-  .notification-sidebar {
-    margin-bottom: 1.5rem;
-  }
-
-  .announcement-card {
-    padding: 1.25rem;
-  }
-
-  .announcement-title {
-    font-size: 1.25rem;
-  }
-
-  .announcement-text {
-    font-size: 1rem;
-  }
-
-  .feature-item {
-    font-size: 0.85rem;
-    padding: 0.625rem 0.875rem;
-  }
 }
 
 .bizyair-key-text {

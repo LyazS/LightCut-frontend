@@ -180,6 +180,18 @@ export class FileSystemAccessAdapter implements IFileSystemAdapter {
       try {
         currentHandle = await currentHandle.getDirectoryHandle(part, { create: true })
       } catch (error) {
+        // 如果是 NotFoundError，说明工作空间句柄已失效（目录被删除/移动）
+        // 需要清除失效的句柄，让用户重新选择工作目录
+        if (error instanceof Error && error.name === 'NotFoundError') {
+          this.workspaceHandle = null
+          await this.clearHandleFromDB()
+          throw new FileSystemError(
+            '工作目录已失效，请重新选择工作目录',
+            ErrorCode.PERMISSION_DENIED,
+            path,
+            error,
+          )
+        }
         throw new FileSystemError(
           `创建目录失败: ${part}`,
           ErrorCode.OPERATION_FAILED,
