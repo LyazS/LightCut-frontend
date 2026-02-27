@@ -19,7 +19,6 @@ import { createUnifiedUIModule } from '@/core/modules/UnifiedUIModule'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useHistoryOperations } from '@/core/composables/useHistoryOperations'
 import { useUnifiedDrag } from '@/core/composables/useUnifiedDrag'
-import { useEditSDK } from '@/aipanel/agent/composables/useEditSDK'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem'
 import { frameToPixel, pixelToFrame } from '@/core/utils/timelineScaleUtils'
 import {
@@ -113,18 +112,6 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedConfigModule,
     unifiedTrackModule,
     unifiedSelectionModule,
-  )
-
-  // 创建视频编辑执行系统
-  const { executeUserScript, list_medias, list_timelineitems } = useEditSDK(
-    unifiedHistoryModule,
-    unifiedTimelineModule,
-    unifiedMediaModule,
-    unifiedConfigModule,
-    unifiedTrackModule,
-    unifiedSelectionModule,
-    unifiedViewportModule,
-    unifiedPlaybackModule,
   )
 
   // 创建统一拖拽管理器（已自动注册所有处理器）
@@ -628,10 +615,5 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 角色编辑器方法
     openCharacterEditor: unifiedUIModule.openCharacterEditor,
     closeCharacterEditor: unifiedUIModule.closeCharacterEditor,
-
-    // ==================== 执行系统集成 ====================
-    executeUserScript,
-    list_medias,
-    list_timelineitems,
   }
 })

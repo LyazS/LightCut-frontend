@@ -21,7 +21,7 @@ import {
   ChatMessageAssistantContentType,
   isAssistantMessage,
 } from '@/aipanel/agent/types'
-import { useUnifiedStore } from '@/core/unifiedStore'
+import { useEditSDK } from '@/aipanel/agent/composables/useEditSDK'
 
 export interface SessionInfo {
   sessionId: string
@@ -46,12 +46,12 @@ export class SessionManager {
   private currentAIMessageId: string | null = null
 
   // 用户脚本执行函数引用
-  private executeUserScript: ReturnType<typeof useUnifiedStore>['executeUserScript']
+  private executeUserScript: ReturnType<typeof useEditSDK>['executeUserScript']
 
   constructor() {
     // 初始化用户脚本执行函数引用
-    const unifiedStore = useUnifiedStore()
-    this.executeUserScript = unifiedStore.executeUserScript
+    const { executeUserScript } = useEditSDK()
+    this.executeUserScript = executeUserScript
   }
 
   /**

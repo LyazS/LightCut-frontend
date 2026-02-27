@@ -7,7 +7,6 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 
 // 导入共享类型定义
 import type {
-  OperationConfig,
   BuildResult,
   BuildOperationResult,
   ExecutionResult,
@@ -15,18 +14,11 @@ import type {
   ValidationError,
   ScriptExecutionResult,
 } from '@/aipanel/agent/core/types'
-import type {
-  UnifiedHistoryModule,
-  UnifiedTimelineModule,
-  UnifiedMediaModule,
-  UnifiedConfigModule,
-  UnifiedTrackModule,
-  UnifiedSelectionModule,
-} from '@/core/modules'
 
-// 导入视口和播放模块类型
-import type { UnifiedViewportModule } from '@/core/modules/UnifiedViewportModule'
-import type { UnifiedPlaybackModule } from '@/core/modules/UnifiedPlaybackModule'
+type EditSDKReturn = ReturnType<typeof createEditSDK>
+
+// 单例缓存
+let editSDKCache: EditSDKReturn | null = null
 
 /**
  * 代理媒体信息接口 - 用于list_medias函数返回的数据结构
@@ -143,29 +135,16 @@ export interface AgentTimelineItemInfo {
 }
 
 /**
- * 音视频编辑SDK组合式函数
+ * 创建音视频编辑SDK实例
  *
  * 提供完整的三阶段执行流程协调功能
  */
-export function useEditSDK(
-  unifiedHistoryModule: UnifiedHistoryModule,
-  unifiedTimelineModule: UnifiedTimelineModule,
-  unifiedMediaModule: UnifiedMediaModule,
-  unifiedConfigModule: UnifiedConfigModule,
-  unifiedTrackModule: UnifiedTrackModule,
-  unifiedSelectionModule: UnifiedSelectionModule,
-  unifiedViewportModule: UnifiedViewportModule, // 视口模块
-  unifiedPlaybackModule: UnifiedPlaybackModule, // 播放模块
-) {
+function createEditSDK() {
+  // 使用统一存储
+  const unifiedStore = useUnifiedStore()
+
   // 创建批量命令构建器
-  const batchCommandBuilder = useBatchCommandBuilder(
-    unifiedHistoryModule,
-    unifiedTimelineModule,
-    unifiedMediaModule,
-    unifiedConfigModule,
-    unifiedTrackModule,
-    unifiedSelectionModule,
-  )
+  const batchCommandBuilder = useBatchCommandBuilder()
 
   // 创建配置验证器
   const configValidator = new ConfigValidator()
@@ -375,7 +354,7 @@ export function useEditSDK(
    * 媒体类型会根据加载状态进行映射：loading/error/正常媒体类型
    */
   function list_medias(): AgentMediaInfo[] {
-    const mediaItems = unifiedMediaModule.getAllMediaItems()
+    const mediaItems = unifiedStore.getAllMediaItems()
     return mediaItems.map((mediaItem) => {
       // 根据媒体状态映射媒体类型
       let agentMediaType: AgentMediaInfo['mediaType']
@@ -432,7 +411,7 @@ export function useEditSDK(
    * @param includeInvisible 是否包含不可见范围内的时间轴项目（默认false）
    */
   function list_timelineitems(includeInvisible: boolean = false): AgentTimelineItemInfo[] {
-    const timelineItems = unifiedTimelineModule.timelineItems.value
+    const timelineItems = unifiedStore.timelineItems
 
     // 如果不需要包含不可见项目，计算可视范围
     let visibleStartFrame = 0
@@ -440,14 +419,12 @@ export function useEditSDK(
 
     if (!includeInvisible) {
       // 使用与 useTimelineTimeScale 相同的计算方法计算可见帧数范围
-      // 需要从统一存储获取总时长和容器宽度
-      const unifiedStore = useUnifiedStore()
       const { startFrames, endFrames } = calculateVisibleFrameRange(
-        unifiedStore.TimelineContainerWidth, // 使用统一存储的容器宽度
+        unifiedStore.TimelineContainerWidth,
         unifiedStore.totalDurationFrames,
-        unifiedViewportModule.zoomLevel.value,
-        unifiedViewportModule.scrollOffset.value,
-        unifiedViewportModule.maxVisibleDurationFrames.value,
+        unifiedStore.zoomLevel,
+        unifiedStore.scrollOffset,
+        unifiedStore.maxVisibleDurationFrames,
       )
       visibleStartFrame = startFrames
       visibleEndFrame = endFrames
@@ -467,7 +444,7 @@ export function useEditSDK(
       .map((timelineItem) => {
         // 获取关联的媒体素材信息
         const mediaItem = timelineItem.mediaItemId !== null
-          ? unifiedMediaModule.getMediaItem(timelineItem.mediaItemId)
+          ? unifiedStore.getMediaItem(timelineItem.mediaItemId)
           : undefined
 
         // 根据媒体状态映射媒体类型（复用list_medias的逻辑）
@@ -598,4 +575,17 @@ export function useEditSDK(
     list_medias,
     list_timelineitems,
   }
+}
+
+/**
+ * 音视频编辑SDK组合式函数（单例模式）
+ *
+ * 提供完整的三阶段执行流程协调功能
+ * 使用单例缓存确保整个应用共享同一个实例
+ */
+export function useEditSDK() {
+  if (!editSDKCache) {
+    editSDKCache = createEditSDK()
+  }
+  return editSDKCache
 }
