@@ -99,6 +99,12 @@ export class ASRProcessor extends DataSourceProcessor {
       throw new Error(source.errorMessage)
     }
 
+    // 处理 ASR 结果：删除占位符，创建文本 items，删除 ASR media item
+    // 放在最后执行，确保所有状态转换和 meta 保存都已完成
+    if (source.resultData?.asr_result) {
+      await this.processASRResult(source, source.resultData.asr_result, mediaItem)
+    }
+
     console.log(`✅ [ASRProcessor] 任务执行成功: ${task.id}`)
   }
 
@@ -210,7 +216,7 @@ export class ASRProcessor extends DataSourceProcessor {
 
                   // 直接保存 result_data（与 AIGenerationProcessor 保持一致）
                   // 处理成功结果
-                  this.handleFinalResult(streamEvent.result_data, source, mediaItem)
+                  this.handleFinalResult(streamEvent.result_data, source)
                     .then(resolve)
                     .catch(reject)
                   needReconnect = false
@@ -281,7 +287,6 @@ export class ASRProcessor extends DataSourceProcessor {
   private async handleFinalResult(
     resultData: TaskResultData,
     source: ASRSourceData,
-    mediaItem: UnifiedMediaItemData,
   ): Promise<ASRQueryResponse> {
     // 保存 resultData 到 source（与 AIGenerationProcessor 保持一致）
     source.resultData = resultData
@@ -292,8 +297,8 @@ export class ASRProcessor extends DataSourceProcessor {
       throw new Error('resultData 中缺少 asr_result')
     }
 
-    // 🆕 处理占位符item和创建文本items
-    await this.processASRResult(source, asrResult, mediaItem)
+    // 注意：processASRResult 已移至 executeTask 的最后执行
+    // 这样可以确保所有状态转换和 meta 保存都完成后再处理 ASR 结果
 
     // 设置 COMPLETED 状态
     source.taskStatus = ASRTaskStatus.COMPLETED
@@ -400,8 +405,8 @@ export class ASRProcessor extends DataSourceProcessor {
         textItem.timelineStatus = 'ready'
         textItem.runtime.isInitialized = true
 
-        // 添加到时间轴（使用历史记录，支持撤销）
-        await unifiedStore.addTimelineItemWithHistory(textItem)
+        // 添加到时间轴（不需要历史记录）
+        await unifiedStore.addTimelineItem(textItem)
         createdCount++
       } catch (error) {
         console.error('❌ [ASRProcessor] 创建文本item失败:', error)
