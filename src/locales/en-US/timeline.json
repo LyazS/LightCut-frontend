@@ -38,6 +38,7 @@
       },
       "clip": {
         "smartSceneDetection": "Scene Detection",
+        "speechRecognition": "Speech Recognition",
         "duplicateClip": "Duplicate Clip",
         "regenerateThumbnail": "Regenerate Thumbnail",
         "deleteClip": "Delete Clip"
@@ -66,6 +67,16 @@
       "noScenes": "No obvious scene boundaries detected",
       "cancelled": "Scene detection cancelled",
       "error": "Scene detection failed: {message}"
+    },
+    "speechRecognition": {
+      "title": "Speech Recognition",
+      "extractingAudio": "Extracting audio...",
+      "uploading": "Uploading audio...",
+      "creatingTask": "Creating recognition task...",
+      "processing": "Processing speech recognition...",
+      "success": "Speech recognition completed",
+      "error": "Speech recognition failed: {message}",
+      "cancelled": "Speech recognition cancelled"
     }
   }
 }

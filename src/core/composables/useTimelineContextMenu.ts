@@ -14,6 +14,14 @@ import { LayoutConstants } from '@/constants/LayoutConstants'
 import { detectScene } from '@/core/utils/scene-detector'
 import { detectSceneAdv } from '@/core/utils/scene-detector-adv'
 import { detectSceneContent } from '@/core/utils/scene-detector-content'
+import { exportTimelineItem } from '@/core/utils/projectExporter'
+import { BizyairFileUploader } from '@/core/utils/bizyairFileUploader'
+import { ASRSourceFactory, ASRTypeGuards, ASRTaskStatus } from '@/core/datasource/providers/asr'
+import { ASRProcessor } from '@/core/datasource/providers/asr/ASRProcessor'
+import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
+import { generateMediaId } from '@/core/utils/idGenerator'
+import type { FileData } from '@/core/datasource/providers/ai-generation/types'
+import { RENDERER_FPS } from '@/core/mediabunny/constant'
 
 /**
  * 菜单项类型定义
@@ -126,6 +134,18 @@ export function useTimelineContextMenu(
           label: t('timeline.contextMenu.clip.smartSceneDetection'),
           icon: IconComponents.LAYOUT,
           onClick: () => detectSceneBoundaries(),
+        })
+
+        // 分隔符
+        menuItems.push({ type: 'separator' } as MenuItem)
+      }
+
+      // 语音识别 - 仅视频和音频类型支持
+      if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') {
+        menuItems.push({
+          label: t('timeline.contextMenu.clip.speechRecognition'),
+          icon: IconComponents.MUSIC,
+          onClick: () => startSpeechRecognition(),
         })
 
         // 分隔符
@@ -463,6 +483,138 @@ export function useTimelineContextMenu(
           })
         )
       }
+    }
+
+    showContextMenu.value = false
+  }
+
+  /**
+   * 开始语音识别
+   * 流程：提取音频 -> 上传到bizyair -> 提交ASR任务 -> 创建MediaItem
+   */
+  async function startSpeechRecognition() {
+    const clipId = contextMenuTarget.value.clipId
+    if (!clipId) return
+
+    const timelineItem = unifiedStore.getTimelineItem(clipId)
+    if (!timelineItem) return
+
+    console.log('🎬 [ASR] 开始语音识别, clipId:', clipId)
+
+    // 创建 loading 实例
+    const loading = unifiedStore.createLoading({
+      title: t('timeline.speechRecognition.title'),
+      showProgress: true,
+      showDetails: true,
+      showCancel: false,
+    })
+
+    try {
+      // 1. 提取音频
+      loading.update({ progress: 10, details: t('timeline.speechRecognition.extractingAudio') })
+      console.log('📦 [ASR] 正在提取音频...')
+      
+      const audioBlob = await exportTimelineItem({
+        timelineItem,
+        getMediaItem: unifiedStore.getMediaItem,
+        exportType: 'audio',
+      })
+      console.log('✅ [ASR] 音频提取完成, size:', audioBlob.size)
+
+      // 2. 上传到 Bizyair
+      loading.update({ progress: 30, details: t('timeline.speechRecognition.uploading') })
+      console.log('⬆️ [ASR] 正在上传音频到Bizyair...')
+      
+      // 构造 FileData 对象
+      const fileData: FileData = {
+        __type__: 'FileData',
+        name: `asr_${clipId}.mp3`,
+        mediaType: 'audio',
+        timelineItemId: clipId,
+        source: 'timeline-item',
+      }
+      
+      const uploadResult = await BizyairFileUploader.uploadFile(
+        fileData,
+        unifiedStore.getMediaItem,
+        unifiedStore.getTimelineItem,
+      )
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || '上传失败')
+      }
+      console.log('✅ [ASR] 上传完成, url:', uploadResult.url)
+
+      // 3. 提交 ASR 任务到后端
+      loading.update({ progress: 50, details: t('timeline.speechRecognition.creatingTask') })
+      console.log('🚀 [ASR] 提交ASR任务到后端...')
+
+      const asrProcessor = ASRProcessor.getInstance()
+      const estimatedDuration = (timelineItem.timeRange.clipEndTime - timelineItem.timeRange.clipStartTime) / RENDERER_FPS // 使用RENDERER_FPS常量
+      
+      const submitResult = await asrProcessor.submitASRTask({
+        audio_url: uploadResult.url!,
+        audio_format: 'mp3',
+        estimated_duration: estimatedDuration,
+      })
+
+      if (!submitResult.success || !submitResult.task_id) {
+        throw new Error(submitResult.error_message || '提交任务失败')
+      }
+      console.log('✅ [ASR] 任务提交成功, taskId:', submitResult.task_id)
+
+      // 4. 创建 ASR 数据源
+      const asrSource = ASRSourceFactory.createASRSource(
+        {
+          type: 'asr',
+          asrTaskId: submitResult.task_id,
+          requestConfig: {
+            audio_url: uploadResult.url!,
+            audio_format: 'mp3',
+            estimated_duration: estimatedDuration,
+          },
+          taskStatus: ASRTaskStatus.PENDING,
+          sourceTimelineItemId: clipId,
+        },
+        SourceOrigin.USER_CREATE,
+      )
+
+      // 5. 创建媒体项并添加到库
+      const mediaId = generateMediaId('txt')
+      const mediaName = `语音识别_${clipId.slice(0, 8)}`
+      
+      const mediaItem = unifiedStore.createUnifiedMediaItemData(
+        mediaId,
+        mediaName,
+        asrSource,
+        { mediaType: 'text', duration: estimatedDuration },
+      )
+
+      // 添加到媒体库
+      unifiedStore.addMediaItem(mediaItem)
+
+      // 添加到当前目录
+      if (unifiedStore.currentDir) {
+        unifiedStore.addMediaToDirectory(mediaId, unifiedStore.currentDir.id)
+      }
+
+      // 6. 启动媒体处理流程
+      unifiedStore.startMediaProcessing(mediaItem)
+
+      loading.update({ progress: 100, details: t('timeline.speechRecognition.processing') })
+      console.log('✅ [ASR] ASR流程启动完成')
+
+      loading.close()
+      unifiedStore.messageSuccess(t('timeline.speechRecognition.success'))
+
+    } catch (error) {
+      loading.close()
+      console.error('❌ [ASR] 语音识别失败:', error)
+      unifiedStore.messageError(
+        t('timeline.speechRecognition.error', {
+          message: error instanceof Error ? error.message : String(error),
+        })
+      )
     }
 
     showContextMenu.value = false

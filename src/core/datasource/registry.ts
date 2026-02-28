@@ -11,6 +11,7 @@ import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { UserSelectedFileProcessor } from '@/core/datasource/providers/user-selected/UserSelectedFileProcessor'
 import { AIGenerationProcessor } from '@/core/datasource/providers/ai-generation/AIGenerationProcessor'
 import { BizyAirProcessor } from '@/core/datasource/providers/bizyair/BizyAirProcessor'
+import { ASRProcessor } from '@/core/datasource/providers/asr/ASRProcessor'
 
 // ==================== 类型定义 ====================
 
@@ -80,6 +81,13 @@ export class DataSourceRegistry {
   }
 
   /**
+   * 获取ASR处理器
+   */
+  getASRProcessor(): ASRProcessor | undefined {
+    return this.processors.get('asr') as ASRProcessor | undefined
+  }
+
+  /**
    * 获取所有处理器
    */
   getAllProcessors(): Map<string, DataSourceProcessor> {
@@ -126,6 +134,9 @@ export class DataSourceRegistry {
 
     // 注册BizyAir处理器
     this.register('bizyair', BizyAirProcessor.getInstance())
+
+    // 注册ASR处理器
+    this.register('asr', ASRProcessor.getInstance())
   }
 
   // ==================== 便捷方法 ====================

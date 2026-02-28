@@ -8,6 +8,8 @@ import type { BaseUserSelectedFileSourceData } from '@/core/datasource/providers
 import type { BaseAIGenerationSourceData } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
 import type { BaseBizyAirSourceData } from '@/core/datasource/providers/bizyair/types'
 import { BizyAirSourceFactory } from '@/core/datasource/providers/bizyair/BizyAirSource'
+import type { BaseASRSourceData } from '@/core/datasource/providers/asr/ASRSource'
+import { ASRSourceFactory } from '@/core/datasource/providers/asr/ASRSource'
 
 /**
  * 媒体项目加载器（阶段二彻底重构版）
@@ -37,7 +39,11 @@ export class MediaItemLoader {
           const mediaItem = await this.rebuildMediaItemFromMeta(metaData)
 
           // 3. 只对 ready 状态的媒体项目验证文件是否存在
-          if (mediaItem.mediaStatus === 'ready') {
+          // 注意：text 类型没有实际媒体文件，跳过文件验证
+          if (mediaItem.mediaType === 'text') {
+            // text 类型没有实际媒体文件，跳过文件验证
+            console.log(`📝 [MediaItemLoader] 文本媒体项目加载（无文件）: ${metaData.name}`)
+          } else if (mediaItem.mediaStatus === 'ready') {
             const fileExists = await globalMetaFileManager.verifyMediaFileExists(metaData.id)
 
             if (fileExists) {
@@ -93,6 +99,12 @@ export class MediaItemLoader {
       // BizyAir 数据源（从项目加载）
       source = BizyAirSourceFactory.createBizyAirSource(
         metaData.source as BaseBizyAirSourceData,
+        SourceOrigin.PROJECT_LOAD,
+      )
+    } else if (sourceType === 'asr') {
+      // ASR 数据源（从项目加载）
+      source = ASRSourceFactory.createASRSource(
+        metaData.source as BaseASRSourceData,
         SourceOrigin.PROJECT_LOAD,
       )
     } else {

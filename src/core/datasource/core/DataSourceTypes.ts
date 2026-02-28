@@ -15,11 +15,17 @@ import type {
   BizyAirSourceData,
   BaseBizyAirSourceData,
 } from '@/core/datasource/providers/bizyair/BizyAirSource'
+import type {
+  ASRSourceData,
+  BaseASRSourceData,
+} from '@/core/datasource/providers/asr/ASRSource'
 import { UserSelectedFileSourceFactory } from '@/core/datasource/providers/user-selected/UserSelectedFileSource'
 import { AIGenerationSourceFactory } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
+import { ASRSourceFactory } from '@/core/datasource/providers/asr/ASRSource'
 import { UserSelectedFileTypeGuards } from '@/core/datasource/providers/user-selected/UserSelectedFileSource'
 import { AIGenerationTypeGuards } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
 import { BizyAirTypeGuards } from '@/core/datasource/providers/bizyair/BizyAirSource'
+import { ASRTypeGuards } from '@/core/datasource/providers/asr/ASRSource'
 import {
   RuntimeStateQueries as BaseDataSourceQueries,
   SourceOrigin,
@@ -27,6 +33,7 @@ import {
 import { extractUserSelectedFileSourceData } from '@/core/datasource/providers/user-selected/UserSelectedFileSource'
 import { extractAIGenerationSourceData } from '@/core/datasource/providers/ai-generation/AIGenerationSource'
 import { extractBizyAirSourceData } from '@/core/datasource/providers/bizyair/BizyAirSource'
+import { extractASRSourceData } from '@/core/datasource/providers/asr/ASRSource'
 
 // ==================== 联合类型定义 ====================
 
@@ -37,6 +44,7 @@ export type UnifiedDataSourceData =
   | UserSelectedFileSourceData
   | AIGenerationSourceData
   | BizyAirSourceData
+  | ASRSourceData
 
 /**
  * 数据源基类型联合类型 - 用于持久化
@@ -45,6 +53,7 @@ export type BaseDataSourcePersistedData =
   | BaseUserSelectedFileSourceData
   | BaseAIGenerationSourceData
   | BaseBizyAirSourceData
+  | BaseASRSourceData
 
 // ==================== 统一工厂函数 ====================
 
@@ -79,6 +88,18 @@ export const DataSourceFactory = {
   ): AIGenerationSourceData {
     return AIGenerationSourceFactory.createAIGenerationSource(param, origin)
   },
+
+  /**
+   * 创建 ASR 数据源
+   * @param param 基础数据
+   * @param origin 数据源来源标识（必须明确传入）
+   */
+  createASRSource(
+    param: BaseASRSourceData,
+    origin: SourceOrigin,
+  ): ASRSourceData {
+    return ASRSourceFactory.createASRSource(param, origin)
+  },
 }
 
 // ==================== 数据源提取函数 ====================
@@ -93,6 +114,8 @@ export function extractSourceData(source: UnifiedDataSourceData): BaseDataSource
     return extractAIGenerationSourceData(source)
   } else if (DataSourceQueries.isBizyAirSource(source)) {
     return extractBizyAirSourceData(source)
+  } else if (DataSourceQueries.isASRSource(source)) {
+    return extractASRSourceData(source)
   } else {
     console.warn('未知的数据源类型:', source)
     throw new Error('未知的数据源类型')
@@ -120,5 +143,9 @@ export const DataSourceQueries = {
 
   isBizyAirSource(source: UnifiedDataSourceData): source is BizyAirSourceData {
     return BizyAirTypeGuards.isBizyAirSource(source)
+  },
+
+  isASRSource(source: UnifiedDataSourceData): source is ASRSourceData {
+    return ASRTypeGuards.isASRSource(source)
   },
 }

@@ -38,6 +38,7 @@
       },
       "clip": {
         "smartSceneDetection": "智能分镜头",
+        "speechRecognition": "语音识别",
         "duplicateClip": "复制片段",
         "regenerateThumbnail": "重新生成缩略图",
         "deleteClip": "删除片段"
@@ -66,6 +67,16 @@
       "noScenes": "未检测到明显的场景边界",
       "cancelled": "场景检测已取消",
       "error": "场景检测失败: {message}"
+    },
+    "speechRecognition": {
+      "title": "语音识别",
+      "extractingAudio": "正在提取音频...",
+      "uploading": "正在上传音频...",
+      "creatingTask": "正在创建识别任务...",
+      "processing": "正在识别语音...",
+      "success": "语音识别任务已提交",
+      "error": "语音识别失败: {message}",
+      "cancelled": "语音识别已取消"
     }
   }
 }
