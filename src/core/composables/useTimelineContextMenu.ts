@@ -22,6 +22,9 @@ import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'
 import { generateMediaId } from '@/core/utils/idGenerator'
 import type { FileData } from '@/core/datasource/providers/ai-generation/types'
 import { RENDERER_FPS } from '@/core/mediabunny/constant'
+import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
+import { findOverlappingTimelineItemsOnTrack } from '@/core/utils/timelineSearchUtils'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 /**
  * 菜单项类型定义
@@ -489,8 +492,111 @@ export function useTimelineContextMenu(
   }
 
   /**
+   * 查找或创建可用的text轨道
+   * @param startTime 开始时间（帧）
+   * @param endTime 结束时间（帧）
+   * @param sourceTrackId 源音视频所在轨道ID
+   * @returns 可用的轨道ID
+   */
+  async function findOrCreateAvailableTextTrack(
+    startTime: number,
+    endTime: number,
+    sourceTrackId: string,
+  ): Promise<string> {
+    // 1. 获取所有text轨道
+    const textTracks = tracks.value.filter(t => t.type === 'text')
+
+    // 2. 查找源音视频轨道下方的第一个不冲突的text轨道
+    const sourceTrackIndex = tracks.value.findIndex(t => t.id === sourceTrackId)
+
+    // 按轨道索引排序，优先查找源轨道附近的轨道
+    const sortedTextTracks = [...textTracks].sort((a, b) => {
+      const indexA = tracks.value.findIndex(t => t.id === a.id)
+      const indexB = tracks.value.findIndex(t => t.id === b.id)
+      return Math.abs(indexA - sourceTrackIndex) - Math.abs(indexB - sourceTrackIndex)
+    })
+
+    // 3. 检查每个轨道是否有冲突
+    for (const track of sortedTextTracks) {
+      const overlappingItems = findOverlappingTimelineItemsOnTrack(
+        track.id,
+        startTime,
+        endTime,
+        unifiedStore.timelineItems,
+      )
+
+      if (overlappingItems.length === 0) {
+        console.log('✅ [ASR] 找到可用的text轨道:', track.id)
+        return track.id  // 找到不冲突的轨道
+      }
+    }
+
+    // 4. 所有轨道都有冲突，创建新的text轨道
+    console.log('📦 [ASR] 所有text轨道都有冲突，创建新轨道')
+    await unifiedStore.addTrackWithHistory('text')
+    const newTrackId = tracks.value[tracks.value.length - 1].id
+    console.log('✅ [ASR] 新建text轨道:', newTrackId)
+
+    return newTrackId
+  }
+
+  /**
+   * 创建ASR占位符文本item
+   * @param sourceTimelineItem 源音视频item
+   * @param estimatedDuration 预估时长（秒）
+   * @returns 创建的占位符item
+   */
+  async function createPlaceholderTextItem(
+    sourceTimelineItem: UnifiedTimelineItemData,
+    estimatedDuration: number,
+  ): Promise<UnifiedTimelineItemData<'text'>> {
+    // 1. 计算时间范围（帧数）
+    const startTimeFrames = sourceTimelineItem.timeRange.timelineStartTime
+    const durationFrames = Math.round(estimatedDuration * RENDERER_FPS)
+
+    // 2. 查找合适的text轨道
+    const targetTrackId = await findOrCreateAvailableTextTrack(
+      startTimeFrames,
+      startTimeFrames + durationFrames,
+      sourceTimelineItem.trackId || '',
+    )
+
+    // 3. 创建占位符文本item
+    const placeholderItem = await createTextTimelineItem(
+      '正在识别...',  // 占位文本
+      {
+        fontSize: 48,
+        color: '#ffffff',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      },
+      startTimeFrames,
+      targetTrackId,
+      durationFrames,
+      `asr_placeholder_${sourceTimelineItem.id}`,  // 特殊ID前缀
+    )
+
+    // 4. 设置为loading状态
+    placeholderItem.timelineStatus = 'loading'
+
+    // 5. 设置 bunny 对象（文本渲染需要）
+    await setupTimelineItemBunny(placeholderItem)
+
+    // 6. 从 textBitmap 获取实际宽高并设置到 config
+    if (placeholderItem.runtime.textBitmap) {
+      placeholderItem.config.width = placeholderItem.runtime.textBitmap.width
+      placeholderItem.config.height = placeholderItem.runtime.textBitmap.height
+    }
+
+    // 7. 添加到时间轴（不需要历史记录，直接添加）
+    await unifiedStore.addTimelineItem(placeholderItem)
+    console.log('✅ [ASR] 占位符item创建完成:', placeholderItem.id)
+
+    return placeholderItem
+  }
+
+  /**
    * 开始语音识别
-   * 流程：提取音频 -> 上传到bizyair -> 提交ASR任务 -> 创建MediaItem
+   * 流程：提取音频 -> 上传到bizyair -> 提交ASR任务 -> 创建占位符item -> 创建MediaItem
    */
   async function startSpeechRecognition() {
     const clipId = contextMenuTarget.value.clipId
@@ -563,7 +669,14 @@ export function useTimelineContextMenu(
       }
       console.log('✅ [ASR] 任务提交成功, taskId:', submitResult.task_id)
 
-      // 4. 创建 ASR 数据源
+      // 4. 创建占位符时间轴item
+      loading.update({ progress: 60, details: '创建占位符...' })
+      console.log('📦 [ASR] 正在创建占位符item...')
+      
+      const placeholderItem = await createPlaceholderTextItem(timelineItem, estimatedDuration)
+      console.log('✅ [ASR] 占位符item创建完成:', placeholderItem.id)
+
+      // 5. 创建 ASR 数据源（包含占位符item ID）
       const asrSource = ASRSourceFactory.createASRSource(
         {
           type: 'asr',
@@ -575,11 +688,12 @@ export function useTimelineContextMenu(
           },
           taskStatus: ASRTaskStatus.PENDING,
           sourceTimelineItemId: clipId,
+          placeholderTimelineItemId: placeholderItem.id,  // 🆕 记录占位符item ID
         },
         SourceOrigin.USER_CREATE,
       )
 
-      // 5. 创建媒体项并添加到库
+      // 6. 创建媒体项并添加到库
       const mediaId = generateMediaId('txt')
       const mediaName = `语音识别_${clipId.slice(0, 8)}`
       

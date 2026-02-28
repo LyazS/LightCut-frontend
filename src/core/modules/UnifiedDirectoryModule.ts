@@ -252,6 +252,21 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
   }
 
   /**
+   * 查找媒体项所在的所有目录ID
+   * @param mediaId 媒体项ID
+   * @returns 目录ID数组，如果未找到返回空数组
+   */
+  function findAllDirectoriesByMediaId(mediaId: string): string[] {
+    const dirIds: string[] = []
+    for (const [dirId, dir] of directories.value) {
+      if (dir.mediaItemIds.includes(mediaId)) {
+        dirIds.push(dirId)
+      }
+    }
+    return dirIds
+  }
+
+  /**
    * 获取目录内容（返回 DisplayItem[]）
    */
   function getDirectoryContent(dirId: string): DisplayItem[] {
@@ -1094,6 +1109,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     switchTab,
     deleteDirectory, // 🆕 新增删除文件夹方法
     deleteMediaItem, // 🆕 新增删除媒体项方法
+    findAllDirectoriesByMediaId, // 🆕 新增查找媒体项所在所有目录方法
 
     // 初始化和管理方法
     initializeRootDirectory,

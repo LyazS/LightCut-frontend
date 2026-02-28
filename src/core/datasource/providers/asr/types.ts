@@ -94,6 +94,7 @@ export interface BaseASRSourceData {
   resultData?: TaskResultData // 识别结果数据（与 AIGenerationProcessor 保持一致）
   taskStatus: ASRTaskStatus // 任务状态
   sourceTimelineItemId?: string // 来源时间轴项目 ID
+  placeholderTimelineItemId?: string // 占位符时间轴项目 ID（loading 状态的文本 item）
 }
 
 // ==================== API 响应类型 ====================

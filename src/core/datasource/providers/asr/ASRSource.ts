@@ -148,6 +148,7 @@ export function extractASRSourceData(source: ASRSourceData): BaseASRSourceData {
     resultData: source.resultData,
     taskStatus: source.taskStatus,
     sourceTimelineItemId: source.sourceTimelineItemId,
+    placeholderTimelineItemId: source.placeholderTimelineItemId,
 
     // 不需要保存运行时状态
     // progress: source.progress, // 重新加载时会重置

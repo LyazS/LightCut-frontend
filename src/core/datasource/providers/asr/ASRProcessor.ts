@@ -15,6 +15,10 @@ import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManag
 import { DATA_SOURCE_CONCURRENCY } from '@/constants/ConcurrencyConstants'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { nextTick } from 'vue'
+import { RENDERER_FPS } from '@/core/mediabunny/constant'
+import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
+import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
+import { splitAllUtterancesToSubtitles, type SplitSubtitle } from '@/core/utils/subtitleSplitter'
 
 // 导入类型定义
 import { ASRStreamEventType, ASRTaskStatus } from './types'
@@ -206,7 +210,7 @@ export class ASRProcessor extends DataSourceProcessor {
 
                   // 直接保存 result_data（与 AIGenerationProcessor 保持一致）
                   // 处理成功结果
-                  this.handleFinalResult(streamEvent.result_data, source)
+                  this.handleFinalResult(streamEvent.result_data, source, mediaItem)
                     .then(resolve)
                     .catch(reject)
                   needReconnect = false
@@ -277,6 +281,7 @@ export class ASRProcessor extends DataSourceProcessor {
   private async handleFinalResult(
     resultData: TaskResultData,
     source: ASRSourceData,
+    mediaItem: UnifiedMediaItemData,
   ): Promise<ASRQueryResponse> {
     // 保存 resultData 到 source（与 AIGenerationProcessor 保持一致）
     source.resultData = resultData
@@ -286,6 +291,9 @@ export class ASRProcessor extends DataSourceProcessor {
     if (!asrResult) {
       throw new Error('resultData 中缺少 asr_result')
     }
+
+    // 🆕 处理占位符item和创建文本items
+    await this.processASRResult(source, asrResult, mediaItem)
 
     // 设置 COMPLETED 状态
     source.taskStatus = ASRTaskStatus.COMPLETED
@@ -299,6 +307,127 @@ export class ASRProcessor extends DataSourceProcessor {
     await unifiedStore.notifySystem('语音识别完成', '您的音频已成功识别')
 
     return asrResult
+  }
+
+  /**
+   * 处理ASR结果：删除占位符，批量创建文本items，删除ASR media item
+   * @param source ASR数据源
+   * @param asrResult ASR识别结果
+   * @param mediaItem ASR媒体项目（创建文本后会被删除）
+   */
+  private async processASRResult(
+    source: ASRSourceData,
+    asrResult: ASRQueryResponse,
+    mediaItem: UnifiedMediaItemData,
+  ): Promise<void> {
+    const unifiedStore = useUnifiedStore()
+
+    // 1. 获取占位符item信息
+    const placeholderId = source.placeholderTimelineItemId
+    const sourceTimelineItemId = source.sourceTimelineItemId
+
+    if (!placeholderId || !sourceTimelineItemId) {
+      console.warn('⚠️ [ASRProcessor] 缺少占位符ID或源item ID，跳过文本创建')
+      return
+    }
+
+    const placeholderItem = unifiedStore.getTimelineItem(placeholderId)
+    if (!placeholderItem) {
+      console.warn('⚠️ [ASRProcessor] 找不到占位符item:', placeholderId)
+      return
+    }
+
+    // 2. 获取占位符的时间位置
+    const startTimeFrames = placeholderItem.timeRange.timelineStartTime
+    const trackId = placeholderItem.trackId
+
+    // 3. 删除占位符item（不需要历史记录，直接删除）
+    await unifiedStore.removeTimelineItem(placeholderId)
+    console.log('🗑️ [ASRProcessor] 已删除占位符item:', placeholderId)
+
+    // 4. 获取utterances并拆分为字幕片段
+    const utterances = asrResult.result?.utterances || []
+    if (utterances.length === 0) {
+      console.warn('⚠️ [ASRProcessor] ASR结果中没有utterances')
+      return
+    }
+
+    // 🆕 使用双指针法拆分长句为适合字幕的短句
+    const subtitles: SplitSubtitle[] = splitAllUtterancesToSubtitles(utterances)
+    console.log(`📝 [ASRProcessor] 拆分后共 ${subtitles.length} 个字幕片段`)
+
+    // 5. 批量创建文本items
+    let createdCount = 0
+
+    for (const subtitle of subtitles) {
+      // 将毫秒转换为帧数
+      const subtitleStartFrames = startTimeFrames + Math.round(subtitle.start_time / 1000 * RENDERER_FPS)
+      const subtitleDurationFrames = Math.round((subtitle.end_time - subtitle.start_time) / 1000 * RENDERER_FPS)
+
+      // 跳过时长为0的字幕
+      if (subtitleDurationFrames <= 0) {
+        console.log('⏭️ [ASRProcessor] 跳过时长为0的字幕:', subtitle.text)
+        continue
+      }
+
+      try {
+        // 创建文本item
+        const textItem = await createTextTimelineItem(
+          subtitle.text,
+          {
+            fontSize: 48,
+            color: '#ffffff',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          },
+          subtitleStartFrames,
+          trackId || '',
+          subtitleDurationFrames,
+        )
+
+        // 设置为loading状态
+        textItem.timelineStatus = 'loading'
+
+        // 设置 bunny 对象（文本渲染需要）
+        await setupTimelineItemBunny(textItem)
+
+        // 从 textBitmap 获取实际宽高并设置到 config
+        if (textItem.runtime.textBitmap) {
+          textItem.config.width = textItem.runtime.textBitmap.width
+          textItem.config.height = textItem.runtime.textBitmap.height
+        }
+
+        // 设置为ready状态
+        textItem.timelineStatus = 'ready'
+        textItem.runtime.isInitialized = true
+
+        // 添加到时间轴（使用历史记录，支持撤销）
+        await unifiedStore.addTimelineItemWithHistory(textItem)
+        createdCount++
+      } catch (error) {
+        console.error('❌ [ASRProcessor] 创建文本item失败:', error)
+      }
+    }
+
+    console.log(`✅ [ASRProcessor] 已创建 ${createdCount} 个文本items`)
+
+    // 6. 删除ASR的text media item（已无用）
+    // 查找mediaItem所在的所有目录
+    const dirIds = unifiedStore.findAllDirectoriesByMediaId(mediaItem.id)
+    if (dirIds.length > 0) {
+      // 逐个从文件夹中移除（会更新引用计数）
+      // 注意：只有最后一个目录删除时才会真正删除文件（引用计数降为0）
+      for (const dirId of dirIds) {
+        const result = await unifiedStore.deleteMediaItem(mediaItem.id, dirId)
+        if (!result.success) {
+          console.warn(`⚠️ [ASRProcessor] 从目录 ${dirId} 移除ASR media item失败: ${result.error}`)
+        }
+      }
+      console.log(`🗑️ [ASRProcessor] 已删除ASR media item: ${mediaItem.name} (${mediaItem.id})`)
+    } else {
+      // 如果找不到目录，直接从媒体列表中移除
+      await unifiedStore.removeMediaItem(mediaItem.id)
+      console.log(`🗑️ [ASRProcessor] 已删除ASR media item（无目录）: ${mediaItem.name} (${mediaItem.id})`)
+    }
   }
 
   /**
