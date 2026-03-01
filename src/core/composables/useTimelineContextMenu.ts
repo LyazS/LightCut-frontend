@@ -24,7 +24,6 @@ import type { FileData } from '@/core/datasource/providers/ai-generation/types'
 import { RENDERER_FPS } from '@/core/mediabunny/constant'
 import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
 import { findOverlappingTimelineItemsOnTrack } from '@/core/utils/timelineSearchUtils'
-import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 
 /**
  * 菜单项类型定义
@@ -563,7 +562,7 @@ export function useTimelineContextMenu(
 
     // 3. 创建占位符文本item
     const placeholderItem = await createTextTimelineItem(
-      '正在识别...',  // 占位文本
+      '',  // 占位符不需要文本内容
       {
         fontSize: 48,
         color: '#ffffff',
@@ -572,22 +571,16 @@ export function useTimelineContextMenu(
       startTimeFrames,
       targetTrackId,
       durationFrames,
-      `asr_placeholder_${sourceTimelineItem.id}`,  // 特殊ID前缀
     )
 
-    // 4. 设置为loading状态
+    // 🆕 设置占位符标识
+    placeholderItem.isPlaceholder = true
     placeholderItem.timelineStatus = 'loading'
 
-    // 5. 设置 bunny 对象（文本渲染需要）
-    await setupTimelineItemBunny(placeholderItem)
+    // 🗑️ 移除不需要的 bunny 设置（占位符不需要渲染）
+    // 不调用 setupTimelineItemBunny
 
-    // 6. 从 textBitmap 获取实际宽高并设置到 config
-    if (placeholderItem.runtime.textBitmap) {
-      placeholderItem.config.width = placeholderItem.runtime.textBitmap.width
-      placeholderItem.config.height = placeholderItem.runtime.textBitmap.height
-    }
-
-    // 7. 添加到时间轴（不需要历史记录，直接添加）
+    // 添加到时间轴
     await unifiedStore.addTimelineItem(placeholderItem)
     console.log('✅ [ASR] 占位符item创建完成:', placeholderItem.id)
 

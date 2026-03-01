@@ -518,6 +518,19 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
               continue
             }
 
+            // 🆕 占位符特殊处理：直接添加，跳过所有重建流程
+            if (itemData.isPlaceholder) {
+              console.log(`🔄 检测到占位符项目，直接添加: ${itemData.id}`)
+
+              // 克隆项目数据（保持所有状态）
+              const placeholderItem = TimelineItemFactory.clone(itemData)
+
+              // 直接添加到时间轴，不需要 rebuildForCmd 和 setupTimelineItemBunny
+              await timelineModule.addTimelineItem(placeholderItem)
+              console.log(`✅ 占位符项目恢复完成: ${itemData.id}`)
+              continue
+            }
+
             // 文本类型特殊处理（文本类型没有对应的媒体项目，mediaItemId可以为空）
             if (itemData.mediaType !== 'text' && !itemData.mediaItemId) {
               console.warn('⚠️ 跳过无效的时间轴项目数据（缺少mediaItemId）:', itemData)

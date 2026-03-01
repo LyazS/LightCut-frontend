@@ -123,4 +123,17 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
 
   // ==================== 运行时数据（不可持久化） ====================
   runtime: UnifiedTimelineItemRuntime<T>
+
+  // ==================== 占位符标识（可选） ====================
+  /**
+   * 是否为占位符项目
+   * - true: ASR占位符，只在时间轴上占位，不需要渲染
+   * - false/undefined: 正常项目，需要正常的创建/恢复流程
+   *
+   * 占位符项目特点：
+   * 1. 不需要调用 rebuildForCmd（因为没有关联的媒体项目）
+   * 2. 不需要调用 setupTimelineItemBunny（因为不需要渲染）
+   * 3. 只需要克隆后直接添加到时间轴
+   */
+  isPlaceholder?: boolean
 }
