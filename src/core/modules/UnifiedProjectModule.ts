@@ -408,7 +408,7 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
         }
       })
 
-      // 2. 收集当前活动目录的媒体ID（包括角色类型子文件夹中的媒体）
+      // 2. 收集当前活动目录的媒体ID
       const activeTabId = directoryModule.activeTabId.value
       if (activeTabId) {
         const activeTab = directoryModule.openTabs.value.find((tab) => tab.id === activeTabId)
@@ -416,15 +416,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
           const activeDir = directoryModule.directories.value.get(activeTab.dirId)
           if (activeDir) {
             directoryModule.getAssetIdsInDirectory(activeDir.id).forEach((id) => immediateLoadIds.add(id))
-
-            activeDir.childDirIds.forEach((childDirId) => {
-              const childDir = directoryModule.directories.value.get(childDirId)
-              if (childDir && directoryModule.isCharacterDirectory(childDir)) {
-                directoryModule
-                  .getAssetIdsInDirectory(childDirId)
-                  .forEach((id) => immediateLoadIds.add(id))
-              }
-            })
           }
         }
       }

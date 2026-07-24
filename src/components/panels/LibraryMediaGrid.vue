@@ -58,7 +58,7 @@
             <!-- 文件夹项目 -->
             <template v-if="item.type === 'directory'">
               <div class="item-icon directory-icon">
-                <FolderIcon :folder-id="item.id" :size="getIconSize()" :is-list-view="false" />
+                <FolderIcon :size="getIconSize()" :is-list-view="false" />
               </div>
             </template>
 
@@ -115,7 +115,7 @@
           <!-- 图标列 -->
           <div class="list-item-icon">
             <template v-if="item.type === 'directory'">
-              <FolderIcon :folder-id="item.id" size="20px" :is-list-view="true" />
+              <FolderIcon size="20px" :is-list-view="true" />
             </template>
             <template v-else>
               <MediaItemThumbnail :media-id="item.id" />

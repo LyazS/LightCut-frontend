@@ -3,27 +3,27 @@
  * 包含虚拟目录、标签页、显示项、剪贴板等相关接口
  */
 
-import type { FileData } from '@/core/datasource/providers/ai-generation/types'
-
 // ==================== 目录相关类型 ====================
 
 /**
- * 文件夹类型枚举
- * 用于区分不同类型的特殊文件夹
+ * 默认目录类型。目录类型保持开放，以支持后续功能或插件扩展。
  */
-export enum DirectoryType {
-  BASE = 'base',
-  CHARACTER = 'character',
-}
+export const BASE_DIRECTORY_TYPE = 'base' as const
 
 /**
- * 角色信息接口
+ * 目录类型标识。
+ *
+ * 使用字符串而非封闭枚举，使新类型不需要修改目录核心模型。
  */
-export interface CharacterInfo {
-  remark: string // 角色备注文本
-  refVideo: FileData[] // 角色参考视频
-  profileMediaItemId?: string // 可选：角色头像对应的 MediaItem ID
-  timestamps: { st: number; ed: number } // 时间戳范围（开始时间和结束时间，单位：秒）
+export type DirectoryType = string
+
+/**
+ * 创建目录时可选的扩展信息。
+ * 特定目录类型需要持久化附加数据时，应放在 metadata 中，避免污染通用目录字段。
+ */
+export interface DirectoryCreateOptions {
+  type?: DirectoryType
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -31,7 +31,7 @@ export interface CharacterInfo {
  * 仅包含文件夹树信息。素材归属保存在媒体 Meta 的 parentDirectoryId 中。
  */
 export interface VirtualDirectory {
-  readonly type: DirectoryType // 目录类型，用于区分不同类型的特殊文件夹（默认：'base'）
+  readonly type: DirectoryType // 目录类型，默认值为 'base'
   // 核心字段
   id: string // 唯一标识符，格式：dir_{nanoid}
   name: string // 目录名称
@@ -40,15 +40,7 @@ export interface VirtualDirectory {
 
   // 子目录引用
   childDirIds: string[] // 子目录ID列表
-}
-
-/**
- * 角色文件夹接口
- * 继承自 VirtualDirectory，type 为 'character'
- */
-export interface CharacterDirectory extends VirtualDirectory {
-  readonly type: DirectoryType.CHARACTER // 固定为 'character'
-  character: CharacterInfo // 角色信息
+  metadata?: Record<string, unknown> // 特定目录类型的扩展数据
 }
 
 /**

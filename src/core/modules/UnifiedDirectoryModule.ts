@@ -11,10 +11,9 @@ import type {
   SortBy,
   SortOrder,
   UnifiedDirectoryConfig,
-  CharacterDirectory,
+  DirectoryCreateOptions,
 } from '@/core/directory/types'
-import type { FileData } from '@/core/datasource/providers/ai-generation/types'
-import { DirectoryType } from '@/core/directory/types'
+import { BASE_DIRECTORY_TYPE } from '@/core/directory/types'
 import {
   AssetLocationIndex,
   persistAssetDirectoryMove,
@@ -124,14 +123,19 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     return { ok: true, normalizedName }
   }
 
-  function createDirectoryRecord(name: string, parentId: string | null = null): VirtualDirectory {
+  function createDirectoryRecord(
+    name: string,
+    parentId: string | null = null,
+    options: DirectoryCreateOptions = {},
+  ): VirtualDirectory {
     const newDir: VirtualDirectory = {
-      type: DirectoryType.BASE,
+      type: options.type ?? BASE_DIRECTORY_TYPE,
       id: generateDirectoryId(),
       name,
       parentId,
       createdAt: new Date().toISOString(),
       childDirIds: [],
+      metadata: options.metadata,
     }
 
     directories.value.set(newDir.id, newDir)
@@ -161,7 +165,11 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
   /**
    * 创建新目录
    */
-  function createDirectory(name: string, parentId: string | null = null): DirectoryMutationResult {
+  function createDirectory(
+    name: string,
+    parentId: string | null = null,
+    options: DirectoryCreateOptions = {},
+  ): DirectoryMutationResult {
     if (parentId && !directories.value.has(parentId)) {
       return { success: false, error: '父目录不存在', code: 'not_found' }
     }
@@ -173,69 +181,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     return {
       success: true,
-      directory: createDirectoryRecord(validation.normalizedName, parentId),
+      directory: createDirectoryRecord(validation.normalizedName, parentId, options),
     }
-  }
-
-  /**
-   * 创建角色文件夹
-   */
-  function createCharacterDirectory(
-    name: string,
-    remark: string,
-    refVideo: FileData[] = [],
-    parentId: string | null = null,
-    timestamps: { st: number; ed: number },
-  ): CharacterDirectory {
-    const validation = validateDirectoryName(name, parentId)
-    if (!validation.ok) {
-      throw new Error(validation.error)
-    }
-
-    const characterDir: CharacterDirectory = {
-      type: DirectoryType.CHARACTER,
-      id: generateDirectoryId(),
-      name: validation.normalizedName,
-      parentId,
-      createdAt: new Date().toISOString(),
-      childDirIds: [],
-      character: {
-        remark,
-        refVideo,
-        timestamps,
-      },
-    }
-
-    directories.value.set(characterDir.id, characterDir)
-
-    // 如果有父目录，更新父目录的子目录列表
-    if (parentId) {
-      const parentDir = directories.value.get(parentId)
-      if (parentDir) {
-        parentDir.childDirIds.push(characterDir.id)
-      }
-    }
-
-    console.log('✅ 角色文件夹创建成功:', characterDir.name)
-    return characterDir
-  }
-
-  /**
-   * 类型守卫：判断是否为角色文件夹
-   */
-  function isCharacterDirectory(dir: VirtualDirectory): dir is CharacterDirectory {
-    return dir.type === DirectoryType.CHARACTER
-  }
-
-  /**
-   * 获取角色文件夹
-   */
-  function getCharacterDirectory(dirId: string): CharacterDirectory | undefined {
-    const dir = directories.value.get(dirId)
-    if (dir && isCharacterDirectory(dir)) {
-      return dir
-    }
-    return undefined
   }
 
   /**
@@ -609,7 +556,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
   /**
    * 启动目录中 pending 状态的资产
-   * 包括当前目录的资产项和角色类型子文件夹中的资产项
+   * 仅处理当前目录中的资产项。
    */
   function startPendingAssetsInDirectory(dirId: string): void {
     const dir = directories.value.get(dirId)
@@ -640,14 +587,6 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     // 处理当前目录的资产项
     getAssetIdsInDirectory(dirId).forEach(startAssetIfNeeded)
-
-    // 处理角色类型子文件夹中的资产项
-    dir.childDirIds.forEach((childDirId) => {
-      const childDir = directories.value.get(childDirId)
-      if (childDir && isCharacterDirectory(childDir)) {
-        getAssetIdsInDirectory(childDirId).forEach(startAssetIfNeeded)
-      }
-    })
 
     if (startedCount > 0) {
       console.log(`🚀 [DirectoryModule] 启动了 ${startedCount} 个延迟加载的资产`)
@@ -1281,11 +1220,8 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
 
     // 核心方法
     createDirectory,
-    createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory,
     getDirectory,
-    getCharacterDirectory, // 🆕 新增获取角色文件夹方法
-    isCharacterDirectory, // 🆕 新增类型守卫方法
     setMediaReadyEnsurer,
     registerAssetLocation,
     moveAssetToDirectory,
@@ -1353,6 +1289,7 @@ export type {
   SortBy,
   SortOrder,
   UnifiedDirectoryConfig,
+  DirectoryCreateOptions,
   DirectoryType,
 } from '@/core/directory/types'
 

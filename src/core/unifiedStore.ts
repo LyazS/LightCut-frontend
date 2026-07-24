@@ -900,14 +900,11 @@ export const useUnifiedStore = defineStore('unified', () => {
 
     // 目录管理方法
     createDirectory: unifiedDirectoryModule.createDirectory,
-    createCharacterDirectory: unifiedDirectoryModule.createCharacterDirectory, // 🆕 新增创建角色文件夹方法
     renameDirectory: unifiedDirectoryModule.renameDirectory,
     deleteDirectory: unifiedDirectoryModule.deleteDirectory, // 🆕 新增删除文件夹方法
     deleteAssetItem: unifiedDirectoryModule.deleteAssetItem,
     deleteMediaItem: unifiedDirectoryModule.deleteMediaItem, // 🆕 新增删除媒体项方法
     getDirectory: unifiedDirectoryModule.getDirectory,
-    getCharacterDirectory: unifiedDirectoryModule.getCharacterDirectory, // 🆕 新增获取角色文件夹方法
-    isCharacterDirectory: unifiedDirectoryModule.isCharacterDirectory, // 🆕 新增类型守卫方法
     registerAssetLocation: unifiedDirectoryModule.registerAssetLocation,
     moveAssetToDirectory: unifiedDirectoryModule.moveAssetToDirectory,
     moveAssetsAtomically: unifiedDirectoryModule.moveAssetsAtomically,
