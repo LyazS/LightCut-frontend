@@ -374,8 +374,44 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedConfigModule,
     unifiedTrackModule,
     unifiedSelectionModule,
+    unifiedDirectoryModule,
     ensureTimelineItemResolved,
   )
+
+  async function pasteLibraryItemsWithHistory(targetDirectoryId: string) {
+    if (!unifiedDirectoryModule.canPaste(targetDirectoryId)) {
+      return {
+        success: false,
+        successCount: 0,
+        failedCount: 0,
+        errors: [{ itemId: '', error: '无法粘贴到此位置' }],
+      }
+    }
+
+    const items = [...unifiedDirectoryModule.clipboardState.value.items]
+    try {
+      await historyOperations.moveLibraryItemsWithHistory(items, targetDirectoryId)
+      unifiedDirectoryModule.clearClipboard()
+      return {
+        success: true,
+        successCount: items.length,
+        failedCount: 0,
+        errors: [],
+      }
+    } catch (error) {
+      return {
+        success: false,
+        successCount: 0,
+        failedCount: items.length,
+        errors: [
+          {
+            itemId: '',
+            error: error instanceof Error ? error.message : '移动项目失败',
+          },
+        ],
+      }
+    }
+  }
 
   // 创建统一拖拽管理器（已自动注册所有处理器）
   const dragManager = useUnifiedDrag(
@@ -384,6 +420,9 @@ export const useUnifiedStore = defineStore('unified', () => {
     unifiedTimelineModule,
     unifiedSelectionModule,
     unifiedTrackModule,
+    {
+      moveLibraryItemsWithHistory: historyOperations.moveLibraryItemsWithHistory,
+    },
   )
 
   /**
@@ -439,6 +478,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     selectTimelineSelectionsWithHistory: historyOperations.selectTimelineSelectionsWithHistory,
     applyChangePlanWithHistory: historyOperations.applyChangePlanWithHistory,
     clearAllKeyframesWithHistory: historyOperations.clearAllKeyframesWithHistory,
+    // 素材库历史记录方法
+    createDirectoryWithHistory: historyOperations.createDirectoryWithHistory,
+    renameDirectoryWithHistory: historyOperations.renameDirectoryWithHistory,
+    deleteEmptyDirectoryWithHistory: historyOperations.deleteEmptyDirectoryWithHistory,
+    renameAssetWithHistory: historyOperations.renameAssetWithHistory,
+    moveLibraryItemsWithHistory: historyOperations.moveLibraryItemsWithHistory,
 
     // ==================== 统一媒体模块状态和方法 ====================
 
@@ -465,6 +510,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     getAsset: unifiedMediaModule.getAsset,
     getAllAssets: unifiedMediaModule.getAllAssets,
     updateAssetName: unifiedMediaModule.updateAssetName,
+    renameAsset: unifiedMediaModule.renameAsset,
     createTransitionTemplatePlaceholder:
       unifiedMediaModule.createTransitionTemplatePlaceholder,
     createFilterTemplatePlaceholder:
@@ -864,8 +910,10 @@ export const useUnifiedStore = defineStore('unified', () => {
     isCharacterDirectory: unifiedDirectoryModule.isCharacterDirectory, // 🆕 新增类型守卫方法
     registerAssetLocation: unifiedDirectoryModule.registerAssetLocation,
     moveAssetToDirectory: unifiedDirectoryModule.moveAssetToDirectory,
+    moveAssetsAtomically: unifiedDirectoryModule.moveAssetsAtomically,
     getAssetDirectoryId: unifiedDirectoryModule.getAssetDirectoryId,
     getAssetIdsInDirectory: unifiedDirectoryModule.getAssetIdsInDirectory,
+    isDirectoryEmpty: unifiedDirectoryModule.isDirectoryEmpty,
     getDirectoryContent: unifiedDirectoryModule.getDirectoryContent,
     getBreadcrumb: unifiedDirectoryModule.getBreadcrumb,
     openTab: unifiedDirectoryModule.openTab,
@@ -885,6 +933,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 剪贴板操作
     cut: unifiedDirectoryModule.cut,
     paste: unifiedDirectoryModule.paste,
+    pasteLibraryItemsWithHistory,
     canPaste: unifiedDirectoryModule.canPaste,
     clearClipboard: unifiedDirectoryModule.clearClipboard,
 

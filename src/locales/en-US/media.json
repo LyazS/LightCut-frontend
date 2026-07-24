@@ -135,6 +135,15 @@
     "mediaDeletedWithFile": "Media {name} has been deleted (including file)",
     "mediaRemovedFromFolder": "Media {name} has been removed from current folder",
     "deleteFolderConfirm": "Are you sure you want to delete folder {name}? This operation will recursively delete all subfolders and their media files.",
+    "deleteEmptyFolderConfirm": "Are you sure you want to delete the empty folder {name}? This action can be restored with Undo.",
+    "history": {
+      "createFolder": "Create folder: {name}",
+      "renameFolder": "Rename folder: {name}",
+      "moveFolder": "Move folder",
+      "deleteEmptyFolder": "Delete empty folder",
+      "renameAsset": "Rename media: {name}",
+      "moveItems": "Move {count} items"
+    },
     "folderDeletedWithMedia": "Folder {name} has been deleted, along with {count} media items",
     "folderDeleted": "Folder {name} has been deleted",
     "deleteFolderFailedWithReason": "Failed to delete folder {name}: {error}",

@@ -308,6 +308,104 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
   }
 
   /**
+   * 判断目录是否完全为空。只有没有直属素材且没有子目录的目录才可以安全撤销删除。
+   */
+  function isDirectoryEmpty(dirId: string): boolean {
+    const dir = directories.value.get(dirId)
+    return Boolean(dir && dir.childDirIds.length === 0 && getAssetIdsInDirectory(dirId).length === 0)
+  }
+
+  function getDirectoryChildIndex(parentId: string, childId: string): number {
+    return directories.value.get(parentId)?.childDirIds.indexOf(childId) ?? -1
+  }
+
+  function insertDirectoryIntoParent(parentId: string, directoryId: string, index?: number): void {
+    const parent = directories.value.get(parentId)
+    if (!parent) {
+      throw new Error('父目录不存在')
+    }
+
+    const insertionIndex = Math.min(Math.max(index ?? parent.childDirIds.length, 0), parent.childDirIds.length)
+    parent.childDirIds.splice(insertionIndex, 0, directoryId)
+  }
+
+  /**
+   * 恢复一个已删除的空目录。调用方必须保留原始目录快照与父目录中的位置。
+   */
+  function restoreDirectory(
+    directory: VirtualDirectory,
+    parentId: string,
+    parentIndex: number,
+  ): DirectoryMutationResult {
+    if (directories.value.has(directory.id)) {
+      return { success: false, error: '目录已存在', code: 'duplicate_name' }
+    }
+    if (!directories.value.has(parentId)) {
+      return { success: false, error: '父目录不存在', code: 'not_found' }
+    }
+    if (directory.childDirIds.length > 0) {
+      return { success: false, error: '只能恢复空目录', code: 'invalid_name' }
+    }
+
+    const validation = validateDirectoryName(directory.name, parentId)
+    if (!validation.ok) {
+      return { success: false, error: validation.error, code: validation.code }
+    }
+
+    const restoredDirectory: VirtualDirectory = {
+      ...directory,
+      name: validation.normalizedName,
+      parentId,
+      childDirIds: [],
+    }
+    directories.value.set(restoredDirectory.id, restoredDirectory)
+    insertDirectoryIntoParent(parentId, restoredDirectory.id, parentIndex)
+    return { success: true, directory: restoredDirectory }
+  }
+
+  /**
+   * 删除一个空目录。标签页属于界面导航状态，沿用常规目录删除时的关闭/回退策略。
+   */
+  function removeEmptyDirectory(dirId: string): DirectoryMutationResult {
+    const dir = directories.value.get(dirId)
+    if (!dir) {
+      return { success: false, error: '目录不存在', code: 'not_found' }
+    }
+    if (dir.parentId === null) {
+      return { success: false, error: '不能删除根目录', code: 'invalid_name' }
+    }
+    if (!isDirectoryEmpty(dirId)) {
+      return { success: false, error: '目录不为空', code: 'invalid_name' }
+    }
+
+    const parent = directories.value.get(dir.parentId)
+    if (!parent) {
+      return { success: false, error: '父目录不存在', code: 'not_found' }
+    }
+
+    const index = parent.childDirIds.indexOf(dirId)
+    if (index >= 0) {
+      parent.childDirIds.splice(index, 1)
+    }
+
+    const tabsToClose = openTabs.value.filter((tab) => tab.dirId === dirId).map((tab) => tab.id)
+    for (const tabId of tabsToClose) {
+      if (openTabs.value.length === 1) {
+        const tab = openTabs.value.find((item) => item.id === tabId)
+        if (tab) {
+          tab.dirId = dir.parentId
+          activeTabId.value = tab.id
+        }
+      } else {
+        closeTab(tabId)
+      }
+    }
+
+    directories.value.delete(dirId)
+    return { success: true, directory: dir }
+  }
+
+  /**
    * 移动素材。先持久化 Meta，保存失败时恢复内存中的原目录并保持索引不变。
    */
   async function moveAssetToDirectory(
@@ -355,6 +453,66 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
         error: error instanceof Error ? error.message : '更新素材目录索引失败，已恢复原位置',
       }
     }
+  }
+
+  /**
+   * 原子移动多个素材。任何素材持久化失败时，已移动的素材会回滚到原目录。
+   */
+  async function moveAssetsAtomically(
+    moves: Array<{ assetId: string; targetDirectoryId: string }>,
+  ): Promise<{ success: boolean; error?: string }> {
+    const uniqueAssetIds = new Set<string>()
+    const originalDirectoryIds = new Map<string, string>()
+
+    for (const move of moves) {
+      if (uniqueAssetIds.has(move.assetId)) {
+        return { success: false, error: '移动项目中存在重复素材' }
+      }
+      uniqueAssetIds.add(move.assetId)
+
+      if (!directories.value.has(move.targetDirectoryId)) {
+        return { success: false, error: '目标文件夹不存在' }
+      }
+
+      const sourceDirectoryId = getAssetDirectoryId(move.assetId)
+      if (!sourceDirectoryId) {
+        return { success: false, error: '素材所属文件夹不存在' }
+      }
+      if (sourceDirectoryId === move.targetDirectoryId) {
+        return { success: false, error: '不能移动到当前文件夹' }
+      }
+      originalDirectoryIds.set(move.assetId, sourceDirectoryId)
+    }
+
+    const movedAssetIds: string[] = []
+    for (const move of moves) {
+      const result = await moveAssetToDirectory(move.assetId, move.targetDirectoryId)
+      if (result.success) {
+        movedAssetIds.push(move.assetId)
+        continue
+      }
+
+      const rollbackErrors: string[] = []
+      for (const movedAssetId of [...movedAssetIds].reverse()) {
+        const rollbackResult = await moveAssetToDirectory(
+          movedAssetId,
+          originalDirectoryIds.get(movedAssetId)!,
+        )
+        if (!rollbackResult.success) {
+          rollbackErrors.push(rollbackResult.error || movedAssetId)
+        }
+      }
+
+      return {
+        success: false,
+        error:
+          rollbackErrors.length > 0
+            ? `移动失败且回滚失败：${rollbackErrors.join('；')}`
+            : result.error || '移动素材失败',
+      }
+    }
+
+    return { success: true }
   }
 
   /**
@@ -626,14 +784,53 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     _sourceFolderId: string | null,
     targetFolderId: string,
   ): Promise<void> {
-    for (const assetId of assetIds) {
-      const result = await moveAssetToDirectory(assetId, targetFolderId)
-      if (!result.success) {
-        throw new Error(result.error)
-      }
+    const result = await moveAssetsAtomically(
+      assetIds.map((assetId) => ({ assetId, targetDirectoryId: targetFolderId })),
+    )
+    if (!result.success) {
+      throw new Error(result.error)
     }
 
     console.log(`✅ 拖拽移动 ${assetIds.length} 个资产到文件夹 ${targetFolderId}`)
+  }
+
+  /**
+   * 移动文件夹到新父目录，可指定在目标目录中的插入位置用于撤销恢复。
+   */
+  function moveDirectoryToParent(
+    folderId: string,
+    targetFolderId: string,
+    targetIndex?: number,
+  ): { success: boolean; error?: string } {
+    const folder = getDirectory(folderId)
+    if (!folder) {
+      return { success: false, error: '源文件夹不存在' }
+    }
+    if (folder.parentId === null) {
+      return { success: false, error: '不能移动根目录' }
+    }
+    if (folder.parentId === targetFolderId) {
+      return { success: false, error: '不能移动到当前父文件夹' }
+    }
+    if (!canDragToFolder(folderId, targetFolderId)) {
+      return { success: false, error: '不能将文件夹移动到此位置' }
+    }
+
+    const sourceParent = getDirectory(folder.parentId)
+    const targetParent = getDirectory(targetFolderId)
+    if (!sourceParent || !targetParent) {
+      return { success: false, error: '源文件夹或目标文件夹不存在' }
+    }
+
+    const sourceIndex = sourceParent.childDirIds.indexOf(folderId)
+    if (sourceIndex < 0) {
+      return { success: false, error: '源文件夹目录结构不完整' }
+    }
+
+    sourceParent.childDirIds.splice(sourceIndex, 1)
+    folder.parentId = targetFolderId
+    insertDirectoryIntoParent(targetFolderId, folderId, targetIndex)
+    return { success: true }
   }
 
   /**
@@ -642,34 +839,9 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
    * @param targetFolderId 目标父文件夹ID
    */
   async function dragMoveFolder(folderId: string, targetFolderId: string): Promise<void> {
-    // 验证是否可以移动
-    if (!canDragToFolder(folderId, targetFolderId)) {
-      throw new Error('不能将文件夹拖拽到此位置')
-    }
-
-    const folder = getDirectory(folderId)
-    if (!folder) {
-      throw new Error('源文件夹不存在')
-    }
-
-    // 从原父文件夹移除
-    if (folder.parentId) {
-      const parentDir = getDirectory(folder.parentId)
-      if (parentDir) {
-        const index = parentDir.childDirIds.indexOf(folderId)
-        if (index > -1) {
-          parentDir.childDirIds.splice(index, 1)
-        }
-      }
-    }
-
-    // 更新父文件夹
-    folder.parentId = targetFolderId
-
-    // 添加到目标文件夹
-    const targetDir = getDirectory(targetFolderId)
-    if (targetDir) {
-      targetDir.childDirIds.push(folderId)
+    const result = moveDirectoryToParent(folderId, targetFolderId)
+    if (!result.success) {
+      throw new Error(result.error)
     }
 
     console.log(`✅ 拖拽移动文件夹 ${folderId} 到 ${targetFolderId}`)
@@ -1117,8 +1289,13 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     setMediaReadyEnsurer,
     registerAssetLocation,
     moveAssetToDirectory,
+    moveAssetsAtomically,
     getAssetDirectoryId,
     getAssetIdsInDirectory,
+    isDirectoryEmpty,
+    getDirectoryChildIndex,
+    restoreDirectory,
+    removeEmptyDirectory,
     getDirectoryContent,
     getBreadcrumb,
     openTab,
@@ -1147,6 +1324,7 @@ export function createUnifiedDirectoryModule(registry: ModuleRegistry) {
     canDragToFolder,
     dragMoveMediaItems,
     dragMoveFolder,
+    moveDirectoryToParent,
     isDescendantOf,
 
     // 视图和排序状态

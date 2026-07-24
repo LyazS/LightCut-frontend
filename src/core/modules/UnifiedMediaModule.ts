@@ -273,6 +273,35 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
   }
 
   /**
+   * 修改素材名称并等待 Meta 写入完成，供可撤销命令使用。
+   */
+  async function renameAsset(
+    assetId: string,
+    newName: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const asset = getAsset(assetId)
+    if (!asset) {
+      return { success: false, error: '素材不存在' }
+    }
+
+    const normalizedName = newName.trim()
+    if (!normalizedName) {
+      return { success: false, error: '素材名称不能为空' }
+    }
+
+    const previousName = asset.name
+    asset.name = normalizedName
+    const persisted = await globalMetaFileManager.saveMetaFile(asset)
+    if (persisted) {
+      return { success: true }
+    }
+
+    asset.name = previousName
+    await globalMetaFileManager.saveMetaFile(asset)
+    return { success: false, error: '保存素材名称失败，已恢复原名称' }
+  }
+
+  /**
    * 更新媒体项目
    * @param updatedMediaItem 更新后的媒体项目
    */
@@ -640,6 +669,7 @@ export function createUnifiedMediaModule(registry: ModuleRegistry) {
     getAsset,
     getAllAssets,
     updateAssetName,
+    renameAsset,
     createTransitionTemplatePlaceholder,
     createFilterTemplatePlaceholder,
     startTemplateProcessing,

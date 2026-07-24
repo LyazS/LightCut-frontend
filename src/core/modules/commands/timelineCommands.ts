@@ -30,6 +30,15 @@ export type { TrimTimelineItemSide } from './TrimTimelineItemCommand'
 export { SelectTimelineSelectionsCommand } from './SelectTimelineItemsCommand' // ok
 export { UpdateTransitionConfigCommand } from './UpdateTransitionOutCommand'
 export { UpdateFilterConfigCommand } from './UpdateFilterEffectCommand'
+export {
+  CreateDirectoryCommand,
+  RenameDirectoryCommand,
+  MoveDirectoryCommand,
+  DeleteEmptyDirectoryCommand,
+  RenameAssetCommand,
+  MoveLibraryItemsCommand,
+} from './LibraryCommands'
+export { HistoryPreconditionError } from './HistoryPreconditionError'
 
 // 导出类型定义
 export type { SimpleCommand } from './types'

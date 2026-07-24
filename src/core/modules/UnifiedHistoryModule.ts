@@ -5,6 +5,7 @@ import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedUseNaiveUIModule } from './UnifiedUseNaiveUIModule'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { generateBatchCommandId } from '@/core/utils/idGenerator'
+import { HistoryPreconditionError } from './commands/HistoryPreconditionError'
 
 /**
  * 批量命令基类
@@ -297,6 +298,11 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       removeCommandAt(currentIndex, 'undo failed')
       updateReactiveState()
 
+      if (error instanceof HistoryPreconditionError) {
+        useNaiveUIModule.messageWarning(t('notification.historyPreconditionFailed'))
+        return false
+      }
+
       // 显示错误通知
       useNaiveUIModule.messageError(
         t('notification.undoFailed', {
@@ -340,6 +346,11 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       console.error('❌ 重做操作失败', error)
       removeCommandAt(currentIndex, 'redo failed')
       updateReactiveState()
+
+      if (error instanceof HistoryPreconditionError) {
+        useNaiveUIModule.messageWarning(t('notification.historyPreconditionFailed'))
+        return false
+      }
 
       // 显示错误通知
       useNaiveUIModule.messageError(

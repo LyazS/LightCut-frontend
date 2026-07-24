@@ -19,6 +19,7 @@ import type { UnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import type { UnifiedSelectionModule } from '@/core/modules/UnifiedSelectionModule'
 import type { UnifiedTrackModule } from '@/core/modules/UnifiedTrackModule'
+import type { DisplayItem } from '@/core/directory/types'
 
 // 导入所有处理器
 import {
@@ -48,6 +49,9 @@ export function useUnifiedDrag(
   timelineModule: UnifiedTimelineModule,
   selectionModule: UnifiedSelectionModule,
   trackModule: UnifiedTrackModule,
+  libraryHistory: {
+    moveLibraryItemsWithHistory: (items: DisplayItem[], targetDirectoryId: string) => Promise<void>
+  },
 ) {
   // 存储处理器
   const sourceHandlers = new Map<DragSourceType, DragSourceHandler>()
@@ -217,8 +221,8 @@ export function useUnifiedDrag(
   registerSourceHandler(new TimelineItemSourceHandler(timelineModule, selectionModule))
 
   // 注册目标处理器
-  registerTargetHandler(new FolderTargetHandler(directoryModule))
-  registerTargetHandler(new TabTargetHandler(directoryModule))
+  registerTargetHandler(new FolderTargetHandler(directoryModule, libraryHistory))
+  registerTargetHandler(new TabTargetHandler(directoryModule, libraryHistory))
   registerTargetHandler(
     new TimelineTrackTargetHandler(timelineModule, selectionModule, trackModule),
   )

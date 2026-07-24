@@ -135,6 +135,15 @@
     "mediaDeletedWithFile": "素材 {name} 已删除（包括文件）",
     "mediaRemovedFromFolder": "素材 {name} 已从当前文件夹移除",
     "deleteFolderConfirm": "确定要删除文件夹 {name} 吗？此操作将递归删除所有子文件夹及其中的素材文件。",
+    "deleteEmptyFolderConfirm": "确定要删除空文件夹 {name} 吗？此操作可以通过撤销恢复。",
+    "history": {
+      "createFolder": "创建文件夹：{name}",
+      "renameFolder": "重命名文件夹：{name}",
+      "moveFolder": "移动文件夹",
+      "deleteEmptyFolder": "删除空文件夹",
+      "renameAsset": "重命名素材：{name}",
+      "moveItems": "移动 {count} 个项目"
+    },
     "folderDeletedWithMedia": "文件夹 {name} 已删除，同时删除了 {count} 个素材",
     "folderDeleted": "文件夹 {name} 已删除",
     "deleteFolderFailedWithReason": "删除文件夹 {name} 失败：{error}",

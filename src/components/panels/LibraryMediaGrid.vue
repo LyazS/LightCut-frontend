@@ -906,7 +906,7 @@ function handleMediaItemDrag(event: DragEvent, item: DisplayItem): void {
   }
 
   const selectedAssetIds = isItemSelected(item)
-    ? Array.from(unifiedStore.selectedLibraryAssetIds)
+    ? Array.from(unifiedStore.selectedLibraryAssetIds).filter((id) => Boolean(getMediaItem(id)))
     : undefined
 
   // 准备拖拽参数
@@ -1119,15 +1119,10 @@ async function handleRenameConfirm(newName: string): Promise<void> {
   try {
     if (target.type === 'directory') {
       // 重命名文件夹
-      const result = unifiedStore.renameDirectory(target.id, newName)
-      if (result.success) {
-        unifiedStore.messageSuccess(t('media.folderRenameSuccess'))
-      } else {
-        unifiedStore.messageError(result.error || t('media.folderRenameFailed'))
-        return
-      }
+      await unifiedStore.renameDirectoryWithHistory(target.id, newName)
+      unifiedStore.messageSuccess(t('media.folderRenameSuccess'))
     } else {
-      unifiedStore.updateAssetName(target.id, newName)
+      await unifiedStore.renameAssetWithHistory(target.id, newName)
       unifiedStore.messageSuccess(t('media.mediaRenameSuccess'))
     }
 
@@ -1146,11 +1141,7 @@ async function handleCreateFolder(folderName: string): Promise<void> {
   }
 
   try {
-    const result = unifiedStore.createDirectory(folderName, currentDir.value.id)
-    if (!result.success) {
-      unifiedStore.messageError(result.error || t('media.folderCreateFailed'))
-      return
-    }
+    await unifiedStore.createDirectoryWithHistory(folderName, currentDir.value.id)
     showCreateDirModal.value = false
     unifiedStore.messageSuccess(t('media.folderCreateSuccess'))
   } catch (error) {
@@ -1529,14 +1520,24 @@ async function deleteFolder(folderId: string): Promise<void> {
   const folder = getDirectory(folderId)
   if (!folder) return
 
+  const isEmpty = unifiedStore.isDirectoryEmpty(folderId)
+
   unifiedStore.dialogWarning({
     title: t('media.deleteFolder'),
-    content: t('media.deleteFolderConfirm', { name: folder.name }),
+    content: t(isEmpty ? 'media.deleteEmptyFolderConfirm' : 'media.deleteFolderConfirm', {
+      name: folder.name,
+    }),
     positiveText: t('media.confirm'),
     negativeText: t('media.cancel'),
     draggable: true,
     onPositiveClick: async () => {
       try {
+        if (isEmpty) {
+          await unifiedStore.deleteEmptyDirectoryWithHistory(folderId)
+          unifiedStore.messageSuccess(t('media.folderDeleted', { name: folder.name }))
+          return
+        }
+
         const result = await unifiedStore.deleteDirectory(folderId)
 
         if (result.success) {
@@ -1599,7 +1600,7 @@ async function handlePaste(): Promise<void> {
 
   showContextMenu.value = false
 
-  const result = await unifiedStore.paste(currentDir.value.id)
+  const result = await unifiedStore.pasteLibraryItemsWithHistory(currentDir.value.id)
 
   if (result.success) {
     unifiedStore.messageSuccess(t('media.pasteSuccess', { count: result.successCount }))
@@ -1617,7 +1618,7 @@ async function handlePaste(): Promise<void> {
 async function handlePasteToFolder(folderId: string): Promise<void> {
   showContextMenu.value = false
 
-  const result = await unifiedStore.paste(folderId)
+  const result = await unifiedStore.pasteLibraryItemsWithHistory(folderId)
 
   if (result.success) {
     unifiedStore.messageSuccess(t('media.pasteSuccess', { count: result.successCount }))

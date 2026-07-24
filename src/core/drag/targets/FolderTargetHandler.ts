@@ -15,11 +15,17 @@ import type {
 } from '@/core/types/drag'
 import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
+import type { DisplayItem } from '@/core/directory/types'
 
 export class FolderTargetHandler implements DropTargetHandler {
   readonly targetType: DropTargetType = TargetType.FOLDER
 
-  constructor(private directoryModule: UnifiedDirectoryModule) {}
+  constructor(
+    private directoryModule: UnifiedDirectoryModule,
+    private libraryHistory: {
+      moveLibraryItemsWithHistory: (items: DisplayItem[], targetDirectoryId: string) => Promise<void>
+    },
+  ) {}
 
   canAccept(dragData: UnifiedDragData): boolean {
     // 接受素材项目和文件夹
@@ -111,10 +117,8 @@ export class FolderTargetHandler implements DropTargetHandler {
         targetFolderId: folderTargetInfo.targetId,
       })
 
-      // 使用 directoryModule 的拖拽移动方法
-      await this.directoryModule.dragMoveMediaItems(
-        dragData.assetIds,
-        dragData.sourceFolderId || null,
+      await this.libraryHistory.moveLibraryItemsWithHistory(
+        dragData.assetIds.map((id) => ({ id, type: 'asset' })),
         folderTargetInfo.targetId,
       )
 
@@ -143,8 +147,10 @@ export class FolderTargetHandler implements DropTargetHandler {
         targetFolderId: folderTargetInfo.targetId,
       })
 
-      // 使用 directoryModule 的拖拽移动方法
-      await this.directoryModule.dragMoveFolder(dragData.folderId, folderTargetInfo.targetId)
+      await this.libraryHistory.moveLibraryItemsWithHistory(
+        [{ id: dragData.folderId, type: 'directory' }],
+        folderTargetInfo.targetId,
+      )
 
       console.log(`✅ [FolderTargetHandler] 文件夹移动成功`)
       return { success: true }

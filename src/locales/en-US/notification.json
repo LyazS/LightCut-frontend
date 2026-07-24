@@ -6,6 +6,7 @@
     "batchFailed": "Batch operation failed: {description} execution failed. {error}",
     "cannotUndo": "Cannot undo: no operations to undo",
     "cannotRedo": "Cannot redo: no operations to redo",
+    "historyPreconditionFailed": "This history operation is no longer valid. Your current state was kept.",
     "undoSuccess": "Undo: {description}",
     "redoSuccess": "Redo: {description}",
     "batchSuccess": "Batch operation completed: {summary}"

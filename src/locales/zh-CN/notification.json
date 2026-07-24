@@ -6,6 +6,7 @@
     "batchFailed": "批量操作失败：{description}执行失败。{error}",
     "cannotUndo": "无法撤销：没有可撤销的操作",
     "cannotRedo": "无法重做：没有可重做的操作",
+    "historyPreconditionFailed": "历史操作条件不满足，已保留当前状态",
     "undoSuccess": "已撤销: {description}",
     "redoSuccess": "已重做: {description}",
     "batchSuccess": "批量操作完成：{summary}"

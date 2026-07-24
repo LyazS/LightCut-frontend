@@ -10,6 +10,8 @@ import type {
   UnifiedTrackModule,
   UnifiedSelectionModule,
 } from '@/core/modules'
+import type { UnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
+import type { DisplayItem, VirtualDirectory } from '@/core/directory/types'
 import {
   AddTimelineItemCommand,
   RemoveTimelineItemCommand,
@@ -27,6 +29,12 @@ import {
   ToggleTrackMuteCommand,
   SelectTimelineSelectionsCommand,
   TrimTimelineItemCommand,
+  CreateDirectoryCommand,
+  RenameDirectoryCommand,
+  MoveDirectoryCommand,
+  DeleteEmptyDirectoryCommand,
+  RenameAssetCommand,
+  MoveLibraryItemsCommand,
 } from '@/core/modules/commands/timelineCommands'
 import { ApplyChangePlanCommand } from '@/core/modules/commands/ApplyChangePlanCommand'
 import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchCommands'
@@ -53,6 +61,7 @@ import { RENDERER_FPS } from '@/core/mediabunny/constant'
 import type { ChangePlan } from '@/core/property-system'
 import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
 import type { TrimTimelineItemSide } from '@/core/modules/commands/timelineCommands'
+import { useAppI18n } from '@/core/composables/useI18n'
 
 interface PlaybackRateUpdate {
   playbackRate: number
@@ -69,8 +78,11 @@ export function useHistoryOperations(
   unifiedConfigModule: UnifiedConfigModule,
   unifiedTrackModule: UnifiedTrackModule,
   unifiedSelectionModule: UnifiedSelectionModule,
+  unifiedDirectoryModule: UnifiedDirectoryModule,
   ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
 ) {
+  const { t } = useAppI18n()
+
   // ==================== 辅助函数 ====================
 
   function hasPlaybackRateChanges(
@@ -96,6 +108,85 @@ export function useHistoryOperations(
     }
 
     return timelineItem
+  }
+
+  // ==================== 素材库历史记录方法 ====================
+
+  async function createDirectoryWithHistory(
+    name: string,
+    parentId: string,
+  ): Promise<VirtualDirectory> {
+    const command = new CreateDirectoryCommand(
+      name,
+      parentId,
+      unifiedDirectoryModule,
+      t('media.history.createFolder', { name: name.trim() }),
+    )
+    await unifiedHistoryModule.executeCommand(command)
+
+    const directory = command.createdDirectory
+    if (!directory) {
+      throw new Error('创建文件夹后未找到目录数据')
+    }
+    return directory
+  }
+
+  async function renameDirectoryWithHistory(directoryId: string, newName: string): Promise<void> {
+    await unifiedHistoryModule.executeCommand(
+      new RenameDirectoryCommand(
+        directoryId,
+        newName,
+        unifiedDirectoryModule,
+        t('media.history.renameFolder', { name: newName.trim() }),
+      ),
+    )
+  }
+
+  async function deleteEmptyDirectoryWithHistory(directoryId: string): Promise<void> {
+    await unifiedHistoryModule.executeCommand(
+      new DeleteEmptyDirectoryCommand(
+        directoryId,
+        unifiedDirectoryModule,
+        t('media.history.deleteEmptyFolder'),
+      ),
+    )
+  }
+
+  async function renameAssetWithHistory(assetId: string, newName: string): Promise<void> {
+    await unifiedHistoryModule.executeCommand(
+      new RenameAssetCommand(
+        assetId,
+        newName,
+        unifiedMediaModule,
+        t('media.history.renameAsset', { name: newName.trim() }),
+      ),
+    )
+  }
+
+  async function moveLibraryItemsWithHistory(
+    items: DisplayItem[],
+    targetDirectoryId: string,
+  ): Promise<void> {
+    if (items.length === 1 && items[0].type === 'directory') {
+      await unifiedHistoryModule.executeCommand(
+        new MoveDirectoryCommand(
+          items[0].id,
+          targetDirectoryId,
+          unifiedDirectoryModule,
+          t('media.history.moveFolder'),
+        ),
+      )
+      return
+    }
+
+    await unifiedHistoryModule.executeCommand(
+      new MoveLibraryItemsCommand(
+        items,
+        targetDirectoryId,
+        unifiedDirectoryModule,
+        t('media.history.moveItems', { count: items.length }),
+      ),
+    )
   }
 
   // ==================== 时间轴项目历史记录方法 ====================
@@ -830,6 +921,11 @@ export function useHistoryOperations(
   }
 
   return {
+    createDirectoryWithHistory,
+    renameDirectoryWithHistory,
+    deleteEmptyDirectoryWithHistory,
+    renameAssetWithHistory,
+    moveLibraryItemsWithHistory,
     addTimelineItemWithHistory,
     removeTimelineItemWithHistory,
     startASRRequestWithHistory,

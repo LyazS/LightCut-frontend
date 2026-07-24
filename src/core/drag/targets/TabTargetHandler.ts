@@ -15,11 +15,17 @@ import type {
 } from '@/core/types/drag'
 import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedDirectoryModule } from '@/core/modules/UnifiedDirectoryModule'
+import type { DisplayItem } from '@/core/directory/types'
 
 export class TabTargetHandler implements DropTargetHandler {
   readonly targetType: DropTargetType = TargetType.TAB
 
-  constructor(private directoryModule: UnifiedDirectoryModule) {}
+  constructor(
+    private directoryModule: UnifiedDirectoryModule,
+    private libraryHistory: {
+      moveLibraryItemsWithHistory: (items: DisplayItem[], targetDirectoryId: string) => Promise<void>
+    },
+  ) {}
 
   canAccept(dragData: UnifiedDragData): boolean {
     // 只接受素材项目和文件夹
@@ -122,9 +128,8 @@ export class TabTargetHandler implements DropTargetHandler {
         case DragSourceType.MEDIA_ITEM: {
           const mediaData = dragData as MediaItemDragData
 
-          await this.directoryModule.dragMoveMediaItems(
-            [mediaData.assetId],
-            mediaData.sourceFolderId || null,
+          await this.libraryHistory.moveLibraryItemsWithHistory(
+            mediaData.assetIds.map((id) => ({ id, type: 'asset' })),
             targetDirId,
           )
 
@@ -134,7 +139,10 @@ export class TabTargetHandler implements DropTargetHandler {
         case DragSourceType.FOLDER: {
           const folderData = dragData as FolderDragData
 
-          await this.directoryModule.dragMoveFolder(folderData.folderId, targetDirId)
+          await this.libraryHistory.moveLibraryItemsWithHistory(
+            [{ id: folderData.folderId, type: 'directory' }],
+            targetDirId,
+          )
 
           return { success: true }
         }
