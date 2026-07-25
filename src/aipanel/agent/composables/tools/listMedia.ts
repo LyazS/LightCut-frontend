@@ -6,8 +6,12 @@
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { UnifiedMediaItemData, UnifiedMediaIndexMetadata } from '@/core/mediaitem/types'
 import type { VirtualDirectory } from '@/core/directory/types'
-import type { ToolDefinition } from '../core/toolTypes'
+import type { ToolDefinition, ToolResult } from '../core/toolTypes'
 import { buildToolError, buildToolSuccess } from './utils/result'
+import {
+  buildCanonicalDirectoryPath as buildCanonicalPath,
+  normalizeDirectoryPath,
+} from './libraryPath'
 
 interface VirtualEntry {
   id: string
@@ -40,7 +44,7 @@ function isUnifiedMediaItemData(value: unknown): value is UnifiedMediaItemData {
   return 'id' in value && 'name' in value && 'mediaType' in value
 }
 
-function formatMediaEntry(entry: VirtualEntry): Record<string, any> {
+function formatMediaEntry(entry: VirtualEntry): Record<string, unknown> {
   const mediaItem = entry.mediaItem
   const indexing = getCompletedIndexingMetadata(mediaItem)
   const baseEntry = {
@@ -68,46 +72,6 @@ function formatMediaEntry(entry: VirtualEntry): Record<string, any> {
     title,
     shots: indexing.segmentCount,
   }
-}
-
-function normalizeDirectoryPath(inputPath: string): string | null {
-  const trimmed = inputPath.trim()
-  if (!trimmed) {
-    return null
-  }
-
-  const normalizedSlashes = trimmed.replace(/\/+/g, '/')
-  if (!normalizedSlashes.startsWith('/')) {
-    return null
-  }
-
-  if (normalizedSlashes === '/') {
-    return '/'
-  }
-
-  return normalizedSlashes.endsWith('/') ? normalizedSlashes : `${normalizedSlashes}/`
-}
-
-function buildCanonicalPath(dirId: string): string {
-  const store = useUnifiedStore()
-  const directoriesMap = store.directories || new Map()
-  const pathParts: string[] = []
-  let currentId: string | null = dirId
-
-  while (currentId !== null) {
-    const dir = directoriesMap.get(currentId)
-    if (!dir) {
-      break
-    }
-
-    if (dir.parentId !== null) {
-      pathParts.unshift(dir.name)
-    }
-
-    currentId = dir.parentId
-  }
-
-  return pathParts.length === 0 ? '/' : `/${pathParts.join('/')}/`
 }
 
 function resolveNamedPathToDirId(filePath: string): ResolvedDirectoryPath | null {
@@ -252,18 +216,32 @@ function getDirectoryEntries(dirId: string): VirtualEntry[] {
   }
 }
 
-function logListMediaResult(result: Record<string, any>) {
+function logListMediaResult(result: ToolResult): ToolResult {
   console.log('[list_media] result', result)
   return result
 }
 
-export async function executeListMedia(args: Record<string, any>) {
-  const { filePath, offset = 1, limit = 20 } = args
+export async function executeListMedia(args: Record<string, unknown>): Promise<ToolResult> {
+  const filePath = args.filePath
+  const offset = args.offset ?? 1
+  const limit = args.limit ?? 20
 
   try {
     if (typeof filePath !== 'string' || !filePath.trim()) {
       return logListMediaResult(
         buildToolError('list_media', 'invalid_arguments', 'filePath 是必填项，且必须是字符串。'),
+      )
+    }
+
+    if (typeof offset !== 'number' || !Number.isInteger(offset) || offset < 1) {
+      return logListMediaResult(
+        buildToolError('list_media', 'invalid_arguments', 'offset 必须是大于等于 1 的整数。'),
+      )
+    }
+
+    if (typeof limit !== 'number' || !Number.isInteger(limit) || limit < 1) {
+      return logListMediaResult(
+        buildToolError('list_media', 'invalid_arguments', 'limit 必须是大于等于 1 的整数。'),
       )
     }
 
@@ -324,7 +302,7 @@ export async function executeListMedia(args: Record<string, any>) {
         : formatMediaEntry(entry),
     )
 
-    const canonicalPath = buildCanonicalPath(resolved.dirId)
+    const canonicalPath = buildCanonicalPath(resolved.dirId) || resolved.canonicalPath
     const nextOffset = endIdx < totalEntries ? endIdx + 1 : null
     return logListMediaResult(
       buildToolSuccess('list_media', {
@@ -338,7 +316,7 @@ export async function executeListMedia(args: Record<string, any>) {
         },
       }),
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     return logListMediaResult(
       buildToolError(
         'list_media',

@@ -1,7 +1,12 @@
+import { unref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import * as tools from './tools'
 import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
 import { framesToTimecode } from '@/core/utils/timeUtils'
+import {
+  buildCanonicalDirectoryPath,
+  getDirectoryParentPath,
+} from './tools/libraryPath'
 
 type AgentToolRuntimeReturn = ReturnType<typeof createAgentToolRuntime>
 
@@ -14,11 +19,51 @@ function createAgentToolRuntime() {
     const parts: string[] = []
 
     try {
-      const selectedMediaIds = Array.from(unifiedStore.selectedLibraryAssetIds)
-      if (selectedMediaIds.length > 0) {
-        parts.push('[当前选中素材media]')
-        selectedMediaIds.forEach((mediaId) => {
-          parts.push(`- ID: ${mediaId}`)
+      const currentDirectory = unref(unifiedStore.currentDir)
+      if (currentDirectory) {
+        const currentPath = buildCanonicalDirectoryPath(currentDirectory.id)
+        if (currentPath) {
+          parts.push('[当前素材库目录] ' + currentPath)
+        }
+      }
+
+      const selectedLibraryItemIds = Array.from(unifiedStore.selectedLibraryAssetIds)
+      if (selectedLibraryItemIds.length > 0) {
+        parts.push('[当前选中素材库项目]')
+        selectedLibraryItemIds.forEach((itemId) => {
+          const directory = unifiedStore.getDirectory(itemId)
+          if (directory) {
+            const path = buildCanonicalDirectoryPath(directory.id)
+            const parentPath = getDirectoryParentPath(directory)
+            parts.push(
+              '- type: directory; name: ' +
+                directory.name +
+                '; path: ' +
+                (path || '') +
+                '; parentPath: ' +
+                (parentPath || 'null'),
+            )
+            return
+          }
+
+          const media = unifiedStore.getMediaItem(itemId)
+          const parentDirectoryId = unifiedStore.getAssetDirectoryId(itemId)
+          const parentPath = parentDirectoryId
+            ? buildCanonicalDirectoryPath(parentDirectoryId)
+            : null
+          if (media) {
+            parts.push(
+              '- type: media; mediaId: ' +
+                media.id +
+                '; name: ' +
+                media.name +
+                '; parentPath: ' +
+                (parentPath || 'null'),
+            )
+            return
+          }
+
+          parts.push('- type: unknown; id: ' + itemId)
         })
       }
 
@@ -32,7 +77,7 @@ function createAgentToolRuntime() {
           parts.push(`- ID: ${clipId}`)
         })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取选中状态失败:', error)
     }
 
@@ -53,7 +98,7 @@ function createAgentToolRuntime() {
       parts.push(
         `[时间轴当前可视范围] ${framesToTimecode(startFrames)} ～ ${framesToTimecode(endFrames)}`,
       )
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取播放头或可视范围失败:', error)
     }
 

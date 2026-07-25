@@ -5,6 +5,8 @@
 
 import { addTrackTool } from './addTrack'
 import { createSubtitleClipTool } from './createSubtitleClip'
+import { createFolderTool } from './createFolder'
+import { deleteEmptyFolderTool } from './deleteEmptyFolder'
 import { patchClipKeyframeTool } from './patchClipKeyframe'
 import { listMediaTool } from './listMedia'
 import { listTracksTool } from './listTracks'
@@ -12,10 +14,12 @@ import { modifyProjectInfoTool } from './modifyProjectInfo'
 import { insertClipTool } from './insertClip'
 import { inspectTimelineFramesTool } from './inspectTimelineFrames'
 import { moveClipTool } from './moveClip'
+import { moveLibraryItemsTool } from './moveLibraryItems'
 import { moveTrackTool } from './moveTrack'
 import { updateTrackPropertiesTool } from './updateTrackProperties'
 import { readClipKeyframeTool } from './readClipKeyframe'
 import { readMediaTool } from './readMedia'
+import { renameLibraryItemTool } from './renameLibraryItem'
 import { readProjectInfoTool } from './readProjectInfo'
 import { readTracksTool } from './readTracks'
 import { readItemTool } from './readItem'
@@ -76,6 +80,8 @@ function registerTool(tool: ToolDefinition): void {
 // 注册内置工具
 registerTool(addTrackTool)
 registerTool(createSubtitleClipTool)
+registerTool(createFolderTool)
+registerTool(deleteEmptyFolderTool)
 registerTool(patchClipKeyframeTool)
 registerTool(listMediaTool)
 registerTool(listTracksTool)
@@ -84,10 +90,12 @@ registerTool(modifyProjectInfoTool)
 registerTool(insertClipTool)
 registerTool(inspectTimelineFramesTool)
 registerTool(moveClipTool)
+registerTool(moveLibraryItemsTool)
 registerTool(moveTrackTool)
 registerTool(updateTrackPropertiesTool)
 registerTool(readClipKeyframeTool)
 registerTool(readMediaTool)
+registerTool(renameLibraryItemTool)
 registerTool(readTracksTool)
 registerTool(readItemTool)
 registerTool(updateItemTool)
@@ -178,6 +186,8 @@ export function listTools(): ToolDefinition[] {
 export {
   addTrackTool,
   createSubtitleClipTool,
+  createFolderTool,
+  deleteEmptyFolderTool,
   patchClipKeyframeTool,
   listMediaTool,
   listTracksTool,
@@ -186,10 +196,12 @@ export {
   insertClipTool,
   inspectTimelineFramesTool,
   moveClipTool,
+  moveLibraryItemsTool,
   moveTrackTool,
   updateTrackPropertiesTool,
   readClipKeyframeTool,
   readMediaTool,
+  renameLibraryItemTool,
   readTracksTool,
   readItemTool,
   updateItemTool,
