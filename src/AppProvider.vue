@@ -35,6 +35,27 @@ watch(locale, () => {
   box-sizing: border-box;
 }
 
+/* 编辑器以拖拽和框选为主，文本输入控件除外。 */
+#app,
+#app * {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app input,
+#app textarea,
+#app [contenteditable]:not([contenteditable='false']) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 聊天记录应支持复制，包括 Markdown、工具调用和交互卡片文本。 */
+#app .chat-messages-container,
+#app .chat-messages-container * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 #app {
   width: 100vw;
   height: 100vh;

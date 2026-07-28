@@ -39,192 +39,195 @@
     </div>
 
     <!-- 主体区域：每个轨道一行，包含左侧控制和右侧内容 -->
-    <n-scrollbar>
-      <div
-        class="timeline-body"
-        :class="{ 'is-marquee-pointer-active': isTimelineMarqueePointerActive }"
-        ref="timelineBody"
-        @wheel="handleWheel"
-        @dragover="handleTimelineDragOver"
-        @drop="handleTimelineDrop"
-        @dragleave="handleTimelineDragLeave"
-        @dragend="handleTimelineDragEnd"
-      >
-        <!-- 每个轨道一行 -->
+    <div ref="timelineScrollViewport" class="timeline-scroll-viewport">
+      <n-scrollbar class="timeline-scrollbar">
         <div
-          v-for="track in tracks"
-          :key="track.id"
-          class="track-row"
-          :style="{ height: track.height + 'px' }"
+          class="timeline-body"
+          :class="{ 'is-marquee-pointer-active': isTimelineMarqueePointerActive }"
+          :style="{ minHeight: `${timelineBodyMinHeight}px` }"
+          ref="timelineBody"
+          @pointerdown="handleMarqueePointerDown"
+          @pointermove="handleMarqueePointerMove"
+          @pointerup="handleMarqueePointerUp"
+          @pointercancel="handleMarqueePointerCancel"
+          @lostpointercapture="handleMarqueeLostPointerCapture"
+          @wheel="handleWheel"
+          @dragover="handleTimelineDragOver"
+          @drop="handleTimelineDrop"
+          @dragleave="handleTimelineDragLeave"
+          @dragend="handleTimelineDragEnd"
         >
-          <!-- 左侧轨道控制 -->
+          <!-- 每个轨道一行 -->
           <div
-            class="track-controls"
-            :class="{
-              'drag-over': dragOverTrackId === track.id,
-              'drag-over-before': dragOverTrackId === track.id && insertPosition === 'before',
-              'drag-over-after': dragOverTrackId === track.id && insertPosition === 'after',
-            }"
-            :data-track-id="track.id"
-            @dragover="handleTrackDragOver($event, track.id)"
-            @drop="handleTrackDrop($event, track.id)"
-            @dragleave="handleTrackDragLeave($event, track.id)"
+            v-for="track in tracks"
+            :key="track.id"
+            class="track-row"
+            :style="{ height: track.height + 'px' }"
           >
-            <!-- 拖拽提示蒙版 -->
+            <!-- 左侧轨道控制 -->
             <div
-              v-if="dragOverTrackId === track.id"
-              class="drag-hint-overlay"
-              :class="insertPosition"
+              class="track-controls"
+              :class="{
+                'drag-over': dragOverTrackId === track.id,
+                'drag-over-before': dragOverTrackId === track.id && insertPosition === 'before',
+                'drag-over-after': dragOverTrackId === track.id && insertPosition === 'after',
+              }"
+              :data-track-id="track.id"
+              @dragover="handleTrackDragOver($event, track.id)"
+              @drop="handleTrackDrop($event, track.id)"
+              @dragleave="handleTrackDragLeave($event, track.id)"
             >
-              <div class="drag-hint-text">
-                {{
-                  insertPosition === 'before'
-                    ? t('common.trackDrag.dragToTop')
-                    : t('common.trackDrag.dragToBottom')
-                }}
+              <!-- 拖拽提示蒙版 -->
+              <div
+                v-if="dragOverTrackId === track.id"
+                class="drag-hint-overlay"
+                :class="insertPosition"
+              >
+                <div class="drag-hint-text">
+                  {{
+                    insertPosition === 'before'
+                      ? t('common.trackDrag.dragToTop')
+                      : t('common.trackDrag.dragToBottom')
+                  }}
+                </div>
+              </div>
+
+              <!-- 轨道颜色标识 -->
+              <div class="track-color-indicator" :class="`track-color-${track.type}`"></div>
+
+              <!-- 轨道名称 -->
+              <div class="track-name">
+                <!-- 拖拽手柄图标 -->
+                <div
+                  class="track-drag-handle"
+                  :class="{ dragging: draggingTrackId === track.id }"
+                  draggable="true"
+                  @dragstart="handleTrackDragStart($event, track.id)"
+                  @dragend="handleTrackDragEnd"
+                  :title="t('common.trackDrag.dragHandle')"
+                >
+                  <component :is="IconComponents.DRAGGABLE" size="24px" />
+                </div>
+
+                <input
+                  v-if="editingTrackId === track.id"
+                  v-model="editingTrackName"
+                  @blur="finishRename"
+                  @keyup.enter="finishRename"
+                  @keyup.escape="cancelRename"
+                  class="track-name-input"
+                  :ref="
+                    (el) => {
+                      if (el) nameInputs[track.id] = el as HTMLInputElement
+                    }
+                  "
+                />
+                <span
+                  v-else
+                  @dblclick="startRename(track)"
+                  class="track-name-text"
+                  :title="track.name"
+                >
+                  {{ track.name }}
+                </span>
+              </div>
+
+              <div class="track-buttons">
+                <!-- 轨道类型图标和片段数量 -->
+                <div
+                  class="track-type-info"
+                  :title="`${t('timeline.' + track.type + 'Track')}，${t('timeline.clips')} ${getClipsForTrack(track.id).length}`"
+                >
+                  <div class="track-type-icon">
+                    <component :is="getTrackTypeIcon(track.type)" size="14px" />
+                  </div>
+                  <div class="clip-count">
+                    {{ getClipsForTrack(track.id).length }}
+                  </div>
+                </div>
+
+                <!-- 轨道快捷操作按钮 -->
+                <div class="track-status">
+                  <!-- 可见性切换按钮 - 音频轨道不显示 -->
+                  <HoverButton
+                    v-if="track.type !== 'audio'"
+                    variant="small"
+                    :class="track.isVisible ? 'active' : ''"
+                    :title="track.isVisible ? t('timeline.hideTrack') : t('timeline.showTrack')"
+                    @click="toggleVisibility(track.id)"
+                  >
+                    <template #icon>
+                      <component :is="getVisibilityIcon(track.isVisible)" size="14px" />
+                    </template>
+                  </HoverButton>
+
+                  <!-- 静音切换按钮 - 文本轨道不显示 -->
+                  <HoverButton
+                    v-if="track.type !== 'text'"
+                    variant="small"
+                    :class="!track.isMuted ? 'active' : ''"
+                    :title="track.isMuted ? t('timeline.unmuteTrack') : t('timeline.muteTrack')"
+                    @click="toggleMute(track.id)"
+                  >
+                    <template #icon>
+                      <component :is="getMuteIcon(track.isMuted)" size="14px" />
+                    </template>
+                  </HoverButton>
+                </div>
               </div>
             </div>
 
-            <!-- 轨道颜色标识 -->
-            <div class="track-color-indicator" :class="`track-color-${track.type}`"></div>
-
-            <!-- 轨道名称 -->
-            <div class="track-name">
-              <!-- 拖拽手柄图标 -->
-              <div
-                class="track-drag-handle"
-                :class="{ dragging: draggingTrackId === track.id }"
-                draggable="true"
-                @dragstart="handleTrackDragStart($event, track.id)"
-                @dragend="handleTrackDragEnd"
-                :title="t('common.trackDrag.dragHandle')"
-              >
-                <component :is="IconComponents.DRAGGABLE" size="24px" />
-              </div>
-
-              <input
-                v-if="editingTrackId === track.id"
-                v-model="editingTrackName"
-                @blur="finishRename"
-                @keyup.enter="finishRename"
-                @keyup.escape="cancelRename"
-                class="track-name-input"
-                :ref="
-                  (el) => {
-                    if (el) nameInputs[track.id] = el as HTMLInputElement
-                  }
-                "
+            <!-- 右侧轨道内容区域 -->
+            <div
+              class="track-content"
+              :class="{
+                'track-hidden': !track.isVisible,
+                [`track-type-${track.type}`]: true,
+              }"
+              :data-track-id="track.id"
+              :data-track-type="track.type"
+              :data-hidden-text="!track.isVisible ? t('timeline.trackHidden') : ''"
+              @click="handleTrackContentClick"
+              @wheel="handleWheel"
+            >
+              <!-- 该轨道的时间轴项目 -->
+              <component
+                v-for="item in getClipsForTrack(track.id)"
+                :key="item.id"
+                :is="renderTimelineItem(item, track)"
               />
-              <span
-                v-else
-                @dblclick="startRename(track)"
-                class="track-name-text"
-                :title="track.name"
-              >
-                {{ track.name }}
-              </span>
-            </div>
-
-            <div class="track-buttons">
-              <!-- 轨道类型图标和片段数量 -->
-              <div
-                class="track-type-info"
-                :title="`${t('timeline.' + track.type + 'Track')}，${t('timeline.clips')} ${getClipsForTrack(track.id).length}`"
-              >
-                <div class="track-type-icon">
-                  <component :is="getTrackTypeIcon(track.type)" size="14px" />
-                </div>
-                <div class="clip-count">
-                  {{ getClipsForTrack(track.id).length }}
-                </div>
-              </div>
-
-              <!-- 轨道快捷操作按钮 -->
-              <div class="track-status">
-                <!-- 可见性切换按钮 - 音频轨道不显示 -->
-                <HoverButton
-                  v-if="track.type !== 'audio'"
-                  variant="small"
-                  :class="track.isVisible ? 'active' : ''"
-                  :title="track.isVisible ? t('timeline.hideTrack') : t('timeline.showTrack')"
-                  @click="toggleVisibility(track.id)"
-                >
-                  <template #icon>
-                    <component :is="getVisibilityIcon(track.isVisible)" size="14px" />
-                  </template>
-                </HoverButton>
-
-                <!-- 静音切换按钮 - 文本轨道不显示 -->
-                <HoverButton
-                  v-if="track.type !== 'text'"
-                  variant="small"
-                  :class="!track.isMuted ? 'active' : ''"
-                  :title="track.isMuted ? t('timeline.unmuteTrack') : t('timeline.muteTrack')"
-                  @click="toggleMute(track.id)"
-                >
-                  <template #icon>
-                    <component :is="getMuteIcon(track.isMuted)" size="14px" />
-                  </template>
-                </HoverButton>
-              </div>
+              <UnifiedTimelineTransitionOverlay
+                v-for="overlay in getTransitionOverlaysForTrack(track.id)"
+                :key="overlay.selectionId"
+                :overlay="overlay"
+                :track-height="track.height"
+                :timeline-width="unifiedStore.TimelineContentWidth"
+                @select="handleSelectTransition"
+                @contextmenu="handleTransitionContextMenu"
+                @updateSnapResult="handleTransitionOverlaySnapResult"
+              />
             </div>
           </div>
 
-          <!-- 右侧轨道内容区域 -->
-          <div
-            class="track-content"
-            :class="{
-              'track-hidden': !track.isVisible,
-              [`track-type-${track.type}`]: true,
-            }"
-            :data-track-id="track.id"
-            :data-track-type="track.type"
-            :data-hidden-text="!track.isVisible ? t('timeline.trackHidden') : ''"
-            @click="handleTrackContentClick"
-            @pointerdown="handleMarqueePointerDown"
-            @pointermove="handleMarqueePointerMove"
-            @pointerup="handleMarqueePointerUp"
-            @pointercancel="handleMarqueePointerCancel"
-            @lostpointercapture="handleMarqueeLostPointerCapture"
-            @wheel="handleWheel"
-          >
-            <!-- 该轨道的时间轴项目 -->
-            <component
-              v-for="item in getClipsForTrack(track.id)"
-              :key="item.id"
-              :is="renderTimelineItem(item, track)"
-            />
-            <UnifiedTimelineTransitionOverlay
-              v-for="overlay in getTransitionOverlaysForTrack(track.id)"
-              :key="overlay.selectionId"
-              :overlay="overlay"
-              :track-height="track.height"
-              :timeline-width="unifiedStore.TimelineContentWidth"
-              @select="handleSelectTransition"
-              @contextmenu="handleTransitionContextMenu"
-              @updateSnapResult="handleTransitionOverlaySnapResult"
-            />
+          <!-- 时间轴背景网格 -->
+          <div class="timeline-grid">
+            <div
+              v-for="line in gridLines"
+              :key="line.time"
+              class="grid-line"
+              :class="{ 'frame-line': line.isFrame }"
+              :style="{
+                left:
+                  LayoutConstants.TRACK_CONTROL_WIDTH +
+                  unifiedStore.frameToPixel(line.time, unifiedStore.TimelineContentWidth) +
+                  'px',
+              }"
+            ></div>
           </div>
+          <div v-if="marqueeRect" class="timeline-marquee-selection" :style="marqueeStyle"></div>
         </div>
-
-        <!-- 时间轴背景网格 -->
-        <div class="timeline-grid">
-          <div
-            v-for="line in gridLines"
-            :key="line.time"
-            class="grid-line"
-            :class="{ 'frame-line': line.isFrame }"
-            :style="{
-              left:
-                LayoutConstants.TRACK_CONTROL_WIDTH +
-                unifiedStore.frameToPixel(line.time, unifiedStore.TimelineContentWidth) +
-                'px',
-            }"
-          ></div>
-        </div>
-        <div v-if="marqueeRect" class="timeline-marquee-selection" :style="marqueeStyle"></div>
-      </div>
-    </n-scrollbar>
+      </n-scrollbar>
+    </div>
     <!-- 吸附指示器 - 贯穿整个时间轴区域 -->
     <div class="snap-indicator-container">
       <UnifiedSnapIndicator
@@ -344,6 +347,13 @@ const viewportFrameRange = computed(() => {
 })
 
 const timelineBody = ref<HTMLElement>()
+const timelineScrollViewport = ref<HTMLElement>()
+const timelineBodyMinHeight = ref(0)
+let timelineBodyResizeObserver: ResizeObserver | null = null
+
+function syncTimelineBodyHeight(): void {
+  timelineBodyMinHeight.value = timelineScrollViewport.value?.clientHeight ?? 0
+}
 
 // 时间刻度相关变量
 const scaleContainer = ref<HTMLElement>()
@@ -676,6 +686,12 @@ let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   updateContainerWidth()
 
+  if (timelineScrollViewport.value) {
+    syncTimelineBodyHeight()
+    timelineBodyResizeObserver = new ResizeObserver(syncTimelineBodyHeight)
+    timelineBodyResizeObserver.observe(timelineScrollViewport.value)
+  }
+
   // 使用 ResizeObserver 监听组件自身尺寸变化
   if (scaleContainer.value) {
     resizeObserver = new ResizeObserver(() => {
@@ -696,6 +712,11 @@ onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
+  }
+
+  if (timelineBodyResizeObserver) {
+    timelineBodyResizeObserver.disconnect()
+    timelineBodyResizeObserver = null
   }
 
   window.removeEventListener('keydown', handleKeyDown)
@@ -785,10 +806,18 @@ onUnmounted(() => {
 }
 
 .timeline-body {
-  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
+}
+
+.timeline-scroll-viewport {
+  flex: 1;
+  min-height: 0;
+}
+
+.timeline-scrollbar {
+  height: 100%;
 }
 
 .timeline-body.is-marquee-pointer-active {

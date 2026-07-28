@@ -15,6 +15,7 @@
           ref="librarySelectionSurface"
           class="media-grid__selection-surface"
           :class="{ 'is-marquee-pointer-active': isLibraryMarqueePointerActive }"
+          :style="{ minHeight: `${librarySelectionSurfaceMinHeight}px` }"
           @pointerdown="handleLibraryMarqueePointerDown"
           @pointermove="handleLibraryMarqueePointerMove"
           @pointerup="handleLibraryMarqueePointerUp"
@@ -262,7 +263,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount, watch, type Component } from 'vue'
+import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch, type Component } from 'vue'
 import { NScrollbar, type ScrollbarInst } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useMarqueeSelection } from '@/core/composables/useMarqueeSelection'
@@ -324,6 +325,21 @@ const showCreateDirModal = ref(false)
 const libraryScrollbar = ref<ScrollbarInst | null>(null)
 const mediaGridScrollViewport = ref<HTMLElement>()
 const librarySelectionSurface = ref<HTMLElement>()
+const librarySelectionSurfaceMinHeight = ref(0)
+let librarySelectionSurfaceResizeObserver: ResizeObserver | undefined
+
+function syncLibrarySelectionSurfaceHeight(): void {
+  librarySelectionSurfaceMinHeight.value = mediaGridScrollViewport.value?.clientHeight ?? 0
+}
+
+onMounted(() => {
+  const viewport = mediaGridScrollViewport.value
+  if (!viewport) return
+
+  syncLibrarySelectionSurfaceHeight()
+  librarySelectionSurfaceResizeObserver = new ResizeObserver(syncLibrarySelectionSurfaceHeight)
+  librarySelectionSurfaceResizeObserver.observe(viewport)
+})
 
 const LIBRARY_AUTO_SCROLL_EDGE = 32
 const LIBRARY_AUTO_SCROLL_SPEED = 12
@@ -397,6 +413,7 @@ watch(
 
 onBeforeUnmount(() => {
   if (revealedAssetTimer) clearTimeout(revealedAssetTimer)
+  librarySelectionSurfaceResizeObserver?.disconnect()
   stopLibraryAutoScroll()
 })
 
@@ -1885,7 +1902,6 @@ async function handleBatchDelete(): Promise<void> {
 
 .media-grid__selection-surface {
   position: relative;
-  min-height: 100%;
 }
 
 .media-grid__selection-surface.is-marquee-pointer-active {

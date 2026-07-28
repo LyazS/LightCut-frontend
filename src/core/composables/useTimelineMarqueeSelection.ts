@@ -20,7 +20,10 @@ export function useTimelineMarqueeSelection(timelineBody: Ref<HTMLElement | unde
     },
     getSelectedIds: () => unifiedStore.selectedTimelineSelectionIds,
     applySelection: (ids) => unifiedStore.selectTimelineSelections(ids, 'replace'),
-    canStart: (event) => event.target === event.currentTarget,
+    canStart: (event) => {
+      const target = event.target as Element
+      return target === event.currentTarget || target.classList.contains('track-content')
+    },
     getLocalPoint: (point, body) => {
       const bounds = body.getBoundingClientRect()
       return {
