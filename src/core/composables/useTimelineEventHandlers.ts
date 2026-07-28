@@ -107,18 +107,12 @@ export function useTimelineEventHandlers(
    * 处理键盘事件
    */
   async function handleKeyDown(event: KeyboardEvent) {
-    // 检查是否有修饰键（除了Escape和Delete），如果有则不处理（让全局快捷键处理）
+    // 检查是否有修饰键（除了Delete），如果有则不处理（让全局快捷键处理）
     if (
       (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) &&
-      event.key !== 'Escape' &&
       event.key !== 'Delete'
     ) {
       return
-    }
-
-    // 按 Escape 键取消选中
-    if (event.key === 'Escape') {
-      unifiedStore.clearTimelineSelection()
     }
 
     // 按 Delete 键删除选中的项目

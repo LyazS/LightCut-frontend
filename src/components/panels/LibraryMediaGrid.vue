@@ -1,221 +1,250 @@
 <template>
   <div class="media-grid" :class="{ 'drag-over': isDragOver }">
     <LibraryBreadcrumb />
-    <n-scrollbar
-      class="media-grid__scrollbar"
-      @dragover="handleDragOver"
-      @dragleave="handleDragLeave"
-      @drop="handleDrop"
-      @contextmenu="handleContextMenu"
-      @click="handleContainerClick"
-    >
-      <!-- 空状态 -->
-      <div v-if="displayItems.length === 0" class="empty-state">
-        <component :is="IconComponents.FOLDER_OPEN" size="32px" />
-        <p>{{ currentDir ? t('media.folderEmpty') : t('media.selectFolder') }}</p>
-        <p class="hint">{{ t('media.dragOrImportHint') }}</p>
-      </div>
-
-      <!-- 内容项列表 - 图标视图 -->
-      <div
-        v-else-if="unifiedStore.viewMode !== 'list'"
-        class="content-list"
-        :class="`view-${unifiedStore.viewMode}`"
+    <div ref="mediaGridScrollViewport" class="media-grid__scroll-viewport">
+      <n-scrollbar
+        ref="libraryScrollbar"
+        class="media-grid__scrollbar"
+        @dragover="handleDragOver"
+        @dragleave="handleDragLeave"
+        @drop="handleDrop"
+        @contextmenu="handleContextMenu"
+        @click="handleContainerClick"
       >
         <div
-          v-for="item in displayItems"
-          :key="item.id"
-          class="content-item"
-          :class="{
-            'directory-item': item.type === 'directory',
-            'media-item': item.type === 'asset',
-            'is-revealed': item.type === 'asset' && revealedAssetId === item.id,
-            selected: isItemSelected(item),
-            'is-cut': isItemCut(item),
-            'drag-over-folder': item.type === 'directory' && folderDragState[item.id]?.isDragOver,
-            'can-drop-folder': item.type === 'directory' && folderDragState[item.id]?.canDrop,
-            'cannot-drop-folder':
-              item.type === 'directory' &&
-              folderDragState[item.id]?.isDragOver &&
-              !folderDragState[item.id]?.canDrop,
-          }"
-          :data-library-asset-id="item.type === 'asset' ? item.id : undefined"
+          ref="librarySelectionSurface"
+          class="media-grid__selection-surface"
+          :class="{ 'is-marquee-pointer-active': isLibraryMarqueePointerActive }"
+          @pointerdown="handleLibraryMarqueePointerDown"
+          @pointermove="handleLibraryMarqueePointerMove"
+          @pointerup="handleLibraryMarqueePointerUp"
+          @pointercancel="handleLibraryMarqueePointerCancel"
+          @lostpointercapture="handleLibraryMarqueeLostPointerCapture"
         >
-          <!-- 可拖拽和点击的图标区域 -->
+          <!-- 空状态 -->
+          <div v-if="displayItems.length === 0" class="empty-state">
+            <component :is="IconComponents.FOLDER_OPEN" size="32px" />
+            <p>{{ currentDir ? t('media.folderEmpty') : t('media.selectFolder') }}</p>
+            <p class="hint">{{ t('media.dragOrImportHint') }}</p>
+          </div>
+
+          <!-- 内容项列表 - 图标视图 -->
           <div
-            class="item-draggable-area"
-            @dblclick="onItemDoubleClick(item)"
-            @click="onItemClick(item, $event)"
-            @contextmenu="onItemContextMenu(item, $event)"
-            @dragstart="handleItemDragStart($event, item)"
-            @dragend="handleItemDragEnd"
-            @dragenter="item.type === 'directory' ? handleFolderDragEnter($event, item.id) : null"
-            @dragover="item.type === 'directory' ? handleFolderDragOver($event, item.id) : null"
-            @dragleave="item.type === 'directory' ? handleFolderDragLeave($event, item.id) : null"
-            @drop="item.type === 'directory' ? handleFolderDrop($event, item.id) : null"
-            :draggable="isDraggable(item)"
+            v-else-if="unifiedStore.viewMode !== 'list'"
+            class="content-list"
+            :class="`view-${unifiedStore.viewMode}`"
           >
-            <!-- 文件夹项目 -->
-            <template v-if="item.type === 'directory'">
-              <div class="item-icon directory-icon">
-                <FolderIcon :size="getIconSize()" :is-list-view="false" />
-              </div>
-            </template>
-
-            <!-- 资产项目 -->
-            <template v-else>
-              <div class="item-icon media-icon">
-                <MediaItemThumbnail :media-id="item.id" />
-              </div>
-            </template>
-          </div>
-
-          <!-- 文件名区域（不可拖拽） -->
-          <div
-            class="item-name"
-            @mouseenter="showFileNameTooltip(item, $event)"
-            @mouseleave="hideFileNameTooltip"
-          >
-            <span class="item-name__label">{{ getItemName(item) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 内容项列表 - 列表视图 -->
-      <div v-else class="content-list-view">
-        <div
-          v-for="item in displayItems"
-          :key="item.id"
-          class="list-item"
-          :class="{
-            'directory-item': item.type === 'directory',
-            'media-item': item.type === 'asset',
-            'is-revealed': item.type === 'asset' && revealedAssetId === item.id,
-            selected: isItemSelected(item),
-            'is-cut': isItemCut(item),
-            'drag-over-folder': item.type === 'directory' && folderDragState[item.id]?.isDragOver,
-            'can-drop-folder': item.type === 'directory' && folderDragState[item.id]?.canDrop,
-            'cannot-drop-folder':
-              item.type === 'directory' &&
-              folderDragState[item.id]?.isDragOver &&
-              !folderDragState[item.id]?.canDrop,
-          }"
-          :data-library-asset-id="item.type === 'asset' ? item.id : undefined"
-          @dblclick="onItemDoubleClick(item)"
-          @click="onItemClick(item, $event)"
-          @contextmenu="onItemContextMenu(item, $event)"
-          @dragstart="handleItemDragStart($event, item)"
-          @dragend="handleItemDragEnd"
-          @dragenter="item.type === 'directory' ? handleFolderDragEnter($event, item.id) : null"
-          @dragover="item.type === 'directory' ? handleFolderDragOver($event, item.id) : null"
-          @dragleave="item.type === 'directory' ? handleFolderDragLeave($event, item.id) : null"
-          @drop="item.type === 'directory' ? handleFolderDrop($event, item.id) : null"
-          :draggable="isDraggable(item)"
-        >
-          <!-- 图标列 -->
-          <div class="list-item-icon">
-            <template v-if="item.type === 'directory'">
-              <FolderIcon size="20px" :is-list-view="true" />
-            </template>
-            <template v-else>
-              <MediaItemThumbnail :media-id="item.id" />
-            </template>
-          </div>
-
-          <!-- 名称列 -->
-          <div class="list-item-name">
-            {{
-              item.type === 'directory'
-                ? getDirectory(item.id)?.name || ''
-                : getMediaItem(item.id)?.name || ''
-            }}
-          </div>
-
-          <!-- 类型列 -->
-          <div class="list-item-type">
-            {{ item.type === 'directory' ? t('media.folder') : getAssetTypeLabel(item.id) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- 右键菜单 -->
-      <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
-        <template v-for="(item, index) in currentMenuItems" :key="index">
-          <ContextMenuSeparator v-if="'type' in item && item.type === 'separator'" />
-          <ContextMenuItem
-            v-else-if="'label' in item && 'onClick' in item && !('children' in item)"
-            :label="item.label"
-            :disabled="item.disabled"
-            @click="item.onClick"
-          >
-            <template #icon>
-              <component
-                :is="item.icon"
-                size="16px"
-                :style="{ color: item.icon === IconComponents.DELETE ? '#ff6b6b' : undefined }"
-              />
-            </template>
-          </ContextMenuItem>
-          <ContextMenuGroup v-else-if="'label' in item && 'children' in item" :label="item.label">
-            <template #icon>
-              <component :is="item.icon" size="16px" />
-            </template>
-            <template v-for="(childItem, childIndex) in item.children" :key="childIndex">
-              <ContextMenuSeparator v-if="'type' in childItem && childItem.type === 'separator'" />
-              <ContextMenuItem
-                v-else-if="'label' in childItem"
-                :label="childItem.label"
-                :disabled="childItem.disabled"
-                @click="childItem.onClick"
+            <div
+              v-for="item in displayItems"
+              :key="item.id"
+              class="content-item"
+              :class="{
+                'directory-item': item.type === 'directory',
+                'media-item': item.type === 'asset',
+                'is-revealed': item.type === 'asset' && revealedAssetId === item.id,
+                selected: isItemSelected(item),
+                'is-cut': isItemCut(item),
+                'drag-over-folder':
+                  item.type === 'directory' && folderDragState[item.id]?.isDragOver,
+                'can-drop-folder': item.type === 'directory' && folderDragState[item.id]?.canDrop,
+                'cannot-drop-folder':
+                  item.type === 'directory' &&
+                  folderDragState[item.id]?.isDragOver &&
+                  !folderDragState[item.id]?.canDrop,
+              }"
+              :data-library-asset-id="item.type === 'asset' ? item.id : undefined"
+              :data-library-item-id="item.id"
+            >
+              <!-- 可拖拽和点击的图标区域 -->
+              <div
+                class="item-draggable-area"
+                @dblclick="onItemDoubleClick(item)"
+                @click="onItemClick(item, $event)"
+                @contextmenu="onItemContextMenu(item, $event)"
+                @dragstart="handleItemDragStart($event, item)"
+                @dragend="handleItemDragEnd"
+                @dragenter="
+                  item.type === 'directory' ? handleFolderDragEnter($event, item.id) : null
+                "
+                @dragover="item.type === 'directory' ? handleFolderDragOver($event, item.id) : null"
+                @dragleave="
+                  item.type === 'directory' ? handleFolderDragLeave($event, item.id) : null
+                "
+                @drop="item.type === 'directory' ? handleFolderDrop($event, item.id) : null"
+                :draggable="isDraggable(item)"
               >
-                <template #icon>
-                  <component
-                    :is="childItem.icon"
-                    size="16px"
-                    :style="{
-                      color: childItem.icon === IconComponents.DELETE ? '#ff6b6b' : undefined,
-                    }"
-                  />
+                <!-- 文件夹项目 -->
+                <template v-if="item.type === 'directory'">
+                  <div class="item-icon directory-icon">
+                    <FolderIcon :size="getIconSize()" :is-list-view="false" />
+                  </div>
                 </template>
-              </ContextMenuItem>
-            </template>
-          </ContextMenuGroup>
-        </template>
-      </ContextMenu>
 
-      <!-- 创建文件夹对话框 -->
-      <CreateFolderModal
-        :show="showCreateDirModal"
-        @close="showCreateDirModal = false"
-        @confirm="handleCreateFolder"
-      />
+                <!-- 资产项目 -->
+                <template v-else>
+                  <div class="item-icon media-icon">
+                    <MediaItemThumbnail :media-id="item.id" />
+                  </div>
+                </template>
+              </div>
 
-      <!-- 重命名对话框 -->
-      <RenameModal
-        :show="showRenameModal"
-        :current-name="renameCurrentName"
-        @close="handleRenameClose"
-        @confirm="handleRenameConfirm"
-      />
+              <!-- 文件名区域（不可拖拽） -->
+              <div
+                class="item-name"
+                @mouseenter="showFileNameTooltip(item, $event)"
+                @mouseleave="hideFileNameTooltip"
+              >
+                <span class="item-name__label">{{ getItemName(item) }}</span>
+              </div>
+            </div>
+          </div>
 
-      <!-- 媒体预览模态框 -->
-      <MediaPreviewModal
-        :show="showMediaPreviewModal"
-        :media-item-id="previewMediaItemId"
-        @update:show="showMediaPreviewModal = $event"
-        @close="showMediaPreviewModal = false"
-      />
+          <!-- 内容项列表 - 列表视图 -->
+          <div v-else class="content-list-view">
+            <div
+              v-for="item in displayItems"
+              :key="item.id"
+              class="list-item"
+              :class="{
+                'directory-item': item.type === 'directory',
+                'media-item': item.type === 'asset',
+                'is-revealed': item.type === 'asset' && revealedAssetId === item.id,
+                selected: isItemSelected(item),
+                'is-cut': isItemCut(item),
+                'drag-over-folder':
+                  item.type === 'directory' && folderDragState[item.id]?.isDragOver,
+                'can-drop-folder': item.type === 'directory' && folderDragState[item.id]?.canDrop,
+                'cannot-drop-folder':
+                  item.type === 'directory' &&
+                  folderDragState[item.id]?.isDragOver &&
+                  !folderDragState[item.id]?.canDrop,
+              }"
+              :data-library-asset-id="item.type === 'asset' ? item.id : undefined"
+              :data-library-item-id="item.id"
+              @dblclick="onItemDoubleClick(item)"
+              @click="onItemClick(item, $event)"
+              @contextmenu="onItemContextMenu(item, $event)"
+              @dragstart="handleItemDragStart($event, item)"
+              @dragend="handleItemDragEnd"
+              @dragenter="item.type === 'directory' ? handleFolderDragEnter($event, item.id) : null"
+              @dragover="item.type === 'directory' ? handleFolderDragOver($event, item.id) : null"
+              @dragleave="item.type === 'directory' ? handleFolderDragLeave($event, item.id) : null"
+              @drop="item.type === 'directory' ? handleFolderDrop($event, item.id) : null"
+              :draggable="isDraggable(item)"
+            >
+              <!-- 图标列 -->
+              <div class="list-item-icon">
+                <template v-if="item.type === 'directory'">
+                  <FolderIcon size="20px" :is-list-view="true" />
+                </template>
+                <template v-else>
+                  <MediaItemThumbnail :media-id="item.id" />
+                </template>
+              </div>
 
-      <!-- 隐藏的文件输入 -->
-      <input
-        ref="fileInput"
-        type="file"
-        multiple
-        accept="video/*,image/*,audio/*"
-        style="display: none"
-        @change="handleFileSelect"
-      />
-    </n-scrollbar>
+              <!-- 名称列 -->
+              <div class="list-item-name">
+                {{
+                  item.type === 'directory'
+                    ? getDirectory(item.id)?.name || ''
+                    : getMediaItem(item.id)?.name || ''
+                }}
+              </div>
+
+              <!-- 类型列 -->
+              <div class="list-item-type">
+                {{ item.type === 'directory' ? t('media.folder') : getAssetTypeLabel(item.id) }}
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="libraryMarqueeRect"
+            class="library-media-marquee-selection"
+            :style="libraryMarqueeStyle"
+          ></div>
+        </div>
+
+        <!-- 右键菜单 -->
+        <ContextMenu v-model:show="showContextMenu" :options="contextMenuOptions">
+          <template v-for="(item, index) in currentMenuItems" :key="index">
+            <ContextMenuSeparator v-if="'type' in item && item.type === 'separator'" />
+            <ContextMenuItem
+              v-else-if="'label' in item && 'onClick' in item && !('children' in item)"
+              :label="item.label"
+              :disabled="item.disabled"
+              @click="item.onClick"
+            >
+              <template #icon>
+                <component
+                  :is="item.icon"
+                  size="16px"
+                  :style="{ color: item.icon === IconComponents.DELETE ? '#ff6b6b' : undefined }"
+                />
+              </template>
+            </ContextMenuItem>
+            <ContextMenuGroup v-else-if="'label' in item && 'children' in item" :label="item.label">
+              <template #icon>
+                <component :is="item.icon" size="16px" />
+              </template>
+              <template v-for="(childItem, childIndex) in item.children" :key="childIndex">
+                <ContextMenuSeparator
+                  v-if="'type' in childItem && childItem.type === 'separator'"
+                />
+                <ContextMenuItem
+                  v-else-if="'label' in childItem"
+                  :label="childItem.label"
+                  :disabled="childItem.disabled"
+                  @click="childItem.onClick"
+                >
+                  <template #icon>
+                    <component
+                      :is="childItem.icon"
+                      size="16px"
+                      :style="{
+                        color: childItem.icon === IconComponents.DELETE ? '#ff6b6b' : undefined,
+                      }"
+                    />
+                  </template>
+                </ContextMenuItem>
+              </template>
+            </ContextMenuGroup>
+          </template>
+        </ContextMenu>
+
+        <!-- 创建文件夹对话框 -->
+        <CreateFolderModal
+          :show="showCreateDirModal"
+          @close="showCreateDirModal = false"
+          @confirm="handleCreateFolder"
+        />
+
+        <!-- 重命名对话框 -->
+        <RenameModal
+          :show="showRenameModal"
+          :current-name="renameCurrentName"
+          @close="handleRenameClose"
+          @confirm="handleRenameConfirm"
+        />
+
+        <!-- 媒体预览模态框 -->
+        <MediaPreviewModal
+          :show="showMediaPreviewModal"
+          :media-item-id="previewMediaItemId"
+          @update:show="showMediaPreviewModal = $event"
+          @close="showMediaPreviewModal = false"
+        />
+
+        <!-- 隐藏的文件输入 -->
+        <input
+          ref="fileInput"
+          type="file"
+          multiple
+          accept="video/*,image/*,audio/*"
+          style="display: none"
+          @change="handleFileSelect"
+        />
+      </n-scrollbar>
+    </div>
     <Teleport to="body">
       <Transition name="file-name-tooltip">
         <div
@@ -234,8 +263,9 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onBeforeUnmount, watch, type Component } from 'vue'
-import { NScrollbar } from 'naive-ui'
+import { NScrollbar, type ScrollbarInst } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { useMarqueeSelection } from '@/core/composables/useMarqueeSelection'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { DisplayItem, VirtualDirectory, ClipboardItem, SortBy } from '@/core/directory/types'
 import {
@@ -291,6 +321,14 @@ function isFileDrag(event: DragEvent): boolean {
 const isDragOver = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const showCreateDirModal = ref(false)
+const libraryScrollbar = ref<ScrollbarInst | null>(null)
+const mediaGridScrollViewport = ref<HTMLElement>()
+const librarySelectionSurface = ref<HTMLElement>()
+
+const LIBRARY_AUTO_SCROLL_EDGE = 32
+const LIBRARY_AUTO_SCROLL_SPEED = 12
+let libraryAutoScrollFrame: number | undefined
+let libraryAutoScrollDirection = 0
 
 // 重命名状态
 const showRenameModal = ref(false)
@@ -359,6 +397,7 @@ watch(
 
 onBeforeUnmount(() => {
   if (revealedAssetTimer) clearTimeout(revealedAssetTimer)
+  stopLibraryAutoScroll()
 })
 
 // 剪贴板状态
@@ -384,6 +423,28 @@ const displayItems = computed(() => {
   if (!currentDir.value) return []
   const items = unifiedStore.getDirectoryContent(currentDir.value.id)
   return sortItems(items)
+})
+
+const {
+  marqueeRect: libraryMarqueeRect,
+  marqueeStyle: libraryMarqueeStyle,
+  isPointerActive: isLibraryMarqueePointerActive,
+  isSelecting: isLibraryMarqueeSelecting,
+  handlePointerDown: handleLibraryMarqueePointerDown,
+  handlePointerMove: handleLibraryMarqueePointerMoveInternal,
+  handlePointerUp: handleLibraryMarqueePointerUpInternal,
+  handlePointerCancel: handleLibraryMarqueePointerCancelInternal,
+  handleLostPointerCapture: handleLibraryMarqueeLostPointerCaptureInternal,
+  refreshPointerPosition: refreshLibraryMarqueePointerPosition,
+  consumeClick: consumeLibraryMarqueeClick,
+} = useMarqueeSelection<string>({
+  root: librarySelectionSurface,
+  getCandidateElements: (surface) =>
+    Array.from(surface.querySelectorAll<HTMLElement>('[data-library-item-id]')),
+  getCandidateId: (element) => element.dataset.libraryItemId || null,
+  getSelectedIds: () => unifiedStore.selectedLibraryAssetIds,
+  applySelection: (ids) => unifiedStore.selectLibraryAssets(ids, 'replace'),
+  canStart: (event) => !(event.target as Element).closest('[data-library-item-id]'),
 })
 
 // 排序函数
@@ -868,8 +929,93 @@ function handleContextMenu(event: MouseEvent): void {
   showContextMenu.value = true
 }
 
+function handleLibraryMarqueePointerMove(event: PointerEvent): void {
+  handleLibraryMarqueePointerMoveInternal(event)
+  updateLibraryAutoScroll(event)
+}
+
+function handleLibraryMarqueePointerUp(event: PointerEvent): void {
+  handleLibraryMarqueePointerUpInternal(event)
+  stopLibraryAutoScroll()
+}
+
+function handleLibraryMarqueePointerCancel(event: PointerEvent): void {
+  handleLibraryMarqueePointerCancelInternal(event)
+  stopLibraryAutoScroll()
+}
+
+function handleLibraryMarqueeLostPointerCapture(event: PointerEvent): void {
+  handleLibraryMarqueeLostPointerCaptureInternal(event)
+  stopLibraryAutoScroll()
+}
+
+function updateLibraryAutoScroll(event: PointerEvent): void {
+  const viewport = mediaGridScrollViewport.value
+  if (!isLibraryMarqueeSelecting.value || !viewport) {
+    stopLibraryAutoScroll()
+    return
+  }
+
+  const viewportRect = viewport.getBoundingClientRect()
+  let direction = 0
+  if (event.clientY < viewportRect.top + LIBRARY_AUTO_SCROLL_EDGE) {
+    direction = -1
+  } else if (event.clientY > viewportRect.bottom - LIBRARY_AUTO_SCROLL_EDGE) {
+    direction = 1
+  }
+
+  if (direction === libraryAutoScrollDirection) {
+    return
+  }
+
+  libraryAutoScrollDirection = direction
+  if (direction === 0) {
+    stopLibraryAutoScroll()
+    return
+  }
+
+  startLibraryAutoScroll()
+}
+
+function startLibraryAutoScroll(): void {
+  if (libraryAutoScrollFrame !== undefined) {
+    return
+  }
+
+  const scroll = () => {
+    if (!isLibraryMarqueeSelecting.value || libraryAutoScrollDirection === 0) {
+      libraryAutoScrollFrame = undefined
+      return
+    }
+
+    libraryScrollbar.value?.scrollBy({
+      top: libraryAutoScrollDirection * LIBRARY_AUTO_SCROLL_SPEED,
+    })
+    refreshLibraryMarqueePointerPosition()
+    libraryAutoScrollFrame = window.requestAnimationFrame(scroll)
+  }
+
+  libraryAutoScrollFrame = window.requestAnimationFrame(scroll)
+}
+
+function stopLibraryAutoScroll(): void {
+  libraryAutoScrollDirection = 0
+  if (libraryAutoScrollFrame === undefined) {
+    return
+  }
+
+  window.cancelAnimationFrame(libraryAutoScrollFrame)
+  libraryAutoScrollFrame = undefined
+}
+
 // 点击空白区域
 function handleContainerClick(event: MouseEvent): void {
+  if (consumeLibraryMarqueeClick()) {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
   if (!event.target) {
     unifiedStore.clearLibraryAssetSelection()
     return
@@ -1303,8 +1449,8 @@ function canCancel(item: DisplayItem): boolean {
   if (!mediaItem) return false
 
   return (
-    ['pending', 'asyncprocessing', 'decoding'].includes(mediaItem.mediaStatus)
-    && Boolean(unifiedStore.findMediaProcessingTaskView(mediaItem.id))
+    ['pending', 'asyncprocessing', 'decoding'].includes(mediaItem.mediaStatus) &&
+    Boolean(unifiedStore.findMediaProcessingTaskView(mediaItem.id))
   )
 }
 
@@ -1395,9 +1541,9 @@ function canStartMediaIndexing(item: DisplayItem): boolean {
 
   const mediaItem = getMediaItem(item.id)
   return Boolean(
-    mediaItem
-      && (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image')
-      && mediaItem.mediaStatus === 'ready',
+    mediaItem &&
+      (mediaItem.mediaType === 'video' || mediaItem.mediaType === 'image') &&
+      mediaItem.mediaStatus === 'ready',
   )
 }
 
@@ -1728,9 +1874,33 @@ async function handleBatchDelete(): Promise<void> {
   transition: background-color var(--transition-fast);
 }
 
-.media-grid__scrollbar {
+.media-grid__scroll-viewport {
   flex: 1;
   min-height: 0;
+}
+
+.media-grid__scrollbar {
+  height: 100%;
+}
+
+.media-grid__selection-surface {
+  position: relative;
+  min-height: 100%;
+}
+
+.media-grid__selection-surface.is-marquee-pointer-active {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.library-media-marquee-selection {
+  position: absolute;
+  z-index: 20;
+  border: 1px solid rgba(96, 165, 250, 0.95);
+  border-radius: 2px;
+  background-color: rgba(96, 165, 250, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.18);
+  pointer-events: none;
 }
 
 .media-grid.drag-over {
@@ -1772,6 +1942,10 @@ async function handleBatchDelete(): Promise<void> {
   gap: var(--spacing-md);
 }
 
+.content-list.view-large-icon .content-item {
+  width: 140px;
+}
+
 .content-list.view-large-icon .item-draggable-area {
   width: 120px;
   height: 120px;
@@ -1786,6 +1960,10 @@ async function handleBatchDelete(): Promise<void> {
 .content-list.view-medium-icon {
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: var(--spacing-sm);
+}
+
+.content-list.view-medium-icon .content-item {
+  width: 100px;
 }
 
 .content-list.view-medium-icon .item-draggable-area {
@@ -1803,6 +1981,10 @@ async function handleBatchDelete(): Promise<void> {
   gap: var(--spacing-xs);
 }
 
+.content-list.view-small-icon .content-item {
+  width: 70px;
+}
+
 .content-list.view-small-icon .item-draggable-area {
   width: 48px;
   height: 48px;
@@ -1814,12 +1996,16 @@ async function handleBatchDelete(): Promise<void> {
 }
 
 .content-item {
+  align-self: start;
   background-color: transparent;
   border: 1px solid transparent;
   border-radius: var(--border-radius-small);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-self: center;
+  max-width: 100%;
   transition-property: background-color, border-color, opacity;
   transition-duration: var(--transition-fast);
   transition-timing-function: ease;
@@ -1831,6 +2017,10 @@ async function handleBatchDelete(): Promise<void> {
   background-color: rgba(59, 130, 246, 0.1);
   border: 1px dashed var(--color-accent-primary);
   border-radius: var(--border-radius-small);
+}
+
+.content-item:hover:not(.selected) {
+  border-color: var(--color-border-hover);
 }
 
 .item-draggable-area {
@@ -1847,10 +2037,6 @@ async function handleBatchDelete(): Promise<void> {
   transition-duration: var(--transition-fast);
   transition-timing-function: ease;
   background-color: transparent;
-}
-
-.item-draggable-area:hover {
-  transform: scale(1.05);
 }
 
 .item-icon {
@@ -2017,13 +2203,19 @@ async function handleBatchDelete(): Promise<void> {
   align-items: center;
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-small);
-  transition: all var(--transition-fast);
+  transition-property: background-color, border-color;
+  transition-duration: var(--transition-fast);
+  transition-timing-function: ease;
   cursor: pointer;
   border: 1px solid transparent;
 }
 
 .list-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+.list-item:hover:not(.selected) {
+  border-color: var(--color-border-hover);
 }
 
 .list-item.selected {
@@ -2084,5 +2276,4 @@ async function handleBatchDelete(): Promise<void> {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 </style>

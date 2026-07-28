@@ -1,5 +1,5 @@
 <template>
-  <div class="timeline" @click="handleTimelineContainerClick" @contextmenu="handleContextMenu">
+  <div class="timeline" @click="handleTimelineRootClick" @contextmenu="handleContextMenu">
     <!-- 顶部区域：轨道管理器头部 + 时间刻度 -->
     <div class="timeline-header">
       <div class="track-manager-header">
@@ -42,6 +42,7 @@
     <n-scrollbar>
       <div
         class="timeline-body"
+        :class="{ 'is-marquee-pointer-active': isTimelineMarqueePointerActive }"
         ref="timelineBody"
         @wheel="handleWheel"
         @dragover="handleTimelineDragOver"
@@ -62,7 +63,7 @@
             :class="{
               'drag-over': dragOverTrackId === track.id,
               'drag-over-before': dragOverTrackId === track.id && insertPosition === 'before',
-              'drag-over-after': dragOverTrackId === track.id && insertPosition === 'after'
+              'drag-over-after': dragOverTrackId === track.id && insertPosition === 'after',
             }"
             :data-track-id="track.id"
             @dragover="handleTrackDragOver($event, track.id)"
@@ -76,7 +77,11 @@
               :class="insertPosition"
             >
               <div class="drag-hint-text">
-                {{ insertPosition === 'before' ? t('common.trackDrag.dragToTop') : t('common.trackDrag.dragToBottom') }}
+                {{
+                  insertPosition === 'before'
+                    ? t('common.trackDrag.dragToTop')
+                    : t('common.trackDrag.dragToBottom')
+                }}
               </div>
             </div>
 
@@ -88,7 +93,7 @@
               <!-- 拖拽手柄图标 -->
               <div
                 class="track-drag-handle"
-                :class="{ 'dragging': draggingTrackId === track.id }"
+                :class="{ dragging: draggingTrackId === track.id }"
                 draggable="true"
                 @dragstart="handleTrackDragStart($event, track.id)"
                 @dragend="handleTrackDragEnd"
@@ -175,7 +180,12 @@
             :data-track-id="track.id"
             :data-track-type="track.type"
             :data-hidden-text="!track.isVisible ? t('timeline.trackHidden') : ''"
-            @click="handleTimelineClick"
+            @click="handleTrackContentClick"
+            @pointerdown="handleMarqueePointerDown"
+            @pointermove="handleMarqueePointerMove"
+            @pointerup="handleMarqueePointerUp"
+            @pointercancel="handleMarqueePointerCancel"
+            @lostpointercapture="handleMarqueeLostPointerCapture"
             @wheel="handleWheel"
           >
             <!-- 该轨道的时间轴项目 -->
@@ -212,6 +222,7 @@
             }"
           ></div>
         </div>
+        <div v-if="marqueeRect" class="timeline-marquee-selection" :style="marqueeStyle"></div>
       </div>
     </n-scrollbar>
     <!-- 吸附指示器 - 贯穿整个时间轴区域 -->
@@ -310,6 +321,7 @@ import { useTimelineTimeScale } from '@/core/composables/useTimelineTimeScale'
 import { useTimelineDragPreview } from '@/core/composables/useTimelineDragPreview'
 import { useTimelineSnap } from '@/core/composables/useTimelineSnap'
 import { useTimelineDragHandlers } from '@/core/composables/useTimelineDragHandlers'
+import { useTimelineMarqueeSelection } from '@/core/composables/useTimelineMarqueeSelection'
 import { buildClipSelectionId, type TimelineSelectionId } from '@/core/types/timelineSelection'
 
 // Component name for Vue DevTools
@@ -418,12 +430,45 @@ const {
   handleKeyDown,
 } = useTimelineEventHandlers(timelineBody, handleTimelineItemRemove)
 
+const {
+  marqueeRect,
+  marqueeStyle,
+  isPointerActive: isTimelineMarqueePointerActive,
+  handlePointerDown: handleMarqueePointerDown,
+  handlePointerMove: handleMarqueePointerMove,
+  handlePointerUp: handleMarqueePointerUp,
+  handlePointerCancel: handleMarqueePointerCancel,
+  handleLostPointerCapture: handleMarqueeLostPointerCapture,
+  consumeTrackContentClick,
+} = useTimelineMarqueeSelection(timelineBody)
+
+function handleTrackContentClick(event: MouseEvent) {
+  if (consumeTrackContentClick()) {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  handleTimelineClick(event)
+}
+
+function handleTimelineRootClick(event: MouseEvent) {
+  if (consumeTrackContentClick()) {
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  handleTimelineContainerClick(event)
+}
+
 // 初始化网格线模块
 const { gridLines } = useTimelineGridLines()
 
 // 初始化拖拽预览模块
 const { handleDragPreview, hidePreview } = useTimelineDragPreview({
-  frameToPixel: (frames: number) => unifiedStore.frameToPixel(frames, unifiedStore.TimelineContentWidth),
+  frameToPixel: (frames: number) =>
+    unifiedStore.frameToPixel(frames, unifiedStore.TimelineContentWidth),
   getCurrentDragData: (event: DragEvent) => unifiedStore.getCurrentDragData(event),
   getMediaItem: (id: string) => unifiedStore.getMediaItem(id),
   getTimelineItemsByTrack: (trackId: string) => unifiedStore.getTimelineItemsByTrack(trackId),
@@ -746,6 +791,11 @@ onUnmounted(() => {
   position: relative;
 }
 
+.timeline-body.is-marquee-pointer-active {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .track-row {
   display: flex;
   border-bottom: 1px solid var(--color-border-primary);
@@ -780,8 +830,9 @@ onUnmounted(() => {
 .track-controls.drag-over .track-color-indicator {
   width: 6px;
   background: #22c55e;
-  box-shadow: 6px 0 6px -2px rgba(255, 255, 255, 0.8),
-              4px 0 4px -2px rgba(255, 255, 255, 0.6);
+  box-shadow:
+    6px 0 6px -2px rgba(255, 255, 255, 0.8),
+    4px 0 4px -2px rgba(255, 255, 255, 0.6);
   opacity: 1;
 }
 
@@ -963,6 +1014,16 @@ onUnmounted(() => {
   z-index: 0;
 }
 
+.timeline-marquee-selection {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  border: 1px solid rgba(96, 165, 250, 0.95);
+  border-radius: 2px;
+  background-color: rgba(96, 165, 250, 0.16);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2);
+}
+
 .grid-line {
   position: absolute;
   top: 0;
@@ -1020,7 +1081,6 @@ onUnmounted(() => {
   opacity: 0.5;
   cursor: grabbing;
 }
-
 
 /* 拖拽提示蒙版 */
 .drag-hint-overlay {
