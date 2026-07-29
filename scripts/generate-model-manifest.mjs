@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
 const projectRoot = process.cwd()
-const publicModelsDir = path.join(projectRoot, 'public', 'models')
+const modelSourcesDir = path.join(projectRoot, 'model-sources')
 const publicChunkDir = path.join(projectRoot, 'public', 'model-chunks')
 const outputFile = path.join(projectRoot, 'src', 'generated', 'model-manifest.ts')
 const MODEL_CHUNK_SIZE = 4 * 1024 * 1024
@@ -70,21 +70,21 @@ async function cleanGeneratedChunks() {
 
 async function buildManifest() {
   const manifest = {}
-  const hasModelsDir = await fs
-    .access(publicModelsDir)
+  const hasModelSourcesDir = await fs
+    .access(modelSourcesDir)
     .then(() => true)
     .catch(() => false)
 
-  if (!hasModelsDir) {
+  if (!hasModelSourcesDir) {
     return manifest
   }
 
   await cleanGeneratedChunks()
 
-  const modelFiles = await collectOnnxFiles(publicModelsDir)
+  const modelFiles = await collectOnnxFiles(modelSourcesDir)
 
   for (const filePath of modelFiles.sort()) {
-    const relativePath = path.relative(publicModelsDir, filePath)
+    const relativePath = path.relative(modelSourcesDir, filePath)
     const modelId = toModelId(relativePath)
 
     if (manifest[modelId]) {
@@ -96,7 +96,6 @@ async function buildManifest() {
     const chunks = await writeModelChunks(modelId, fileBuffer)
 
     manifest[modelId] = {
-      path: `models/${relativePath.split(path.sep).join('/')}`,
       version: `sha256-${hash}`,
       size: fileBuffer.byteLength,
       chunkSize: MODEL_CHUNK_SIZE,

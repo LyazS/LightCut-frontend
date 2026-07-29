@@ -16,7 +16,6 @@ import {
 const transNetV2ModelConfig: OnnxModelConfig = {
   modelId: TRANSNETV2_MODEL_ID,
   version: modelManifest.transnetv2.version,
-  modelPath: modelManifest.transnetv2.path,
   chunks: modelManifest.transnetv2.chunks,
   executionProviders: ['wasm'],
   graphOptimizationLevel: 'all',

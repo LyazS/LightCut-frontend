@@ -1,5 +1,5 @@
 import * as ort from 'onnxruntime-web/wasm'
-import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
+import localOrtWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
 import { loadCachedOnnxModelBytes } from './modelCache'
 import type {
   OnnxDimensionExpectation,
@@ -11,7 +11,14 @@ import type {
 
 const modelCache = new Map<string, Promise<OnnxModelRunner>>()
 
-let wasmConfigured = false
+const ORT_WASM_FILE_NAME = 'ort-wasm-simd-threaded.wasm'
+const WASM_CDN_FETCH_TIMEOUT_MS = 5_000
+const ortWasmCdnUrls = [
+  `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions.web}/dist/${ORT_WASM_FILE_NAME}`,
+  `https://unpkg.com/onnxruntime-web@${ort.env.versions.web}/dist/${ORT_WASM_FILE_NAME}`,
+]
+
+let wasmConfigurationPromise: Promise<void> | undefined
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -50,16 +57,57 @@ async function waitForRunner(
   return runner
 }
 
-function configureWasmRuntime(): void {
-  if (wasmConfigured) {
-    return
+async function fetchWasmBinary(url: string): Promise<ArrayBuffer> {
+  const controller = new AbortController()
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), WASM_CDN_FETCH_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    if (!response.ok) {
+      throw new Error(`WASM 下载失败: ${response.status}`)
+    }
+
+    return response.arrayBuffer()
+  } finally {
+    globalThis.clearTimeout(timeoutId)
+  }
+}
+
+async function fetchFirstAvailableWasmBinary(urls: readonly string[]): Promise<ArrayBuffer> {
+  let lastError: unknown
+
+  for (const url of urls) {
+    try {
+      return await fetchWasmBinary(url)
+    } catch (error) {
+      lastError = error
+    }
   }
 
-  ort.env.wasm.numThreads = 1
-  ort.env.wasm.wasmPaths = {
-    wasm: ortWasmUrl,
+  throw lastError ?? new Error('所有 ONNX WASM CDN 均不可用')
+}
+
+async function configureWasmRuntime(): Promise<void> {
+  if (wasmConfigurationPromise) {
+    return wasmConfigurationPromise
   }
-  wasmConfigured = true
+
+  wasmConfigurationPromise = (async () => {
+    ort.env.wasm.numThreads = 1
+
+    try {
+      // Download the CDN asset completely before ONNX Runtime starts, so failed mirrors can
+      // safely fall back to the same-origin asset without poisoning its one-time initialization.
+      ort.env.wasm.wasmBinary = await fetchFirstAvailableWasmBinary(ortWasmCdnUrls)
+    } catch {
+      ort.env.wasm.wasmBinary = await fetchWasmBinary(localOrtWasmUrl)
+    }
+  })().catch((error) => {
+    wasmConfigurationPromise = undefined
+    throw error
+  })
+
+  return wasmConfigurationPromise
 }
 
 function assertTensorMetadata(
@@ -145,7 +193,7 @@ async function createOnnxModelRunner(
   config: OnnxModelConfig,
   options?: OnnxModelLoadOptions,
 ): Promise<OnnxModelRunner> {
-  configureWasmRuntime()
+  await configureWasmRuntime()
 
   const modelBytes = await loadCachedOnnxModelBytes(config, options)
   throwIfAborted(options?.signal)

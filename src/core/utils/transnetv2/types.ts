@@ -1,5 +1,4 @@
 export const TRANSNETV2_MODEL_ID = 'transnetv2'
-export const TRANSNETV2_MODEL_PATH = 'models/transnetv2/transnetv2.onnx'
 export const TRANSNETV2_WINDOW_SIZE = 100
 export const TRANSNETV2_INPUT_WIDTH = 48
 export const TRANSNETV2_INPUT_HEIGHT = 27

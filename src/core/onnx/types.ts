@@ -40,7 +40,6 @@ export interface OnnxTensorMetadataExpectation {
 export interface OnnxModelConfig {
   modelId: string
   version: string
-  modelPath: string
   chunks?: readonly OnnxModelChunk[]
   executionProviders: readonly OnnxExecutionProvider[]
   graphOptimizationLevel?: ort.InferenceSession.SessionOptions['graphOptimizationLevel']
