@@ -11,7 +11,6 @@
         <template #icon>
           <component :is="IconComponents.UNDO" size="14px" />
         </template>
-        {{ t('toolbar.history.undo') }}
       </HoverButton>
       <HoverButton
         @click="redo"
@@ -21,33 +20,42 @@
         <template #icon>
           <component :is="IconComponents.REDO" size="14px" />
         </template>
-        {{ t('toolbar.history.redo') }}
       </HoverButton>
     </div>
 
     <div v-if="timelineItems.length > 0" class="toolbar-section">
-      <HoverButton
-        v-if="unifiedStore.selectedClipTimelineItemId"
-        :disabled="!canToggleMarker"
-        @click="toggleSelectedClipMarker"
-        :title="markerButtonTooltip"
-      >
-        <template #icon>
-          <span
-            class="marker-action-icon"
-            :class="{ 'marker-action-icon--remove': hasMarkerAtPlayhead }"
-          >
-            <component :is="IconComponents.MARKER" size="14px" aria-hidden="true" />
-            <component
-              :is="IconComponents.MARKER_OFF"
-              size="14px"
-              class="marker-action-icon__remove"
-              aria-hidden="true"
-            />
-          </span>
-        </template>
-        {{ markerButtonLabel }}
-      </HoverButton>
+      <template v-if="unifiedStore.selectedClipTimelineItemId">
+        <HoverButton
+          :disabled="!canToggleMarker"
+          @click="toggleSelectedClipMarker"
+          :title="markerButtonTooltip"
+        >
+          <template #icon>
+            <span
+              class="marker-action-icon"
+              :class="{ 'marker-action-icon--remove': hasMarkerAtPlayhead }"
+            >
+              <RiFlagFill size="14px" class="marker-action-icon__mark" aria-hidden="true" />
+              <RiFlagOffLine size="14px" class="marker-action-icon__remove" aria-hidden="true" />
+            </span>
+          </template>
+        </HoverButton>
+
+        <n-dropdown
+          placement="bottom-start"
+          trigger="click"
+          :disabled="isAIMarkerButtonDisabled"
+          :options="aiMarkModeOptions"
+          @select="handleAIMarkModeSelect"
+        >
+          <HoverButton :disabled="isAIMarkerButtonDisabled" :title="aiMarkerButtonTooltip">
+            <template #icon>
+              <component :is="IconComponents.MUSIC" size="14px" aria-hidden="true" />
+            </template>
+            <component :is="IconComponents.DROPDOWN" size="14px" aria-hidden="true" />
+          </HoverButton>
+        </n-dropdown>
+      </template>
       <HoverButton
         v-if="unifiedStore.selectedClipTimelineItemId"
         :disabled="isSplitButtonDisabled"
@@ -57,7 +65,6 @@
         <template #icon>
           <component :is="IconComponents.SPLIT" size="14px" />
         </template>
-        {{ t('toolbar.clip.split') }}
       </HoverButton>
       <HoverButton
         v-if="deletableSelectionId"
@@ -67,7 +74,6 @@
         <template #icon>
           <component :is="IconComponents.DELETE" size="14px" color="#ef4444" />
         </template>
-        {{ t('toolbar.clip.delete') }}
       </HoverButton>
       <span v-if="overlappingCount > 0" class="overlap-warning">
         {{ t('toolbar.clip.overlapping', { count: overlappingCount }) }}
@@ -93,7 +99,6 @@
         <template #icon>
           <component :is="edgeEditModeIcon" size="14px" />
         </template>
-        {{ edgeEditModeLabel }}
       </HoverButton>
 
       <!-- 吸附开关按钮 -->
@@ -105,7 +110,6 @@
         <template #icon>
           <component :is="getSnapIcon(snapEnabled)" size="14px" />
         </template>
-        {{ t('toolbar.snap.snap') }}
       </HoverButton>
     </div>
   </div>
@@ -113,8 +117,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { NDropdown, type DropdownOption } from 'naive-ui'
+import { RiFlagFill, RiFlagOffLine } from '@remixicon/vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { useBeatMarkDetection } from '@/core/composables/useBeatMarkDetection'
+import type { AIMarkMode } from '@/core/timelineitem/model/timelineItem'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
 import HoverButton from '@/components/base/HoverButton.vue'
@@ -123,6 +131,7 @@ import { IconComponents, getSnapIcon } from '@/constants/iconComponents'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
+const { isDetectingBeatMarks, detectBeatMarks } = useBeatMarkDetection()
 
 const timelineItems = computed(() => unifiedStore.timelineItems)
 
@@ -172,12 +181,6 @@ function handleZoomChange(sliderValue: number) {
 // 吸附功能状态
 const snapEnabled = computed(() => unifiedStore.snapConfig.enabled)
 
-const edgeEditModeLabel = computed(() =>
-  unifiedStore.timelineEdgeEditMode === 'trim'
-    ? t('toolbar.edgeEdit.trim')
-    : t('toolbar.edgeEdit.resize'),
-)
-
 const edgeEditModeTooltip = computed(() =>
   unifiedStore.timelineEdgeEditMode === 'trim'
     ? t('toolbar.edgeEdit.trimTooltip')
@@ -223,6 +226,57 @@ const selectedTimelineItem = computed(() => {
   return selectedId ? unifiedStore.getTimelineItem(selectedId) : undefined
 })
 
+const aiMarkModeOptions = computed<DropdownOption[]>(() => [
+  { label: t('toolbar.clip.aiMarkerModes.none'), key: 'none' },
+  { label: t('toolbar.clip.aiMarkerModes.beat1'), key: 'beat1' },
+  { label: t('toolbar.clip.aiMarkerModes.beat1234'), key: 'beat1234' },
+])
+
+const supportsAIMarkDetection = computed(() => {
+  const mediaType = selectedTimelineItem.value?.mediaType
+  return mediaType === 'video' || mediaType === 'audio'
+})
+
+const isAIMarkDetectionReady = computed(() => {
+  const item = selectedTimelineItem.value
+  if (!item || item.timelineStatus !== 'ready') return false
+
+  return unifiedStore.getMediaItem(item.mediaItemId)?.mediaStatus === 'ready'
+})
+
+const isAIMarkerButtonDisabled = computed(
+  () =>
+    !supportsAIMarkDetection.value || !isAIMarkDetectionReady.value || isDetectingBeatMarks.value,
+)
+
+const aiMarkerButtonTooltip = computed(() =>
+  !supportsAIMarkDetection.value
+    ? t('toolbar.clip.aiMarkerUnsupportedTooltip')
+    : !isAIMarkDetectionReady.value
+      ? t('toolbar.clip.aiMarkerUnavailableTooltip')
+      : selectedTimelineItem.value?.aiMarks
+        ? t('toolbar.clip.aiMarkerTooltip')
+        : t('toolbar.clip.aiMarkerDetectTooltip'),
+)
+
+function isAIMarkMode(value: string | number): value is AIMarkMode {
+  return value === 'none' || value === 'beat1' || value === 'beat1234'
+}
+
+async function handleAIMarkModeSelect(value: string | number) {
+  const selectedId = unifiedStore.selectedClipTimelineItemId
+  if (!selectedId || !isAIMarkMode(value)) return
+
+  if (selectedTimelineItem.value?.aiMarks) {
+    await unifiedStore.setAIMarksModeWithHistory(selectedId, value)
+    return
+  }
+
+  if (value !== 'none') {
+    await detectBeatMarks(selectedId, value)
+  }
+}
+
 const markerOffsetAtPlayhead = computed(() => {
   const item = selectedTimelineItem.value
   if (!item) return null
@@ -244,10 +298,6 @@ const hasMarkerAtPlayhead = computed(() => {
   const markerOffset = markerOffsetAtPlayhead.value
   return Boolean(item && markerOffset !== null && item.markers?.includes(markerOffset))
 })
-
-const markerButtonLabel = computed(() =>
-  hasMarkerAtPlayhead.value ? t('toolbar.clip.unmark') : t('toolbar.clip.marker'),
-)
 
 const markerButtonTooltip = computed(() => {
   if (!canToggleMarker.value) {
@@ -678,15 +728,25 @@ function debugHistory() {
   color: #ffffff;
 }
 
+.marker-action-icon__mark,
+.marker-action-icon__remove {
+  transition-property: opacity, transform, filter;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
 .marker-action-icon__remove {
   position: absolute;
   inset: 0;
   opacity: 0;
   transform: scale(0.25);
   filter: blur(4px);
-  transition-property: opacity, transform, filter;
-  transition-duration: 150ms;
-  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.marker-action-icon--remove .marker-action-icon__mark {
+  opacity: 0;
+  transform: scale(0.25);
+  filter: blur(4px);
 }
 
 .marker-action-icon--remove .marker-action-icon__remove {

@@ -13,8 +13,6 @@ import { LayoutConstants } from '@/constants/LayoutConstants'
 import { detectSceneAdv } from '@/core/utils/scene-detector-adv'
 import { detectSceneTransNetV2 } from '@/core/utils/scene-detector-transnetv2'
 import type { TransNetV2ProgressEvent } from '@/core/utils/transnetv2/types'
-import { detectBeatThis } from '@/core/utils/beat-detector'
-import type { BeatThisProgressEvent } from '@/core/utils/beatthis/types'
 import { exportTimelineItem } from '@/core/utils/mediaExporter'
 import { BizyairFileUploader } from '@/core/utils/bizyairFileUploader'
 import { submitASRTask } from '@/core/jobs'
@@ -40,6 +38,15 @@ type MenuItem =
   | {
       type: 'separator'
     }
+
+function appendMenuSeparator(menuItems: MenuItem[]): void {
+  const previousItem = menuItems[menuItems.length - 1]
+  if (!previousItem || ('type' in previousItem && previousItem.type === 'separator')) {
+    return
+  }
+
+  menuItems.push({ type: 'separator' })
+}
 
 /**
  * 时间轴右键菜单模块
@@ -135,7 +142,7 @@ export function useTimelineContextMenu(
         icon: IconComponents.FOLDER_OPEN,
         onClick: () => revealClipInLibrary(),
       })
-      menuItems.push({ type: 'separator' } as MenuItem)
+      appendMenuSeparator(menuItems)
     }
 
     // 只有 ready 状态的 timelineItem 才有各种右键选项
@@ -149,54 +156,16 @@ export function useTimelineContextMenu(
           onClick: () => detectSceneBoundaries(),
         })
 
-        // 分隔符
-        menuItems.push({ type: 'separator' } as MenuItem)
+        appendMenuSeparator(menuItems)
       }
 
       // 语音识别 - 仅视频和音频类型支持
       if (timelineItem.mediaType === 'video' || timelineItem.mediaType === 'audio') {
         const hasAIMarks = timelineItem.aiMarks !== undefined
         const hasManualMarkers = Boolean(timelineItem.markers?.length)
-        menuItems.push({
-          label: t(
-            hasAIMarks
-              ? 'timeline.contextMenu.clip.regenerateBeatMarks'
-              : 'timeline.contextMenu.clip.autoBeatMarks',
-          ),
-          icon: IconComponents.MUSIC,
-          onClick: () => detectBeatMarks(),
-        })
-
-        if (hasAIMarks) {
-          menuItems.push(
-            { type: 'separator' },
-            {
-              label: t('timeline.contextMenu.clip.hideAIMarks'),
-              icon: IconComponents.MARKER_OFF,
-              onClick: () => setAIMarksMode('none'),
-            },
-            {
-              label: t('timeline.contextMenu.clip.showBeat1'),
-              icon: IconComponents.MARKER,
-              onClick: () => setAIMarksMode('beat1'),
-            },
-            {
-              label: t('timeline.contextMenu.clip.showBeat1234'),
-              icon: IconComponents.MARKER,
-              onClick: () => setAIMarksMode('beat1234'),
-            },
-          )
-        }
 
         if (hasAIMarks || hasManualMarkers) {
-          menuItems.push({ type: 'separator' })
-          if (hasAIMarks) {
-            menuItems.push({
-              label: t('timeline.contextMenu.clip.clearAIMarks'),
-              icon: IconComponents.MARKER_OFF,
-              onClick: () => clearClipAIMarks(),
-            })
-          }
+          appendMenuSeparator(menuItems)
           if (hasManualMarkers) {
             menuItems.push({
               label: t('timeline.contextMenu.clip.clearManualMarkers'),
@@ -204,17 +173,23 @@ export function useTimelineContextMenu(
               onClick: () => clearClipMarkers(),
             })
           }
+          if (hasAIMarks) {
+            menuItems.push({
+              label: t('timeline.contextMenu.clip.clearAIMarks'),
+              icon: IconComponents.MARKER_OFF,
+              onClick: () => clearClipAIMarks(),
+            })
+          }
         }
 
-        menuItems.push({ type: 'separator' } as MenuItem)
+        appendMenuSeparator(menuItems)
         menuItems.push({
           label: t('timeline.contextMenu.clip.speechRecognition'),
           icon: IconComponents.MUSIC,
           onClick: () => startSpeechRecognition(),
         })
 
-        // 分隔符
-        menuItems.push({ type: 'separator' } as MenuItem)
+        appendMenuSeparator(menuItems)
       }
 
       // 复制片段 - 所有类型都支持
@@ -236,8 +211,7 @@ export function useTimelineContextMenu(
         })
       }
 
-      // 分隔符
-      menuItems.push({ type: 'separator' } as MenuItem)
+      appendMenuSeparator(menuItems)
     }
 
     // 删除片段 - 所有状态都支持
@@ -534,131 +508,12 @@ export function useTimelineContextMenu(
     }
   }
 
-  async function setAIMarksMode(mode: 'none' | 'beat1' | 'beat1234') {
-    const clipId = contextMenuTarget.value.clipId
-    if (!clipId) return
-
-    try {
-      await unifiedStore.setAIMarksModeWithHistory(clipId, mode)
-    } finally {
-      showContextMenu.value = false
-    }
-  }
-
   async function clearClipAIMarks() {
     const clipId = contextMenuTarget.value.clipId
     if (!clipId) return
 
     try {
       await unifiedStore.clearAIMarksWithHistory(clipId)
-    } finally {
-      showContextMenu.value = false
-    }
-  }
-
-  async function detectBeatMarks() {
-    const clipId = contextMenuTarget.value.clipId
-    if (!clipId) return
-
-    const timelineItem = unifiedStore.getTimelineItem(clipId)
-    if (!timelineItem) return
-
-    await unifiedStore.pause()
-    const abortController = new AbortController()
-    const loading = unifiedStore.createLoading({
-      title: t('timeline.beatDetection.title'),
-      showProgress: true,
-      showDetails: true,
-      showTips: true,
-      tipText: t('timeline.beatDetection.tip'),
-      showCancel: true,
-      cancelText: t('common.cancel'),
-      onCancel: () => abortController.abort(),
-    })
-
-    try {
-      const updateProgress = (event: BeatThisProgressEvent) => {
-        let details: string
-        switch (event.stage) {
-          case 'loading-model':
-            details = t('timeline.beatDetection.progress.loadingModel')
-            break
-          case 'checking-cache':
-            details = t('timeline.beatDetection.progress.checkingCache')
-            break
-          case 'loading-from-cache':
-            details = t('timeline.beatDetection.progress.loadingFromCache')
-            break
-          case 'downloading-model':
-            details = t('timeline.beatDetection.progress.downloadingModel', {
-              percent: Math.round((event.progress ?? 0) * 100),
-            })
-            break
-          case 'initializing-model':
-            details = t('timeline.beatDetection.progress.initializingModel')
-            break
-          case 'model-ready':
-            details = t('timeline.beatDetection.progress.modelReady')
-            break
-          case 'decoding-audio':
-            details = t('timeline.beatDetection.progress.decodingAudio')
-            break
-          case 'extracting-features':
-            details = t('timeline.beatDetection.progress.extractingFeatures', {
-              current: Math.floor(event.audioCurrentSeconds ?? 0),
-              total: Math.ceil(event.audioTotalSeconds ?? 0),
-            })
-            break
-          case 'detecting-beats':
-            details = t('timeline.beatDetection.progress.detectingBeats')
-            break
-          case 'finalizing-beats':
-            details = t('timeline.beatDetection.progress.finalizingBeats')
-            break
-        }
-
-        loading.update({
-          progress: Math.min(100, Math.round((event.current / event.total) * 100)),
-          details,
-        })
-      }
-
-      const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
-      const oriFile = mediaItem?.runtime.bunny?.bunnyMedia?.getOriFile()
-      if (!oriFile) {
-        throw new Error('无法获取原始文件')
-      }
-
-      const marks = await detectBeatThis(timelineItem, oriFile, {
-        signal: abortController.signal,
-        onProgress: updateProgress,
-      })
-      if (abortController.signal.aborted) {
-        throw new DOMException('自动节拍已取消', 'AbortError')
-      }
-
-      await unifiedStore.updateAIMarksWithHistory(clipId, {
-        mode: marks.length > 0 ? (timelineItem.aiMarks?.mode ?? 'beat1234') : 'none',
-        marks,
-      })
-      loading.close()
-
-      if (marks.length === 0) {
-        unifiedStore.messageWarning(t('timeline.beatDetection.noCompleteBars'))
-      } else {
-        unifiedStore.messageSuccess(t('timeline.beatDetection.success', { count: marks.length }))
-      }
-    } catch (error) {
-      loading.close()
-      if (error instanceof Error && error.name === 'AbortError') {
-        unifiedStore.messageInfo(t('timeline.beatDetection.cancelled'))
-      } else {
-        unifiedStore.messageError(
-          t('timeline.beatDetection.error', {
-            message: error instanceof Error ? error.message : String(error),
-          }),
-        )
-      }
     } finally {
       showContextMenu.value = false
     }

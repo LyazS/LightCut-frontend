@@ -1,31 +1,32 @@
 {
   "toolbar": {
     "history": {
-      "undo": "撤销",
       "undoTooltip": "撤销上一个操作 (Ctrl+Z)",
-      "redo": "重做",
       "redoTooltip": "重做下一个操作 (Ctrl+Y)"
     },
     "clip": {
-      "marker": "标记",
-      "unmark": "反标记",
-      "unmarkTooltip": "反标记当前播放头位置",
+      "marker": "手动标记",
+      "unmarkTooltip": "移除当前播放头位置的手动标记",
       "markerOutOfRangeTooltip": "播放头不在选中片段内，无法添加标记",
-      "split": "裁剪",
+      "aiMarkerTooltip": "设置 AI 节拍标记的显示方式",
+      "aiMarkerDetectTooltip": "选择节拍模式并自动识别 AI 节拍标记",
+      "aiMarkerUnsupportedTooltip": "只有音频和视频片段支持 AI 节拍标记",
+      "aiMarkerUnavailableTooltip": "片段尚未就绪，暂时无法识别 AI 节拍标记",
+      "aiMarkerModes": {
+        "none": "无",
+        "beat1": "舒缓节拍",
+        "beat1234": "急促节拍"
+      },
       "splitTooltip": "在当前时间位置裁剪选中的片段",
-      "delete": "删除",
       "deleteTooltip": "删除选中的片段",
       "overlapping": "⚠️ {count} 个重叠"
     },
     "edgeEdit": {
-      "trim": "裁切",
       "trimTooltip": "左右手柄执行 Trim/Extend：音视频保持当前倍速并同步素材入出点",
-      "resize": "伸缩",
       "resizeTooltip": "左右手柄执行伸缩：只改变时间轴长度，不移动素材入出点",
       "tooltip": "切换片段左右手柄的编辑模式"
     },
     "snap": {
-      "snap": "吸附",
       "enabledTooltip": "吸附功能已开启 - 片段会自动对齐到相邻片段边缘和时间轴起点",
       "disabledTooltip": "吸附功能已关闭 - 点击开启吸附功能，拖拽时将自动对齐片段"
     },

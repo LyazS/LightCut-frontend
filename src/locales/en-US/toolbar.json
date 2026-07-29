@@ -1,31 +1,32 @@
 {
   "toolbar": {
     "history": {
-      "undo": "Undo",
       "undoTooltip": "Undo last operation (Ctrl+Z)",
-      "redo": "Redo",
       "redoTooltip": "Redo next operation (Ctrl+Y)"
     },
     "clip": {
-      "marker": "Marker",
-      "unmark": " Unmarker",
-      "unmarkTooltip": "Remove the clip marker at the current playhead position",
+      "marker": "Manual Marker",
+      "unmarkTooltip": "Remove the manual marker at the current playhead position",
       "markerOutOfRangeTooltip": "The playhead is outside the selected clip",
-      "split": "Split",
+      "aiMarkerTooltip": "Set the AI beat marker display",
+      "aiMarkerDetectTooltip": "Choose a beat mode to detect AI beat markers",
+      "aiMarkerUnsupportedTooltip": "AI beat markers are available for audio and video clips only",
+      "aiMarkerUnavailableTooltip": "The clip is not ready for AI beat detection yet",
+      "aiMarkerModes": {
+        "none": "None",
+        "beat1": "Relaxed Beat",
+        "beat1234": "Fast Beat"
+      },
       "splitTooltip": "Split selected clip at current time position",
-      "delete": "Delete",
       "deleteTooltip": "Delete selected clip",
       "overlapping": "{count} overlaps"
     },
     "edgeEdit": {
-      "trim": "Trim",
       "trimTooltip": "Clip handles trim/extend while preserving playback rate for audio/video",
-      "resize": "Resize",
       "resizeTooltip": "Clip handles resize timeline duration without moving source in/out points",
       "tooltip": "Switch clip edge handle edit mode"
     },
     "snap": {
-      "snap": "Snap",
       "enabledTooltip": "Snap enabled - Clips will automatically align to adjacent clip edges and timeline start",
       "disabledTooltip": "Snap disabled - Click to enable snap function for automatic clip alignment during drag"
     },
