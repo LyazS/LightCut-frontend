@@ -1,17 +1,16 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { ClipFilterConfig } from '@/core/filter/types'
 import { supportsClipFilter } from '@/core/timelineitem/features/filter'
-import {
-  type UnifiedLibraryAssetData,
-} from '@/core/asset/types'
+import { type UnifiedLibraryAssetData } from '@/core/asset/types'
 import { effectTemplateRegistry } from '@/core/effect-template/EffectTemplateRegistry'
 
 export class UpdateFilterConfigCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.updateFilter()
   private _isDisposed = false
 
   constructor(
@@ -20,17 +19,13 @@ export class UpdateFilterConfigCommand implements SimpleCommand {
     private readonly newValue: ClipFilterConfig | undefined,
     private readonly timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setTimelineItemFilterConfigForCmd: (
-        id: string,
-        filter?: ClipFilterConfig,
-      ) => void
+      setTimelineItemFilterConfigForCmd: (id: string, filter?: ClipFilterConfig) => void
     },
     private readonly mediaModule: {
       getAsset: (id: string | null) => UnifiedLibraryAssetData | undefined
     },
   ) {
     this.id = generateCommandId()
-    this.description = '更新片段滤镜'
   }
 
   async execute(): Promise<void> {
@@ -52,7 +47,13 @@ export class UpdateFilterConfigCommand implements SimpleCommand {
     }
 
     const effectPackageId = nextValue?.effectPackageId
-    if (nextValue && (!effectPackageId || !nextValue.templateId || !nextValue.packageVersion || !nextValue.catalogVersion)) {
+    if (
+      nextValue &&
+      (!effectPackageId ||
+        !nextValue.templateId ||
+        !nextValue.packageVersion ||
+        !nextValue.catalogVersion)
+    ) {
       throw new Error('滤镜效果缺少必要标识字段')
     }
     if (effectPackageId) {

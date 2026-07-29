@@ -1,3 +1,5 @@
+import type { HistoryLabel } from '@/core/modules/historyLabel'
+
 /**
  * 命令模式接口定义
  * 用于实现撤销/重做功能的统一命令接口
@@ -6,8 +8,8 @@ export interface SimpleCommand {
   /** 命令的唯一标识符 */
   readonly id: string
 
-  /** 命令的描述信息，用于显示在历史记录中 */
-  readonly description: string
+  /** 命令的语义标签，由历史模块按当前语言格式化 */
+  readonly historyLabel: HistoryLabel
 
   /** 执行命令 */
   execute(): Promise<void>

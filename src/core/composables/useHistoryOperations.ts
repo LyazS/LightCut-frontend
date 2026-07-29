@@ -66,11 +66,11 @@ import { RENDERER_FPS } from '@/core/mediabunny/constant'
 import type { ChangePlan } from '@/core/property-system'
 import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
 import type { TrimTimelineItemSide } from '@/core/modules/commands/timelineCommands'
-import { useAppI18n } from '@/core/composables/useI18n'
 import {
   getVisibleTimelineMarkers,
   normalizeTimelineMarkers,
 } from '@/core/utils/timelineMarkerUtils'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 interface PlaybackRateUpdate {
   playbackRate: number
@@ -90,8 +90,6 @@ export function useHistoryOperations(
   unifiedDirectoryModule: UnifiedDirectoryModule,
   ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
 ) {
-  const { t } = useAppI18n()
-
   // ==================== 辅助函数 ====================
 
   function hasPlaybackRateChanges(
@@ -125,12 +123,7 @@ export function useHistoryOperations(
     name: string,
     parentId: string,
   ): Promise<VirtualDirectory> {
-    const command = new CreateDirectoryCommand(
-      name,
-      parentId,
-      unifiedDirectoryModule,
-      t('media.history.createFolder', { name: name.trim() }),
-    )
+    const command = new CreateDirectoryCommand(name, parentId, unifiedDirectoryModule)
     await unifiedHistoryModule.executeCommand(command)
 
     const directory = command.createdDirectory
@@ -142,33 +135,19 @@ export function useHistoryOperations(
 
   async function renameDirectoryWithHistory(directoryId: string, newName: string): Promise<void> {
     await unifiedHistoryModule.executeCommand(
-      new RenameDirectoryCommand(
-        directoryId,
-        newName,
-        unifiedDirectoryModule,
-        t('media.history.renameFolder', { name: newName.trim() }),
-      ),
+      new RenameDirectoryCommand(directoryId, newName, unifiedDirectoryModule),
     )
   }
 
   async function deleteEmptyDirectoryWithHistory(directoryId: string): Promise<void> {
     await unifiedHistoryModule.executeCommand(
-      new DeleteEmptyDirectoryCommand(
-        directoryId,
-        unifiedDirectoryModule,
-        t('media.history.deleteEmptyFolder'),
-      ),
+      new DeleteEmptyDirectoryCommand(directoryId, unifiedDirectoryModule),
     )
   }
 
   async function renameAssetWithHistory(assetId: string, newName: string): Promise<void> {
     await unifiedHistoryModule.executeCommand(
-      new RenameAssetCommand(
-        assetId,
-        newName,
-        unifiedMediaModule,
-        t('media.history.renameAsset', { name: newName.trim() }),
-      ),
+      new RenameAssetCommand(assetId, newName, unifiedMediaModule),
     )
   }
 
@@ -178,23 +157,13 @@ export function useHistoryOperations(
   ): Promise<void> {
     if (items.length === 1 && items[0].type === 'directory') {
       await unifiedHistoryModule.executeCommand(
-        new MoveDirectoryCommand(
-          items[0].id,
-          targetDirectoryId,
-          unifiedDirectoryModule,
-          t('media.history.moveFolder'),
-        ),
+        new MoveDirectoryCommand(items[0].id, targetDirectoryId, unifiedDirectoryModule),
       )
       return
     }
 
     await unifiedHistoryModule.executeCommand(
-      new MoveLibraryItemsCommand(
-        items,
-        targetDirectoryId,
-        unifiedDirectoryModule,
-        t('media.history.moveItems', { count: items.length }),
-      ),
+      new MoveLibraryItemsCommand(items, targetDirectoryId, unifiedDirectoryModule),
     )
   }
 
@@ -466,7 +435,7 @@ export function useHistoryOperations(
       return
     }
 
-    const batch = unifiedHistoryModule.startBatch('移除片段滤镜')
+    const batch = unifiedHistoryModule.startBatch(historyLabels.removeFilter())
 
     if (currentFilterEffect) {
       batch.addCommand(
@@ -566,7 +535,7 @@ export function useHistoryOperations(
         beforeMarkers,
         [],
         unifiedTimelineModule,
-        t('timeline.contextMenu.clip.clearAllMarkers'),
+        historyLabels.clearAllMarkers(),
       ),
     )
     return true
@@ -864,13 +833,7 @@ export function useHistoryOperations(
       })
 
       // 创建选择命令
-      const command = new SelectTimelineSelectionsCommand(
-        itemIds,
-        mode,
-        unifiedSelectionModule,
-        unifiedTimelineModule,
-        unifiedMediaModule,
-      )
+      const command = new SelectTimelineSelectionsCommand(itemIds, mode, unifiedSelectionModule)
 
       // 执行命令（带历史记录）
       await unifiedHistoryModule.executeCommand(command)

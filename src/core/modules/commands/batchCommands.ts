@@ -20,6 +20,7 @@ import {
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 批量删除时间轴项目命令
@@ -38,7 +39,7 @@ export class BatchDeleteCommand extends BaseBatchCommand {
     },
     private ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
   ) {
-    super(`批量删除 ${timelineItemIds.length} 个时间轴项目`)
+    super(historyLabels.batchDeleteTimelineItems(timelineItemIds.length))
     this.buildDeleteCommands()
   }
 
@@ -80,7 +81,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
     },
   ) {
     const track = trackModule.getTrack(trackId)
-    super(`自动排列轨道: ${track?.name || `轨道 ${trackId}`}`)
+    super(historyLabels.autoArrangeTrack(track?.name || trackId))
     this.buildMoveCommands()
   }
 
@@ -151,7 +152,7 @@ export class BatchAutoArrangeTrackCommand extends BaseBatchCommand {
  */
 export class BatchUpdatePropertiesCommand extends BaseBatchCommand {
   constructor(targetItemIds: string[], updateCommands: SimpleCommand[]) {
-    super(`批量修改 ${targetItemIds.length} 个项目的属性`)
+    super(historyLabels.updateProperties(targetItemIds.length))
 
     // 添加所有更新命令
     updateCommands.forEach((command) => this.addCommand(command))
@@ -166,7 +167,7 @@ export class BatchUpdatePropertiesCommand extends BaseBatchCommand {
  */
 export class BatchUpdateMaskCommand extends BaseBatchCommand {
   constructor(targetItemIds: string[], updateCommands: SimpleCommand[]) {
-    super(`批量修改 ${targetItemIds.length} 个项目的蒙版属性`)
+    super(historyLabels.updateMask(targetItemIds.length))
 
     updateCommands.forEach((command) => this.addCommand(command))
 

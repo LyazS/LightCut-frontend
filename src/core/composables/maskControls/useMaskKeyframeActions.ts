@@ -2,6 +2,7 @@ import type { ComputedRef } from 'vue'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { useUnifiedStore } from '@/core/unifiedStore'
 import { propertyMutationCommitter, type ChangePlan } from '@/core/property-system'
+import { historyLabels } from '@/core/modules/historyLabel'
 import {
   clearMaskCenterOverlay,
   clearMaskFeatherOverlay,
@@ -30,7 +31,11 @@ import {
 } from '@/core/property-system/render-state'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { MaskPropertyPath, MaskType } from '@/core/timelineitem/features/mask'
-import { getItemLocalSize, normalizeMaskConfig, replaceMaskType } from '@/core/timelineitem/features/mask'
+import {
+  getItemLocalSize,
+  normalizeMaskConfig,
+  replaceMaskType,
+} from '@/core/timelineitem/features/mask'
 import {
   getKeyframeButtonState,
   getNextKeyframeFrame,
@@ -67,12 +72,15 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     return { currentMask, itemLocalSize }
   }
 
-  function createMaskEnabledPlan(item: NonNullable<typeof selectedTimelineItem.value>, value: boolean): ChangePlan {
+  function createMaskEnabledPlan(
+    item: NonNullable<typeof selectedTimelineItem.value>,
+    value: boolean,
+  ): ChangePlan {
     const { currentMask } = getMaskPlanContext(item)
 
     return {
       propertyId: 'mask.enabled',
-      description: value ? '启用蒙版' : '关闭蒙版',
+      historyLabel: historyLabels.updateProperties(),
       operations: [
         {
           kind: 'extra-render-config-patch',
@@ -89,12 +97,15 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     }
   }
 
-  function createMaskTypePlan(item: NonNullable<typeof selectedTimelineItem.value>, value: MaskType): ChangePlan {
+  function createMaskTypePlan(
+    item: NonNullable<typeof selectedTimelineItem.value>,
+    value: MaskType,
+  ): ChangePlan {
     const { currentMask, itemLocalSize } = getMaskPlanContext(item)
 
     return {
       propertyId: 'mask.type',
-      description: '修改蒙版类型',
+      historyLabel: historyLabels.updateProperties(),
       operations: [
         {
           kind: 'extra-render-config-patch',
@@ -108,12 +119,15 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     }
   }
 
-  function createMaskInvertedPlan(item: NonNullable<typeof selectedTimelineItem.value>, value: boolean): ChangePlan {
+  function createMaskInvertedPlan(
+    item: NonNullable<typeof selectedTimelineItem.value>,
+    value: boolean,
+  ): ChangePlan {
     const { currentMask } = getMaskPlanContext(item)
 
     return {
       propertyId: 'mask.inverted',
-      description: value ? '开启蒙版反相' : '关闭蒙版反相',
+      historyLabel: historyLabels.updateProperties(),
       operations: [
         {
           kind: 'extra-render-config-patch',
@@ -171,7 +185,11 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
         const item = selectedTimelineItem.value
         if (!item || !canOperateMaskNumbers.value) return
         clearMaskIntensityOverlay(item.id)
-        await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.intensity', value)
+        await propertyMutationCommitter.commitDirect(
+          getCommitContext(item),
+          'mask.intensity',
+          value,
+        )
         return
       }
       case 'mask.outerRange': {
@@ -186,9 +204,13 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
         const item = selectedTimelineItem.value
         if (!item || !canOperateMaskNumbers.value) return
         clearMaskRectangleSizeOverlay(item.id)
-        await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.rectangle.size', {
-          [path === 'mask.width' ? 'width' : 'height']: value,
-        })
+        await propertyMutationCommitter.commitDirect(
+          getCommitContext(item),
+          'mask.rectangle.size',
+          {
+            [path === 'mask.width' ? 'width' : 'height']: value,
+          },
+        )
         return
       }
       case 'mask.ellipseWidth':
@@ -233,7 +255,11 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
         const item = selectedTimelineItem.value
         if (!item || !canOperateMaskNumbers.value) return
         clearMaskMirrorLengthOverlay(item.id)
-        await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.mirror.length', value)
+        await propertyMutationCommitter.commitDirect(
+          getCommitContext(item),
+          'mask.mirror.length',
+          value,
+        )
         return
       }
       default: {
@@ -246,20 +272,29 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
   async function setEnabled(value: boolean) {
     const item = selectedTimelineItem.value
     if (!item) return
-    await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), createMaskEnabledPlan(item, value))
+    await propertyMutationCommitter.commitConfigPatch(
+      getCommitContext(item),
+      createMaskEnabledPlan(item, value),
+    )
   }
 
   async function setType(value: MaskType) {
     const item = selectedTimelineItem.value
     if (!item) return
     clearMaskRotationOverlay(item.id)
-    await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), createMaskTypePlan(item, value))
+    await propertyMutationCommitter.commitConfigPatch(
+      getCommitContext(item),
+      createMaskTypePlan(item, value),
+    )
   }
 
   async function setInverted(value: boolean) {
     const item = selectedTimelineItem.value
     if (!item) return
-    await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), createMaskInvertedPlan(item, value))
+    await propertyMutationCommitter.commitConfigPatch(
+      getCommitContext(item),
+      createMaskInvertedPlan(item, value),
+    )
   }
 
   async function toggleMaskKeyframe(channel: MaskChannelKey) {
@@ -289,7 +324,10 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
         const item = selectedTimelineItem.value
         if (!item || !canOperateMaskNumbers.value) return
         clearMaskRectangleSizeOverlay(item.id)
-        await propertyMutationCommitter.toggleKeyframe(getCommitContext(item), 'mask.rectangle.size')
+        await propertyMutationCommitter.toggleKeyframe(
+          getCommitContext(item),
+          'mask.rectangle.size',
+        )
         return
       }
       case 'mask.ellipse.size': {
@@ -405,7 +443,10 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const centerX = overlay.centerX ?? currentMask.centerX
     const centerY = overlay.centerY ?? currentMask.centerY
     clearMaskCenterOverlay(item.id)
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.center', { centerX, centerY })
+    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.center', {
+      centerX,
+      centerY,
+    })
   }
 
   async function commitMaskRectangleSizeDeferredUpdate() {
@@ -418,7 +459,10 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const width = overlay.width ?? currentMask.width
     const height = overlay.height ?? currentMask.height
     clearMaskRectangleSizeOverlay(item.id)
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.rectangle.size', { width, height })
+    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.rectangle.size', {
+      width,
+      height,
+    })
   }
 
   async function commitMaskFeatherDeferredUpdate(value?: number) {
@@ -426,7 +470,8 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     if (!item || !canOperateMaskNumbers.value) return
     const overlay = getMaskFeatherOverlay(item.id)
     const { currentMask } = getMaskPlanContext(item)
-    const outerRange = typeof value === 'number' ? value : overlay?.outerRange ?? currentMask.falloff.outerRange
+    const outerRange =
+      typeof value === 'number' ? value : (overlay?.outerRange ?? currentMask.falloff.outerRange)
     if (!Number.isFinite(outerRange)) return
     clearMaskFeatherOverlay(item.id)
     await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.feather', outerRange)
@@ -438,10 +483,14 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const overlay = getMaskIntensityOverlay(item.id)
     const { currentMask } = getMaskPlanContext(item)
     const decayRate =
-      typeof value === 'number' ? value : overlay?.decayRate ?? currentMask.falloff.decayRate
+      typeof value === 'number' ? value : (overlay?.decayRate ?? currentMask.falloff.decayRate)
     if (!Number.isFinite(decayRate)) return
     clearMaskIntensityOverlay(item.id)
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.intensity', decayRate)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'mask.intensity',
+      decayRate,
+    )
   }
 
   async function commitMaskEllipseSizeDeferredUpdate() {
@@ -467,7 +516,11 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const nextRotation = typeof value === 'number' ? value : overlay?.rotation
     if (typeof nextRotation !== 'number' || !Number.isFinite(nextRotation)) return
     clearMaskRotationOverlay(item.id)
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.rotation', nextRotation)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'mask.rotation',
+      nextRotation,
+    )
   }
 
   async function commitMaskRectangleCornerRadiusDeferredUpdate(value?: number) {
@@ -477,7 +530,7 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const { currentMask } = getMaskPlanContext(item)
     if (currentMask.type !== 'rectangle') return
     const cornerRadius =
-      typeof value === 'number' ? value : overlay?.cornerRadius ?? currentMask.cornerRadius
+      typeof value === 'number' ? value : (overlay?.cornerRadius ?? currentMask.cornerRadius)
     if (!Number.isFinite(cornerRadius)) return
     clearMaskRectangleCornerRadiusOverlay(item.id)
     await propertyMutationCommitter.commitDirect(
@@ -493,10 +546,14 @@ export function useMaskKeyframeActions(options: MaskKeyframeActionsOptions) {
     const overlay = getMaskMirrorLengthOverlay(item.id)
     const { currentMask } = getMaskPlanContext(item)
     if (currentMask.type !== 'mirror') return
-    const length = typeof value === 'number' ? value : overlay?.length ?? currentMask.length
+    const length = typeof value === 'number' ? value : (overlay?.length ?? currentMask.length)
     if (!Number.isFinite(length)) return
     clearMaskMirrorLengthOverlay(item.id)
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'mask.mirror.length', length)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'mask.mirror.length',
+      length,
+    )
   }
 
   return {

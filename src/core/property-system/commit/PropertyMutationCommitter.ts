@@ -7,6 +7,7 @@ import type {
   DirectPropertyId,
   DirectPropertyBatchPlanEntry,
 } from '@/core/property-system/mutation'
+import type { HistoryLabel } from '@/core/modules/historyLabel'
 import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 
@@ -37,7 +38,7 @@ export class PropertyMutationCommitter {
   async commitDirectBatch(
     context: PropertyMutationCommitContext,
     entries: DirectPropertyBatchPlanEntry[],
-    description?: string,
+    historyLabel?: HistoryLabel,
   ): Promise<void> {
     if (entries.length === 0) {
       return
@@ -49,7 +50,7 @@ export class PropertyMutationCommitter {
         frame: context.frame,
         item: context.item,
         entries,
-        description,
+        historyLabel,
       }),
     )
   }
@@ -88,17 +89,14 @@ export class PropertyMutationCommitter {
     context: PropertyMutationCommitContext,
     plan: {
       propertyId: ChangePlanPropertyId
-      description: string
+      historyLabel: ChangePlan['historyLabel']
       operations: ChangeOperation[]
     },
   ): Promise<void> {
     await context.applyChangePlan(plan)
   }
 
-  async commitChangePlan(
-    context: PropertyMutationCommitContext,
-    plan: ChangePlan,
-  ): Promise<void> {
+  async commitChangePlan(context: PropertyMutationCommitContext, plan: ChangePlan): Promise<void> {
     await context.applyChangePlan(plan)
   }
 }

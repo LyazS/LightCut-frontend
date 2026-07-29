@@ -34,11 +34,7 @@ type TimelineCommand =
   | SplitTimelineItemCommand
   | TrimTimelineItemCommand
 
-export function parseRequiredTimecode(
-  tool: string,
-  value: unknown,
-  field: string,
-) {
+export function parseRequiredTimecode(tool: string, value: unknown, field: string) {
   if (typeof value !== 'string' || !isValidAgentToolTimecode(value)) {
     return {
       ok: false as const,
@@ -86,9 +82,7 @@ export function buildClipSnapshot(item: UnifiedTimelineItemData) {
     timeline: {
       start: framesToTimecode(item.timeRange.timelineStartTime),
       end: framesToTimecode(item.timeRange.timelineEndTime),
-      duration: framesToTimecode(
-        item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
-      ),
+      duration: framesToTimecode(item.timeRange.timelineEndTime - item.timeRange.timelineStartTime),
     },
     source:
       item.mediaType === 'video' || item.mediaType === 'audio'
@@ -130,7 +124,7 @@ export function findTrackConflict(params: {
 
 export async function executeSingleCommand(command: SimpleCommand): Promise<void> {
   const store = useUnifiedStore()
-  const batch = store.startBatch(command.description)
+  const batch = store.startBatch(command.historyLabel)
   batch.addCommand(command)
   await store.executeBatchCommand(batch.build())
 }

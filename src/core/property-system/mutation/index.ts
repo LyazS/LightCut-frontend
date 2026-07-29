@@ -1,7 +1,4 @@
-export {
-  PropertyPlanner,
-  propertyPlanner,
-} from './PropertyPlanner'
+export { PropertyPlanner, propertyPlanner } from './PropertyPlanner'
 export type {
   AudioConfigPatchOperation,
   AnimatablePropertyId,
@@ -19,6 +16,4 @@ export type {
   PropertyPlanIntent,
   VisualConfigPatchOperation,
 } from './types'
-export type {
-  DynamicFilterParamPropertyId,
-} from '@/core/property-system/schema/propertyIds'
+export type { DynamicFilterParamPropertyId } from '@/core/property-system/schema/propertyIds'

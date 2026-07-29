@@ -1,8 +1,7 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
-import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
-import { parseTimelineSelectionId, type TimelineSelectionId } from '@/core/types/timelineSelection'
+import { historyLabels, type HistoryLabel } from '@/core/modules/historyLabel'
+import type { TimelineSelectionId } from '@/core/types/timelineSelection'
 
 /**
  * 选择时间轴项目命令
@@ -11,7 +10,7 @@ import { parseTimelineSelectionId, type TimelineSelectionId } from '@/core/types
  */
 export class SelectTimelineSelectionsCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: HistoryLabel
   private previousSelection: Set<TimelineSelectionId> // 保存操作前的选择状态
   private newSelection: Set<TimelineSelectionId> // 保存操作后的选择状态
   private _isDisposed = false
@@ -21,12 +20,6 @@ export class SelectTimelineSelectionsCommand implements SimpleCommand {
     private mode: 'replace' | 'toggle',
     private selectionModule: {
       selectedTimelineSelectionIds: { value: Set<TimelineSelectionId> }
-    },
-    private timelineModule: {
-      getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-    },
-    private mediaModule: {
-      getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
     },
   ) {
     this.id = generateCommandId()
@@ -38,7 +31,7 @@ export class SelectTimelineSelectionsCommand implements SimpleCommand {
     this.newSelection = this.calculateNewSelection()
 
     // 生成描述信息
-    this.description = this.generateDescription()
+    this.historyLabel = this.generateHistoryLabel()
 
     console.log('💾 保存选择操作数据:', {
       itemIds,
@@ -75,35 +68,21 @@ export class SelectTimelineSelectionsCommand implements SimpleCommand {
   /**
    * 生成操作描述
    */
-  private generateDescription(): string {
-    const itemNames = this.itemIds.map((id) => {
-      const parsed = parseTimelineSelectionId(id)
-      if (!parsed) return '未知项目'
-
-      const timelineItem = this.timelineModule.getTimelineItem(parsed.sourceId)
-      if (!timelineItem) return '未知项目'
-
-      const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      const baseName = mediaItem?.name || '未知素材'
-      return parsed.kind === 'transition' ? `转场: ${baseName}` : baseName
-    })
-
+  private generateHistoryLabel(): HistoryLabel {
     if (this.mode === 'replace') {
       if (this.itemIds.length === 0) {
-        return '取消选择所有项目'
-      } else if (this.itemIds.length === 1) {
-        return `选择项目: ${itemNames[0]}`
-      } else {
-        return `选择 ${this.itemIds.length} 个项目`
+        return historyLabels.clearSelection()
       }
+      return historyLabels.selectItems(this.itemIds.length)
     } else {
-      // toggle模式
-      if (this.itemIds.length === 1) {
-        const wasSelected = this.previousSelection.has(this.itemIds[0])
-        return wasSelected ? `取消选择: ${itemNames[0]}` : `添加选择: ${itemNames[0]}`
-      } else {
-        return `切换选择 ${this.itemIds.length} 个项目`
+      const selectedCount = this.itemIds.filter((id) => this.previousSelection.has(id)).length
+      if (selectedCount === 0) {
+        return historyLabels.addSelection(this.itemIds.length)
       }
+      if (selectedCount === this.itemIds.length) {
+        return historyLabels.removeSelection(selectedCount)
+      }
+      return historyLabels.toggleSelection(this.itemIds.length)
     }
   }
 
@@ -112,14 +91,14 @@ export class SelectTimelineSelectionsCommand implements SimpleCommand {
    */
   async execute(): Promise<void> {
     try {
-      console.log(`🔄 执行选择操作: ${this.description}`)
+      console.log('🔄 执行选择操作:', this.historyLabel.key)
 
       // 直接设置选择状态，避免触发新的历史记录
       this.applySelection(this.newSelection)
 
       console.log(`✅ 选择操作完成: ${Array.from(this.newSelection).length} 个项目被选中`)
     } catch (error) {
-      console.error(`❌ 选择操作失败: ${this.description}`, error)
+      console.error('❌ 选择操作失败:', this.historyLabel.key, error)
       throw error
     }
   }
@@ -129,14 +108,14 @@ export class SelectTimelineSelectionsCommand implements SimpleCommand {
    */
   async undo(): Promise<void> {
     try {
-      console.log(`🔄 撤销选择操作: ${this.description}`)
+      console.log('🔄 撤销选择操作:', this.historyLabel.key)
 
       // 恢复到之前的选择状态
       this.applySelection(this.previousSelection)
 
       console.log(`↩️ 已恢复选择状态: ${Array.from(this.previousSelection).length} 个项目被选中`)
     } catch (error) {
-      console.error(`❌ 撤销选择操作失败: ${this.description}`, error)
+      console.error('❌ 撤销选择操作失败:', this.historyLabel.key, error)
       throw error
     }
   }

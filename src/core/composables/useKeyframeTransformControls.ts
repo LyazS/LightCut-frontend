@@ -13,6 +13,7 @@ import { isPlayheadInTimelineItem } from '@/core/utils/timelineSearchUtils'
 import type { BlendMode } from '@/core/timelineitem/model/blendMode'
 import { isBlendMode } from '@/core/timelineitem/model/blendMode'
 import { propertyMutationCommitter, type ChangeOperation } from '@/core/property-system'
+import { historyLabels } from '@/core/modules/historyLabel'
 import {
   clearAudioVolumeOverlay,
   clearVisualBlendIntensityOverlay,
@@ -46,9 +47,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
-export function useUnifiedKeyframeVisualControls(
-  options: UnifiedKeyframeVisualControlsOptions,
-) {
+export function useUnifiedKeyframeVisualControls(options: UnifiedKeyframeVisualControlsOptions) {
   const { selectedTimelineItem, currentFrame } = options
   const unifiedStore = useUnifiedStore()
 
@@ -115,8 +114,8 @@ export function useUnifiedKeyframeVisualControls(
   const proportionalScale = computed(() =>
     Boolean(
       selectedTimelineItem.value &&
-      TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value) &&
-      visualRenderConfig.value?.proportionalScale,
+        TimelineItemQueries.hasVisualProperties(selectedTimelineItem.value) &&
+        visualRenderConfig.value?.proportionalScale,
     ),
   )
   function getScaledSizeFromWidth(nextWidth: number): Record<string, number> {
@@ -192,7 +191,10 @@ export function useUnifiedKeyframeVisualControls(
       case 'visual.blendIntensity': {
         const item = selectedTimelineItem.value
         if (!item || !canOperateVisualChannels.value) return
-        await propertyMutationCommitter.toggleKeyframe(getCommitContext(item), 'visual.blendIntensity')
+        await propertyMutationCommitter.toggleKeyframe(
+          getCommitContext(item),
+          'visual.blendIntensity',
+        )
         return
       }
       case 'visual.size': {
@@ -241,7 +243,11 @@ export function useUnifiedKeyframeVisualControls(
     const item = selectedTimelineItem.value
     if (!item || !canOperateVisualChannels.value) return
     const nextRotation = typeof nextValue === 'number' ? nextValue : rotation.value
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.rotation', nextRotation)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'visual.rotation',
+      nextRotation,
+    )
     clearVisualRotationOverlay(item.id)
   }
 
@@ -254,13 +260,15 @@ export function useUnifiedKeyframeVisualControls(
     const resolvedValue =
       typeof nextValue === 'number'
         ? nextValue
-        : positionOverlay?.[axis] ?? currentRenderConfig?.[axis]
+        : (positionOverlay?.[axis] ?? currentRenderConfig?.[axis])
 
     if (!isFiniteNumber(resolvedValue)) {
       return
     }
 
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.position', { [axis]: resolvedValue })
+    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.position', {
+      [axis]: resolvedValue,
+    })
     clearVisualPositionOverlay(item.id)
   }
 
@@ -276,14 +284,14 @@ export function useUnifiedKeyframeVisualControls(
     const y = positionOverlay.y ?? currentRenderConfig?.y
     if (!isFiniteNumber(x) || !isFiniteNumber(y)) return
 
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.position', { x, y })
+    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.position', {
+      x,
+      y,
+    })
     clearVisualPositionOverlay(item.id)
   }
 
-  async function commitSizeDeferredUpdate(
-    axis: 'width' | 'height',
-    nextValue?: number,
-  ) {
+  async function commitSizeDeferredUpdate(axis: 'width' | 'height', nextValue?: number) {
     const item = selectedTimelineItem.value
     if (!item || !canOperateVisualChannels.value) return
 
@@ -292,7 +300,7 @@ export function useUnifiedKeyframeVisualControls(
     const resolvedValue =
       typeof nextValue === 'number'
         ? nextValue
-        : sizeOverlay?.[axis] ?? currentRenderConfig?.[axis]
+        : (sizeOverlay?.[axis] ?? currentRenderConfig?.[axis])
 
     if (!isFiniteNumber(resolvedValue)) {
       return
@@ -320,11 +328,15 @@ export function useUnifiedKeyframeVisualControls(
     const nextBlendIntensity =
       typeof nextValue === 'number'
         ? nextValue
-        : blendIntensityOverlay?.blendIntensity ?? currentRenderConfig?.blendIntensity
+        : (blendIntensityOverlay?.blendIntensity ?? currentRenderConfig?.blendIntensity)
 
     if (!isFiniteNumber(nextBlendIntensity)) return
 
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.blendIntensity', nextBlendIntensity)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'visual.blendIntensity',
+      nextBlendIntensity,
+    )
     clearVisualBlendIntensityOverlay(item.id)
   }
 
@@ -337,7 +349,7 @@ export function useUnifiedKeyframeVisualControls(
     const nextVolume =
       typeof nextValue === 'number'
         ? nextValue
-        : volumeOverlay?.volume ?? currentRenderConfig?.volume
+        : (volumeOverlay?.volume ?? currentRenderConfig?.volume)
 
     if (!isFiniteNumber(nextVolume)) return
 
@@ -386,7 +398,7 @@ export function useUnifiedKeyframeVisualControls(
 
     await propertyMutationCommitter.commitChangePlan(getCommitContext(item), {
       propertyId: 'visual.size',
-      description: '修改尺寸和位置',
+      historyLabel: historyLabels.updateProperties(),
       operations,
     })
     clearVisualSizeOverlay(item.id)
@@ -498,7 +510,10 @@ export function useUnifiedKeyframeVisualControls(
   const setSizeDirectly = async (width: number, height: number) => {
     const item = selectedTimelineItem.value
     if (!item || !canOperateVisualChannels.value) return
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.size', { width, height })
+    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.size', {
+      width,
+      height,
+    })
   }
 
   const setSizePatchDirectly = async (value: Record<string, number>) => {
@@ -561,17 +576,22 @@ export function useUnifiedKeyframeVisualControls(
   const setBlendIntensityDirectly = async (nextBlendIntensity: number) => {
     const item = selectedTimelineItem.value
     if (!item || !canOperateVisualChannels.value) return
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), 'visual.blendIntensity', nextBlendIntensity)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      'visual.blendIntensity',
+      nextBlendIntensity,
+    )
   }
 
   const setBlendModeDirectly = async (nextBlendMode: BlendMode) => {
     const item = selectedTimelineItem.value
-    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasVisualProperties(item)) return
+    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasVisualProperties(item))
+      return
     if (!isBlendMode(nextBlendMode)) return
 
     await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), {
       propertyId: 'visual.blendMode',
-      description: '修改混合模式',
+      historyLabel: historyLabels.updateProperties(),
       operations: [
         {
           kind: 'visual-config-patch',
@@ -591,11 +611,12 @@ export function useUnifiedKeyframeVisualControls(
 
   const setMutedDirectly = async (nextMuted: boolean) => {
     const item = selectedTimelineItem.value
-    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasAudioProperties(item)) return
+    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasAudioProperties(item))
+      return
 
     await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), {
       propertyId: 'audio.isMuted',
-      description: nextMuted ? '静音音频' : '取消静音音频',
+      historyLabel: historyLabels.updateProperties(),
       operations: [
         {
           kind: 'audio-config-patch',
@@ -609,9 +630,11 @@ export function useUnifiedKeyframeVisualControls(
 
   const toggleProportionalScale = async () => {
     const item = selectedTimelineItem.value
-    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasVisualProperties(item)) return
+    if (!item || !canOperateVisualChannels.value || !TimelineItemQueries.hasVisualProperties(item))
+      return
 
-    const nextProportionalScale = !TimelineItemQueries.getResolvedRenderConfig(item).visual.proportionalScale
+    const nextProportionalScale =
+      !TimelineItemQueries.getResolvedRenderConfig(item).visual.proportionalScale
     const operations: ChangeOperation[] = [
       {
         kind: 'visual-config-patch' as const,
@@ -636,7 +659,7 @@ export function useUnifiedKeyframeVisualControls(
 
     await propertyMutationCommitter.commitConfigPatch(getCommitContext(item), {
       propertyId: 'visual.proportionalScale',
-      description: `${nextProportionalScale ? '开启' : '关闭'}等比缩放`,
+      historyLabel: historyLabels.updateProperties(),
       operations,
     })
   }

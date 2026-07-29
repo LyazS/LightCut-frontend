@@ -6,6 +6,7 @@
 
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
@@ -19,7 +20,7 @@ import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
  */
 export class MoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.moveTimelineItem>
   private _isDisposed = false
 
   constructor(
@@ -39,27 +40,15 @@ export class MoveTimelineItemCommand implements SimpleCommand {
     this.id = generateCommandId()
 
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
-    let itemName = '未知素材'
+    let itemName: string | undefined
 
     // 根据项目类型获取名称
     if (timelineItem) {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      itemName = mediaItem?.name || '未知素材'
+      itemName = mediaItem?.name
     }
 
-    // 生成描述信息
-    const positionChanged = this.oldPositionFrames !== this.newPositionFrames
-    const trackChanged = oldTrackId !== newTrackId
-
-    if (positionChanged && trackChanged) {
-      this.description = `移动时间轴项目: ${itemName} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧, 轨道: ${oldTrackId}→${newTrackId})`
-    } else if (positionChanged) {
-      this.description = `移动时间轴项目: ${itemName} (位置: ${this.oldPositionFrames}帧→${this.newPositionFrames}帧)`
-    } else if (trackChanged) {
-      this.description = `移动时间轴项目: ${itemName} (轨道: ${oldTrackId}→${newTrackId})`
-    } else {
-      this.description = `移动时间轴项目: ${itemName} (无变化)`
-    }
+    this.historyLabel = historyLabels.moveTimelineItem(itemName)
 
     console.log('💾 保存移动操作数据:', {
       timelineItemId,
@@ -67,8 +56,8 @@ export class MoveTimelineItemCommand implements SimpleCommand {
       newPositionFrames: this.newPositionFrames,
       oldTrackId,
       newTrackId,
-      positionChanged,
-      trackChanged,
+      positionChanged: this.oldPositionFrames !== this.newPositionFrames,
+      trackChanged: oldTrackId !== newTrackId,
     })
   }
 

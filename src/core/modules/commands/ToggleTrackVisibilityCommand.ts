@@ -3,6 +3,7 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 切换轨道可见性命令
@@ -11,7 +12,7 @@ import type { UnifiedTrackData } from '@/core/track/TrackTypes'
  */
 export class ToggleTrackVisibilityCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.showTrack>
   private previousVisibility: boolean // 保存切换前的可见性状态
   private targetVisibility?: boolean // 外部指定的目标可见性状态
   private _isDisposed = false
@@ -37,7 +38,9 @@ export class ToggleTrackVisibilityCommand implements SimpleCommand {
 
     // 确定最终的目标状态：如果有外部指定则使用，否则切换当前状态
     const finalTargetState = targetVisibility !== undefined ? targetVisibility : !track.isVisible
-    this.description = `${finalTargetState ? '显示' : '隐藏'}轨道: ${track.name}`
+    this.historyLabel = finalTargetState
+      ? historyLabels.showTrack(track.name)
+      : historyLabels.hideTrack(track.name)
 
     console.log(
       `📋 准备切换轨道可见性: ${track.name}, 当前状态: ${track.isVisible ? '可见' : '隐藏'}, 目标状态: ${finalTargetState ? '可见' : '隐藏'}`,

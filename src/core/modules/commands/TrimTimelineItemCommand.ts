@@ -5,7 +5,6 @@
 
 import { cloneDeep } from 'lodash'
 import { generateCommandId } from '@/core/utils/idGenerator'
-import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem/types'
@@ -21,6 +20,7 @@ import {
   percentageToFrame,
 } from '@/core/utils/keyframePositionUtils'
 import { trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 export type TrimTimelineItemSide = 'start' | 'end'
 
@@ -269,7 +269,7 @@ export function calculateTrimTimelineItemTimeRange(params: {
 
 export class TrimTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.trimTimelineItem>
   private originalTimeRange: UnifiedTimeRange
   private originalAnimation?: GetAnimation<MediaType>
   private originalMarkers: number[]
@@ -329,7 +329,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
       this.newTimeRange,
     )
 
-    this.description = `Trim 时间轴项目: ${mediaItem?.name || '未知素材'} (${side === 'start' ? '开始' : '结束'} → ${framesToTimecode(side === 'start' ? this.newTimeRange.timelineStartTime : this.newTimeRange.timelineEndTime)})`
+    this.historyLabel = historyLabels.trimTimelineItem(mediaItem?.name)
   }
 
   private applyState(

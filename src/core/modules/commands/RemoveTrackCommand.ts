@@ -7,6 +7,7 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timeline
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
+import { historyLabels } from '@/core/modules/historyLabel'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 /**
@@ -16,7 +17,7 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
  */
 export class RemoveTrackCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.removeTrack>
   private trackData: UnifiedTrackData // 保存被删除的轨道数据
   private trackIndex: number // 保存被删除的轨道在tracks数组中的原始索引位置
   private affectedTimelineItems: UnifiedTimelineItemData<MediaType>[] = [] // 保存被删除的时间轴项目的重建元数据
@@ -56,7 +57,7 @@ export class RemoveTrackCommand implements SimpleCommand {
     }
 
     this.trackData = { ...track }
-    this.description = `删除轨道: ${track.name}`
+    this.historyLabel = historyLabels.removeTrack(track.name)
 
     // 保存该轨道上所有时间轴项目的重建元数据
     const affectedItems = this.timelineModule.timelineItems.value.filter(

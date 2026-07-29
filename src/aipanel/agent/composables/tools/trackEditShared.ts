@@ -25,7 +25,7 @@ export function buildTrackSnapshot(track: UnifiedTrackData, index: number, clipC
 
 export async function executeSingleTrackCommand(command: SimpleCommand): Promise<void> {
   const store = useUnifiedStore()
-  const batch = store.startBatch(command.description)
+  const batch = store.startBatch(command.historyLabel)
   batch.addCommand(command)
   await store.executeBatchCommand(batch.build())
 }
@@ -46,25 +46,17 @@ export function createTrackCommandHelpers() {
   return {
     store,
     createAddTrackCommand(trackType: UnifiedTrackType, position?: number) {
-      return new AddTrackCommand(
-        trackType,
-        position,
-        {
-          addTrack: store.addTrack.bind(store),
-          removeTrack: store.removeTrack.bind(store),
-          getTrack: (trackId: string) => store.getTrack(trackId),
-        },
-      )
+      return new AddTrackCommand(trackType, position, {
+        addTrack: store.addTrack.bind(store),
+        removeTrack: store.removeTrack.bind(store),
+        getTrack: (trackId: string) => store.getTrack(trackId),
+      })
     },
     createMoveTrackCommand(trackId: string, fromPosition: number, toPosition: number) {
-      return new MoveTrackCommand(
-        trackId,
-        fromPosition,
-        toPosition,
-        {
-          moveTrack: store.moveTrack.bind(store),
-        },
-      )
+      return new MoveTrackCommand(trackId, fromPosition, toPosition, {
+        moveTrack: store.moveTrack.bind(store),
+        getTrack: (trackId: string) => store.getTrack(trackId),
+      })
     },
     createRemoveTrackCommand(trackId: string) {
       return new RemoveTrackCommand(
@@ -88,14 +80,10 @@ export function createTrackCommandHelpers() {
       )
     },
     createRenameTrackCommand(trackId: string, newName: string) {
-      return new RenameTrackCommand(
-        trackId,
-        newName,
-        {
-          renameTrack: store.renameTrack.bind(store),
-          getTrack: (id: string) => store.getTrack(id),
-        },
-      )
+      return new RenameTrackCommand(trackId, newName, {
+        renameTrack: store.renameTrack.bind(store),
+        getTrack: (id: string) => store.getTrack(id),
+      })
     },
     createSetTrackVisibilityCommand(trackId: string, visible: boolean) {
       return new ToggleTrackVisibilityCommand(

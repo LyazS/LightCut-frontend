@@ -11,6 +11,7 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import { i18n } from '@/locales'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 添加轨道命令
@@ -19,7 +20,7 @@ import { i18n } from '@/locales'
  */
 export class AddTrackCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.addTrack()
   private newTrackId: string | undefined = undefined // 新创建的轨道ID
   private trackData: UnifiedTrackData // 保存轨道数据
   private _isDisposed = false
@@ -37,8 +38,6 @@ export class AddTrackCommand implements SimpleCommand {
 
     // 根据轨道类型获取i18n翻译名称
     const trackTypeName = i18n.global.t(`timeline.${trackType}Track`)
-    this.description = `添加轨道: ${trackTypeName}${position !== undefined ? ` (位置: ${position})` : ''}`
-
     // 在构造函数中创建完整的轨道数据，使用i18n名称
     this.trackData = createUnifiedTrackData(trackType, {
       name: trackTypeName,

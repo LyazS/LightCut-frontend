@@ -30,6 +30,7 @@ import type {
 } from '@/core/timelineitem/model/render'
 import { framesToTimecode } from '@/core/utils/timeUtils'
 import { isValidAgentToolTimecode, parseAgentToolTimecode } from '../utils/timecode'
+import { historyLabels, type HistoryLabel } from '@/core/modules/historyLabel'
 
 type ExternalKeyframeValue = number | Record<string, unknown>
 
@@ -94,7 +95,11 @@ function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-function toolError(code: string, message: string, details?: Record<string, any>): Error & {
+function toolError(
+  code: string,
+  message: string,
+  details?: Record<string, any>,
+): Error & {
   toolCode: string
   toolDetails?: Record<string, any>
 } {
@@ -117,9 +122,7 @@ function normalizeTimecode(time: unknown, field: string): number {
   return parseAgentToolTimecode(time)
 }
 
-function normalizeLinearEasing(
-  easing: unknown,
-): {
+function normalizeLinearEasing(easing: unknown): {
   type: 'linear'
 } {
   if (easing === undefined) {
@@ -168,7 +171,9 @@ export class KeyframePropertyEditService {
       timelineRange: {
         start: framesToTimecode(item.timeRange.timelineStartTime),
         end: framesToTimecode(item.timeRange.timelineEndTime),
-        duration: framesToTimecode(item.timeRange.timelineEndTime - item.timeRange.timelineStartTime),
+        duration: framesToTimecode(
+          item.timeRange.timelineEndTime - item.timeRange.timelineStartTime,
+        ),
       },
       keyframes: keyframes.map((entry) => this.serializeTimelineKeyframe(item, groupId, entry)),
     }
@@ -181,7 +186,7 @@ export class KeyframePropertyEditService {
 
     const current = this.readTimelineKeyframes(item, groupId)
     const next = this.normalizeInputKeyframes(item, groupId, args.keyframes, 'keyframes')
-    const plan = this.buildPlan(item, groupId, current, next, `重写 ${args.propertyId} 关键帧`)
+    const plan = this.buildPlan(item, groupId, current, next, historyLabels.updateKeyframes())
 
     if (plan.operations.length > 0) {
       await useUnifiedStore().applyChangePlanWithHistory(plan)
@@ -230,7 +235,7 @@ export class KeyframePropertyEditService {
       ...replacement,
     ])
 
-    const plan = this.buildPlan(item, groupId, current, next, `局部更新 ${args.propertyId} 关键帧`)
+    const plan = this.buildPlan(item, groupId, current, next, historyLabels.updateKeyframes())
 
     if (plan.operations.length > 0) {
       await useUnifiedStore().applyChangePlanWithHistory(plan)
@@ -331,10 +336,10 @@ export class KeyframePropertyEditService {
       })
     }
 
-    return normalizeMaskConfig(TimelineItemQueries.getResolvedMask(item), getItemLocalSize(
-      visualConfig.visual.width ?? 0,
-      visualConfig.visual.height ?? 0,
-    ))
+    return normalizeMaskConfig(
+      TimelineItemQueries.getResolvedMask(item),
+      getItemLocalSize(visualConfig.visual.width ?? 0, visualConfig.visual.height ?? 0),
+    )
   }
 
   private assertFrameMode(frameMode: 'absolute' | undefined) {
@@ -380,7 +385,12 @@ export class KeyframePropertyEditService {
         const frame = normalizeTimecode(entry?.time, `${fieldName}[${index}].time`)
         this.assertFrameInRange(item, frame)
         const relativeFrame = getRelativeFrame(item, frame)
-        const value = this.normalizeGroupValue(item, groupId, entry?.value, `${fieldName}[${index}].value`)
+        const value = this.normalizeGroupValue(
+          item,
+          groupId,
+          entry?.value,
+          `${fieldName}[${index}].value`,
+        )
         return {
           frame,
           relativeFrame,
@@ -446,7 +456,9 @@ export class KeyframePropertyEditService {
     return cloneJson(nextValue)
   }
 
-  private normalizeTimelineKeyframes(keyframes: TimelineKeyframeRecord[]): TimelineKeyframeRecord[] {
+  private normalizeTimelineKeyframes(
+    keyframes: TimelineKeyframeRecord[],
+  ): TimelineKeyframeRecord[] {
     const deduped = new Map<number, TimelineKeyframeRecord>()
     for (const keyframe of keyframes) {
       deduped.set(keyframe.frame, keyframe)
@@ -469,7 +481,7 @@ export class KeyframePropertyEditService {
     groupId: PropertyAnimationGroupId,
     current: TimelineKeyframeRecord[],
     next: TimelineKeyframeRecord[],
-    description: string,
+    historyLabel: HistoryLabel,
   ): ChangePlan {
     const operations: ChangeOperation[] = []
     const currentMap = new Map(current.map((entry) => [entry.relativeFrame, entry]))
@@ -514,7 +526,9 @@ export class KeyframePropertyEditService {
           frame: nextKeyframe.frame,
           groupId,
           relativeFrame,
-          value: cloneJson(nextKeyframe.value) as PropertyAnimationValueByGroup<PropertyAnimationGroupId>,
+          value: cloneJson(
+            nextKeyframe.value,
+          ) as PropertyAnimationValueByGroup<PropertyAnimationGroupId>,
         })
       }
     }
@@ -527,7 +541,7 @@ export class KeyframePropertyEditService {
 
     return {
       propertyId: groupId === 'mask.linear' ? 'mask.center' : groupId,
-      description,
+      historyLabel,
       operations,
       toolMode: true,
     }

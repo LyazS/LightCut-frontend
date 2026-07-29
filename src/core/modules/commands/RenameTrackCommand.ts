@@ -1,6 +1,7 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 重命名轨道命令
@@ -9,7 +10,7 @@ import type { UnifiedTrackData } from '@/core/track/TrackTypes'
  */
 export class RenameTrackCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.renameTrack>
   private oldName: string = '' // 保存原始名称用于撤销
   private _isDisposed = false
 
@@ -22,7 +23,7 @@ export class RenameTrackCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = `重命名轨道: ${newName}`
+    this.historyLabel = historyLabels.renameTrack(newName)
 
     // 获取当前轨道名称用于撤销
     const track = this.trackModule.getTrack(trackId)

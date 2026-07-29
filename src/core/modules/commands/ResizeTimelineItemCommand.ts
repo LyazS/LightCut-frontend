@@ -4,6 +4,7 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
 import { resizeTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
@@ -19,7 +20,7 @@ import type { UnifiedTimeRange } from '@/core/types/timeRange'
  */
 export class ResizeTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.resizeTimelineItem>
   private originalTimeRange: UnifiedTimeRange
   private newTimeRange: UnifiedTimeRange
   private oldDurationFrames: number
@@ -60,12 +61,12 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     this.newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
 
     // 获取时间轴项目信息用于描述
-    let itemName = '未知素材'
+    let itemName: string | undefined
 
     // 根据项目类型获取名称
     if (timelineItem) {
       const mediaItem = this.mediaModule.getMediaItem(timelineItem.mediaItemId)
-      itemName = mediaItem?.name || '未知素材'
+      itemName = mediaItem?.name
 
       // 检查是否有动画
       this.hasAnimation = hasAnimation(timelineItem)
@@ -74,9 +75,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     const originalStartFrames = this.originalTimeRange.timelineStartTime
     const newStartFrames = this.newTimeRange.timelineStartTime
 
-    this.description = `调整时间范围: ${itemName} (${framesToTimecode(this.oldDurationFrames)} → ${framesToTimecode(this.newDurationFrames)})`
+    this.historyLabel = historyLabels.resizeTimelineItem(itemName)
 
-    console.log(`📋 准备调整时间范围: ${itemName}`, {
+    console.log(`📋 准备调整时间范围: ${itemName ?? this.timelineItemId}`, {
       原始时长: framesToTimecode(this.oldDurationFrames),
       新时长: framesToTimecode(this.newDurationFrames),
       原始位置: framesToTimecode(originalStartFrames),

@@ -5,6 +5,7 @@
  */
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 // ==================== 新架构类型导入 ====================
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
@@ -21,7 +22,7 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
  */
 export class RemoveTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.removeTimelineItem()
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
   private _isDisposed = false
 
@@ -38,8 +39,6 @@ export class RemoveTimelineItemCommand implements SimpleCommand {
     private ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
   ) {
     this.id = generateCommandId()
-
-    this.description = `移除时间轴项目: ${timelineItemId}`
   }
 
   /**

@@ -4,13 +4,10 @@
  */
 
 import { useUnifiedStore } from '@/core/unifiedStore'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 // 导入共享类型定义
-import type {
-  OperationConfig,
-  BuildOperationResult,
-  BuildResult,
-} from './core/types'
+import type { OperationConfig, BuildOperationResult, BuildResult } from './core/types'
 
 // 导入命令工厂
 import { CommandFactory } from './core/CommandFactory'
@@ -31,7 +28,7 @@ export function useBatchCommandBuilder() {
    * 注意：此方法现在是异步的，以支持 addTimelineItem 中的 pending 状态等待
    */
   async function buildOperations(operations: OperationConfig[]): Promise<BuildResult> {
-    const batchBuilder = unifiedStore.startBatch('用户脚本批量操作')
+    const batchBuilder = unifiedStore.startBatch(historyLabels.scriptedBatch())
     const buildResults: BuildOperationResult[] = []
 
     for (const op of operations) {

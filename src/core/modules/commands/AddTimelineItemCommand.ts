@@ -13,6 +13,7 @@ import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 // ==================== 旧架构类型工具导入 ====================
 import { generateCommandId } from '@/core/utils/idGenerator'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 添加时间轴项目命令
@@ -21,7 +22,7 @@ import { generateCommandId } from '@/core/utils/idGenerator'
  */
 export class AddTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.addTimelineItem()
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> | null = null // 保存原始项目的重建数据
   private _isDisposed = false
 
@@ -38,9 +39,6 @@ export class AddTimelineItemCommand implements SimpleCommand {
     private ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
   ) {
     this.id = generateCommandId()
-
-    // 新架构只支持已知媒体类型
-    this.description = `添加时间轴项目: ${timelineItem.id}`
 
     // 保存原始数据用于重建sprite
     this.originalTimelineItemData = TimelineItemFactory.clone(timelineItem)

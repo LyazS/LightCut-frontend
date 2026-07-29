@@ -1,12 +1,13 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { ClipTransitionOutConfig } from '@/core/transition/types'
 
 export class UpdateTransitionConfigCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.updateTransition()
   private _isDisposed = false
 
   constructor(
@@ -22,7 +23,6 @@ export class UpdateTransitionConfigCommand implements SimpleCommand {
     },
   ) {
     this.id = generateCommandId()
-    this.description = '更新片段转场'
   }
 
   async execute(): Promise<void> {
@@ -42,7 +42,10 @@ export class UpdateTransitionConfigCommand implements SimpleCommand {
     const effectPackageId = nextValue?.effectPackageId
     if (
       nextValue &&
-      (!effectPackageId || !nextValue.templateId || !nextValue.packageVersion || !nextValue.catalogVersion)
+      (!effectPackageId ||
+        !nextValue.templateId ||
+        !nextValue.packageVersion ||
+        !nextValue.catalogVersion)
     ) {
       throw new Error('转场效果缺少必要标识字段')
     }

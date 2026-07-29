@@ -3,10 +3,11 @@ import { normalizeTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 import type { SimpleCommand } from './types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
+import { historyLabels, type HistoryLabel } from '@/core/modules/historyLabel'
 
 export class UpdateTimelineMarkersCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: HistoryLabel
   private readonly beforeMarkers: number[]
   private readonly afterMarkers: number[]
   private _isDisposed = false
@@ -18,14 +19,16 @@ export class UpdateTimelineMarkersCommand implements SimpleCommand {
     private readonly timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
     },
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
     this.id = generateCommandId()
     this.beforeMarkers = normalizeTimelineMarkers(beforeMarkers)
     this.afterMarkers = normalizeTimelineMarkers(afterMarkers)
-    this.description =
-      description ??
-      (this.afterMarkers.length > this.beforeMarkers.length ? '添加片段标记' : '移除片段标记')
+    this.historyLabel =
+      historyLabel ??
+      (this.afterMarkers.length > this.beforeMarkers.length
+        ? historyLabels.addMarker()
+        : historyLabels.removeMarker())
   }
 
   async execute(): Promise<void> {

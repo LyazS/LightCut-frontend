@@ -23,6 +23,7 @@ import type {
 } from '@/core/timelineitem/model/render'
 import { sliceKeyframesToSegment } from '@/core/utils/keyframePositionUtils'
 import { splitTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 // ==================== 新架构工具导入 ====================
 
@@ -47,7 +48,7 @@ const sliceChannelKeyframes = sliceKeyframesToSegment as <T extends SplitKeyfram
  */
 export class SplitTimelineItemCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.splitTimelineItem>
   private originalTimelineItemData: UnifiedTimelineItemData<MediaType> // 保存原始项目的重建数据
   private splitItemIds: string[] // 分割后所有项目的ID（n个分割点产生n+1个片段）
   private _isDisposed = false
@@ -71,8 +72,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 已知项目处理逻辑
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-    const splitPointsDesc = splitTimeFrames.map((t) => framesToTimecode(t)).join(', ')
-    this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${splitPointsDesc})`
+    this.historyLabel = historyLabels.splitTimelineItem(mediaItem?.name)
 
     // 保存原始项目的完整重建元数据
     this.originalTimelineItemData = TimelineItemFactory.clone(originalTimelineItem)

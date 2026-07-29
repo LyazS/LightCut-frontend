@@ -1,6 +1,7 @@
 import type { Ref } from 'vue'
 import { generateCommandId, generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
@@ -30,7 +31,7 @@ type MediaModule = {
 
 export class StartASRRequestCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.startSpeechRecognition()
   private readonly placeholderTimelineItemId: string
   private originalProjectionItems: UnifiedTimelineItemData<MediaType>[] = []
   private createdTrackSnapshot: UnifiedTrackData | null = null
@@ -49,7 +50,6 @@ export class StartASRRequestCommand implements SimpleCommand {
     private readonly ensureTimelineItemResolved: (timelineItemId: string) => Promise<unknown>,
   ) {
     this.id = generateCommandId()
-    this.description = `发起 ASR 请求: ${requestId}`
     this.placeholderTimelineItemId = generateTimelineItemId()
   }
 
@@ -75,7 +75,9 @@ export class StartASRRequestCommand implements SimpleCommand {
       return
     }
 
-    this.originalProjectionItems = currentProjectionItems.map((item) => TimelineItemFactory.clone(item))
+    this.originalProjectionItems = currentProjectionItems.map((item) =>
+      TimelineItemFactory.clone(item),
+    )
 
     for (const item of currentProjectionItems) {
       await this.timelineModule.removeTimelineItem(item.id)
@@ -225,7 +227,9 @@ export class StartASRRequestCommand implements SimpleCommand {
       return
     }
 
-    const hasRemainingItems = this.timelineModule.timelineItems.value.some((item) => item.trackId === trackId)
+    const hasRemainingItems = this.timelineModule.timelineItems.value.some(
+      (item) => item.trackId === trackId,
+    )
     if (hasRemainingItems) {
       return
     }
@@ -237,8 +241,13 @@ export class StartASRRequestCommand implements SimpleCommand {
     return this.timelineModule.timelineItems.value
       .filter((item) => {
         const placeholderRequestId =
-          item.isPlaceholder && item.task?.kind === 'asr-subtitles' ? item.task.requestId : undefined
-        return placeholderRequestId === this.requestId || item.provenance?.asrRequestId === this.requestId
+          item.isPlaceholder && item.task?.kind === 'asr-subtitles'
+            ? item.task.requestId
+            : undefined
+        return (
+          placeholderRequestId === this.requestId ||
+          item.provenance?.asrRequestId === this.requestId
+        )
       })
       .sort((a, b) => {
         if (a.timeRange.timelineStartTime !== b.timeRange.timelineStartTime) {

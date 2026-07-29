@@ -15,7 +15,11 @@ import type {
   DirectPropertyId,
 } from '@/core/property-system/catalog'
 import type { MediaType } from '@/core/mediaitem'
-import type { TimelineExtraRenderConfig, UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
+import type {
+  TimelineExtraRenderConfig,
+  UnifiedTimelineItemData,
+} from '@/core/timelineitem/model/timelineItem'
+import type { HistoryLabel } from '@/core/modules/historyLabel'
 
 export type { AnimatablePropertyId, ConfigPropertyId, DirectOnlyPropertyId, DirectPropertyId }
 
@@ -40,7 +44,7 @@ export interface DirectPropertyBatchPlanIntent {
   frame: number
   item: UnifiedTimelineItemData<MediaType>
   entries: DirectPropertyBatchPlanEntry[]
-  description?: string
+  historyLabel?: HistoryLabel
 }
 
 export interface PropertyKeyframeTogglePlanIntent {
@@ -58,13 +62,17 @@ export type FilterEffectPatch = {
   params?: Record<string, unknown>
 }
 
-export interface NoAnimationGroupPatchOperation<G extends PropertyAnimationGroupId = PropertyAnimationGroupId> {
+export interface NoAnimationGroupPatchOperation<
+  G extends PropertyAnimationGroupId = PropertyAnimationGroupId,
+> {
   kind: 'no-animation-group-patch'
   timelineItemId: string
   frame: number
   groupId?: G
   target: AnimatablePropertyTarget
-  patch: G extends AnimationGroupId ? Partial<AnimationGroupValueMap[G]> | FilterEffectPatch : FilterEffectPatch
+  patch: G extends AnimationGroupId
+    ? Partial<AnimationGroupValueMap[G]> | FilterEffectPatch
+    : FilterEffectPatch
 }
 
 export interface VisualConfigPatchOperation {
@@ -88,7 +96,9 @@ export interface ExtraRenderConfigPatchOperation {
   patch: Partial<TimelineExtraRenderConfig>
 }
 
-export interface AnimationKeyframeUpdateOperation<G extends PropertyAnimationGroupId = PropertyAnimationGroupId> {
+export interface AnimationKeyframeUpdateOperation<
+  G extends PropertyAnimationGroupId = PropertyAnimationGroupId,
+> {
   kind: 'animation-keyframe-update'
   timelineItemId: string
   frame: number
@@ -97,7 +107,9 @@ export interface AnimationKeyframeUpdateOperation<G extends PropertyAnimationGro
   value: PropertyAnimationValueByGroup<G>
 }
 
-export interface AnimationKeyframeCreateOperation<G extends PropertyAnimationGroupId = PropertyAnimationGroupId> {
+export interface AnimationKeyframeCreateOperation<
+  G extends PropertyAnimationGroupId = PropertyAnimationGroupId,
+> {
   kind: 'animation-keyframe-create'
   timelineItemId: string
   frame: number
@@ -105,7 +117,9 @@ export interface AnimationKeyframeCreateOperation<G extends PropertyAnimationGro
   keyframe: AnimateKeyframe<MediaType, G>
 }
 
-export interface AnimationKeyframeDeleteOperation<G extends PropertyAnimationGroupId = PropertyAnimationGroupId> {
+export interface AnimationKeyframeDeleteOperation<
+  G extends PropertyAnimationGroupId = PropertyAnimationGroupId,
+> {
   kind: 'animation-keyframe-delete'
   timelineItemId: string
   frame: number
@@ -133,7 +147,7 @@ export type ChangeOperation =
 
 export interface ChangePlan {
   propertyId: ChangePlanPropertyId
-  description: string
+  historyLabel: HistoryLabel
   operations: ChangeOperation[]
   toolMode?: boolean
 }

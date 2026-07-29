@@ -2,6 +2,7 @@ import { generateCommandId } from '@/core/utils/idGenerator'
 import type { DisplayItem, VirtualDirectory } from '@/core/directory/types'
 import type { SimpleCommand } from './types'
 import { HistoryPreconditionError } from './HistoryPreconditionError'
+import { historyLabels, type HistoryLabel } from '@/core/modules/historyLabel'
 
 type DirectoryMutationResult =
   | { success: true; directory: VirtualDirectory }
@@ -52,7 +53,7 @@ abstract class LibraryCommandBase implements SimpleCommand {
   public readonly id = generateCommandId()
   protected disposed = false
 
-  constructor(public readonly description: string) {}
+  constructor(public readonly historyLabel: HistoryLabel) {}
 
   abstract execute(): Promise<void>
   abstract undo(): Promise<void>
@@ -73,9 +74,9 @@ export class CreateDirectoryCommand extends LibraryCommandBase {
     private readonly name: string,
     private readonly parentId: string,
     private readonly directoryModule: DirectoryOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || `创建文件夹: ${name.trim()}`)
+    super(historyLabel ?? historyLabels.createDirectory(name.trim()))
   }
 
   get createdDirectory(): VirtualDirectory | null {
@@ -84,7 +85,11 @@ export class CreateDirectoryCommand extends LibraryCommandBase {
 
   async execute(): Promise<void> {
     if (this.directory) {
-      const restored = this.directoryModule.restoreDirectory(this.directory, this.parentId, Number.MAX_SAFE_INTEGER)
+      const restored = this.directoryModule.restoreDirectory(
+        this.directory,
+        this.parentId,
+        Number.MAX_SAFE_INTEGER,
+      )
       requireSuccess(restored, '无法恢复创建的文件夹')
       return
     }
@@ -122,9 +127,9 @@ export class RenameDirectoryCommand extends LibraryCommandBase {
     private readonly directoryId: string,
     private readonly newName: string,
     private readonly directoryModule: DirectoryOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || `重命名文件夹: ${newName.trim()}`)
+    super(historyLabel ?? historyLabels.renameDirectory(newName.trim()))
   }
 
   async execute(): Promise<void> {
@@ -138,7 +143,10 @@ export class RenameDirectoryCommand extends LibraryCommandBase {
       throw new HistoryPreconditionError('文件夹名称已被修改，无法重做')
     }
 
-    requireSuccess(this.directoryModule.renameDirectory(this.directoryId, this.newName), '无法重命名文件夹')
+    requireSuccess(
+      this.directoryModule.renameDirectory(this.directoryId, this.newName),
+      '无法重命名文件夹',
+    )
   }
 
   async undo(): Promise<void> {
@@ -147,7 +155,10 @@ export class RenameDirectoryCommand extends LibraryCommandBase {
       throw new HistoryPreconditionError('文件夹已被修改或删除，无法撤销重命名')
     }
 
-    requireSuccess(this.directoryModule.renameDirectory(this.directoryId, this.oldName), '无法撤销文件夹重命名')
+    requireSuccess(
+      this.directoryModule.renameDirectory(this.directoryId, this.oldName),
+      '无法撤销文件夹重命名',
+    )
   }
 }
 
@@ -159,9 +170,9 @@ export class MoveDirectoryCommand extends LibraryCommandBase {
     private readonly directoryId: string,
     private readonly targetParentId: string,
     private readonly directoryModule: DirectoryOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || '移动文件夹')
+    super(historyLabel ?? historyLabels.moveDirectory())
   }
 
   async execute(): Promise<void> {
@@ -175,7 +186,10 @@ export class MoveDirectoryCommand extends LibraryCommandBase {
         throw new HistoryPreconditionError('不能移动根目录')
       }
       this.sourceParentId = directory.parentId
-      this.sourceIndex = this.directoryModule.getDirectoryChildIndex(directory.parentId, directory.id)
+      this.sourceIndex = this.directoryModule.getDirectoryChildIndex(
+        directory.parentId,
+        directory.id,
+      )
     } else if (directory.parentId !== this.sourceParentId) {
       throw new HistoryPreconditionError('文件夹位置已被修改，无法重做')
     }
@@ -211,21 +225,28 @@ export class DeleteEmptyDirectoryCommand extends LibraryCommandBase {
   constructor(
     private readonly directoryId: string,
     private readonly directoryModule: DirectoryOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || '删除空文件夹')
+    super(historyLabel ?? historyLabels.deleteDirectory())
   }
 
   async execute(): Promise<void> {
     const directory = this.directoryModule.getDirectory(this.directoryId)
-    if (!directory || directory.parentId === null || !this.directoryModule.isDirectoryEmpty(this.directoryId)) {
+    if (
+      !directory ||
+      directory.parentId === null ||
+      !this.directoryModule.isDirectoryEmpty(this.directoryId)
+    ) {
       throw new HistoryPreconditionError('文件夹不存在、为根目录或不为空，无法删除')
     }
 
     if (this.snapshot === null) {
       this.snapshot = cloneDirectory(directory)
       this.parentId = directory.parentId
-      this.parentIndex = this.directoryModule.getDirectoryChildIndex(directory.parentId, directory.id)
+      this.parentIndex = this.directoryModule.getDirectoryChildIndex(
+        directory.parentId,
+        directory.id,
+      )
     } else if (
       directory.parentId !== this.parentId ||
       directory.name !== this.snapshot.name ||
@@ -256,9 +277,9 @@ export class RenameAssetCommand extends LibraryCommandBase {
     private readonly assetId: string,
     private readonly newName: string,
     private readonly mediaModule: MediaOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || `重命名素材: ${newName.trim()}`)
+    super(historyLabel ?? historyLabels.renameAsset(newName.trim()))
   }
 
   async execute(): Promise<void> {
@@ -281,7 +302,10 @@ export class RenameAssetCommand extends LibraryCommandBase {
       throw new HistoryPreconditionError('素材已被修改或删除，无法撤销重命名')
     }
 
-    requireSuccess(await this.mediaModule.renameAsset(this.assetId, this.oldName), '无法撤销素材重命名')
+    requireSuccess(
+      await this.mediaModule.renameAsset(this.assetId, this.oldName),
+      '无法撤销素材重命名',
+    )
   }
 }
 
@@ -296,9 +320,9 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
     private readonly items: DisplayItem[],
     private readonly targetDirectoryId: string,
     private readonly directoryModule: DirectoryOperations,
-    description?: string,
+    historyLabel?: HistoryLabel,
   ) {
-    super(description || `移动 ${items.length} 个项目`)
+    super(historyLabel ?? historyLabels.moveLibraryItems(items.length))
   }
 
   private captureDescriptors(): MoveDescriptor[] {
@@ -320,7 +344,10 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
         if (!directory || !directory.parentId) {
           throw new HistoryPreconditionError('文件夹不存在或不能移动根目录')
         }
-        const sourceIndex = this.directoryModule.getDirectoryChildIndex(directory.parentId, directory.id)
+        const sourceIndex = this.directoryModule.getDirectoryChildIndex(
+          directory.parentId,
+          directory.id,
+        )
         if (sourceIndex < 0) {
           throw new HistoryPreconditionError('文件夹目录结构不完整')
         }
@@ -345,10 +372,14 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
   private assertAtSource(): void {
     for (const descriptor of this.descriptors || []) {
       if (descriptor.type === 'directory') {
-        if (this.directoryModule.getDirectory(descriptor.id)?.parentId !== descriptor.sourceParentId) {
+        if (
+          this.directoryModule.getDirectory(descriptor.id)?.parentId !== descriptor.sourceParentId
+        ) {
           throw new HistoryPreconditionError('文件夹位置已被修改，无法重做')
         }
-      } else if (this.directoryModule.getAssetDirectoryId(descriptor.id) !== descriptor.sourceParentId) {
+      } else if (
+        this.directoryModule.getAssetDirectoryId(descriptor.id) !== descriptor.sourceParentId
+      ) {
         throw new HistoryPreconditionError('素材位置已被修改或删除，无法重做')
       }
     }
@@ -360,15 +391,22 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
         if (this.directoryModule.getDirectory(descriptor.id)?.parentId !== this.targetDirectoryId) {
           throw new HistoryPreconditionError('文件夹位置已被修改或删除，无法撤销移动')
         }
-      } else if (this.directoryModule.getAssetDirectoryId(descriptor.id) !== this.targetDirectoryId) {
+      } else if (
+        this.directoryModule.getAssetDirectoryId(descriptor.id) !== this.targetDirectoryId
+      ) {
         throw new HistoryPreconditionError('素材位置已被修改或删除，无法撤销移动')
       }
     }
   }
 
-  private async moveAssets(targetFor: (descriptor: Extract<MoveDescriptor, { type: 'asset' }>) => string) {
+  private async moveAssets(
+    targetFor: (descriptor: Extract<MoveDescriptor, { type: 'asset' }>) => string,
+  ) {
     const assetMoves = (this.descriptors || [])
-      .filter((descriptor): descriptor is Extract<MoveDescriptor, { type: 'asset' }> => descriptor.type === 'asset')
+      .filter(
+        (descriptor): descriptor is Extract<MoveDescriptor, { type: 'asset' }> =>
+          descriptor.type === 'asset',
+      )
       .map((descriptor) => ({ assetId: descriptor.id, targetDirectoryId: targetFor(descriptor) }))
 
     if (assetMoves.length === 0) {
@@ -406,7 +444,8 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
     }
 
     const directoryDescriptors = this.descriptors.filter(
-      (descriptor): descriptor is Extract<MoveDescriptor, { type: 'directory' }> => descriptor.type === 'directory',
+      (descriptor): descriptor is Extract<MoveDescriptor, { type: 'directory' }> =>
+        descriptor.type === 'directory',
     )
     const movedDirectories: Array<Extract<MoveDescriptor, { type: 'directory' }>> = []
 
@@ -418,7 +457,11 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
       await this.moveAssets(() => this.targetDirectoryId)
     } catch (error) {
       for (const descriptor of [...movedDirectories].reverse()) {
-        this.moveDirectories([descriptor], () => descriptor.sourceParentId, () => descriptor.sourceIndex)
+        this.moveDirectories(
+          [descriptor],
+          () => descriptor.sourceParentId,
+          () => descriptor.sourceIndex,
+        )
       }
       throw error
     }
@@ -431,7 +474,8 @@ export class MoveLibraryItemsCommand extends LibraryCommandBase {
     this.assertAtTarget()
 
     const directoryDescriptors = this.descriptors.filter(
-      (descriptor): descriptor is Extract<MoveDescriptor, { type: 'directory' }> => descriptor.type === 'directory',
+      (descriptor): descriptor is Extract<MoveDescriptor, { type: 'directory' }> =>
+        descriptor.type === 'directory',
     )
 
     await this.moveAssets((descriptor) => descriptor.sourceParentId)

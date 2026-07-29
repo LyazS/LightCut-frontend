@@ -8,11 +8,7 @@ export { ClearAllKeyframesCommand } from './ClearAllKeyframesCommand'
 // 导出当前仍在使用的命令类
 
 // 导出共享的类型和工具函数
-export type {
-  KeyframeSnapshot,
-  TimelineModule,
-  PlaybackControls,
-} from './shared'
+export type { KeyframeSnapshot, TimelineModule, PlaybackControls } from './shared'
 
 export {
   createSnapshot,

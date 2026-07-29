@@ -1,6 +1,7 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 切换轨道静音命令
@@ -9,7 +10,7 @@ import type { UnifiedTrackData } from '@/core/track/TrackTypes'
  */
 export class ToggleTrackMuteCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.muteTrack>
   private previousMuteState: boolean // 保存切换前的静音状态
   private targetMuteState?: boolean // 外部指定的目标静音状态
   private _isDisposed = false
@@ -36,7 +37,9 @@ export class ToggleTrackMuteCommand implements SimpleCommand {
 
     // 确定最终的目标状态：如果有外部指定则使用，否则切换当前状态
     const finalTargetState = targetMuteState !== undefined ? targetMuteState : !track.isMuted
-    this.description = `${finalTargetState ? '静音' : '取消静音'}轨道: ${track.name}`
+    this.historyLabel = finalTargetState
+      ? historyLabels.muteTrack(track.name)
+      : historyLabels.unmuteTrack(track.name)
 
     console.log(
       `📋 准备切换轨道静音状态: ${track.name}, 当前状态: ${track.isMuted ? '静音' : '有声'}, 目标状态: ${finalTargetState ? '静音' : '有声'}`,

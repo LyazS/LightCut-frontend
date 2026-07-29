@@ -6,6 +6,7 @@ import type { UnifiedUseNaiveUIModule } from './UnifiedUseNaiveUIModule'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { generateBatchCommandId } from '@/core/utils/idGenerator'
 import { HistoryPreconditionError } from './commands/HistoryPreconditionError'
+import type { HistoryLabel } from './historyLabel'
 
 /**
  * 批量命令基类
@@ -13,13 +14,13 @@ import { HistoryPreconditionError } from './commands/HistoryPreconditionError'
  */
 export abstract class BaseBatchCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: HistoryLabel
   protected subCommands: SimpleCommand[] = []
   private _isDisposed = false
 
-  constructor(description: string) {
+  constructor(historyLabel: HistoryLabel) {
     this.id = this.generateCommandId()
-    this.description = description
+    this.historyLabel = historyLabel
   }
 
   /**
@@ -47,11 +48,8 @@ export abstract class BaseBatchCommand implements SimpleCommand {
     this.subCommands.push(command)
   }
 
-  /**
-   * 获取批量操作摘要
-   */
-  getBatchSummary(): string {
-    return `${this.description} (${this.subCommands.length}个操作)`
+  get commandCount(): number {
+    return this.subCommands.length
   }
 
   /**
@@ -79,9 +77,9 @@ export abstract class BaseBatchCommand implements SimpleCommand {
       this.subCommands = []
 
       this._isDisposed = true
-      console.log(`🧹 批量命令资源已清理: ${this.description}`)
+      console.log('🧹 批量命令资源已清理:', this.historyLabel.key)
     } catch (error) {
-      console.error(`❌ 清理批量命令资源失败: ${this.description}`, error)
+      console.error('❌ 清理批量命令资源失败:', this.historyLabel.key, error)
       // 不抛出错误，避免影响主要功能
     }
   }
@@ -100,10 +98,10 @@ export abstract class BaseBatchCommand implements SimpleCommand {
  */
 export class BatchBuilder {
   private commands: SimpleCommand[] = []
-  private description: string
+  private historyLabel: HistoryLabel
 
-  constructor(description: string) {
-    this.description = description
+  constructor(historyLabel: HistoryLabel) {
+    this.historyLabel = historyLabel
   }
 
   /**
@@ -118,7 +116,7 @@ export class BatchBuilder {
    * 构建批量命令
    */
   build(): GenericBatchCommand {
-    return new GenericBatchCommand(this.description, this.commands)
+    return new GenericBatchCommand(this.historyLabel, this.commands)
   }
 
   /**
@@ -133,8 +131,8 @@ export class BatchBuilder {
  * 通用批量命令实现
  */
 export class GenericBatchCommand extends BaseBatchCommand {
-  constructor(description: string, commands: SimpleCommand[]) {
-    super(description)
+  constructor(historyLabel: HistoryLabel, commands: SimpleCommand[]) {
+    super(historyLabel)
     this.subCommands = [...commands]
   }
 }
@@ -159,6 +157,18 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
   const canUndo = ref(false)
   const canRedo = ref(false)
 
+  function formatHistoryLabel(historyLabel: HistoryLabel): string {
+    return String(t(historyLabel.key, historyLabel.params ?? {}))
+  }
+
+  function formatCommandLabel(command: SimpleCommand): string {
+    return formatHistoryLabel(command.historyLabel)
+  }
+
+  function formatExecutionError(): string {
+    return String(t('notification.history.executionError'))
+  }
+
   // ==================== 内部方法 ====================
 
   /**
@@ -169,17 +179,17 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
     try {
       // 检查命令是否已被清理
       if (command.isDisposed) {
-        console.log(`⚠️ 命令已被清理: ${command.description}`)
+        console.log('⚠️ 命令已被清理:', command.historyLabel.key)
         return
       }
 
       // 检查命令是否有 dispose 方法
       if (typeof command.dispose === 'function') {
         command.dispose()
-        console.log(`🧹 命令资源已清理: ${command.description}`)
+        console.log('🧹 命令资源已清理:', command.historyLabel.key)
       }
     } catch (error) {
-      console.error(`❌ 清理命令资源失败: ${command.description}`, error)
+      console.error('❌ 清理命令资源失败:', command.historyLabel.key, error)
       // 不抛出错误，避免影响主要功能
     }
   }
@@ -221,7 +231,7 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       currentIndex--
     }
 
-    console.warn(`🧹 已移除失效历史命令: ${command.description} (${reason})`)
+    console.warn('🧹 已移除失效历史命令:', command.historyLabel.key, reason)
   }
 
   // ==================== 公共方法 ====================
@@ -247,17 +257,16 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       commands.push(command)
       currentIndex++
 
-      console.log(`✅ 命令已执行: ${command.description}`)
+      console.log('✅ 命令已执行:', command.historyLabel.key)
       console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
     } catch (error) {
-      console.error(`❌ 命令执行失败: ${command.description}`, error)
+      console.error('❌ 命令执行失败:', command.historyLabel.key, error)
 
       // 显示错误通知
       useNaiveUIModule.messageError(
         t('notification.executeFailed', {
-          description: command.description,
-          error:
-            error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error'),
+          description: formatCommandLabel(command),
+          error: formatExecutionError(),
         }),
       )
 
@@ -283,12 +292,12 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       await command.undo()
       currentIndex--
 
-      console.log(`↩️ 已撤销: ${command.description}`)
+      console.log('↩️ 已撤销:', command.historyLabel.key)
       console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
 
       // 显示成功通知
       useNaiveUIModule.messageSuccess(
-        t('notification.undoSuccess', { description: command.description }),
+        t('notification.undoSuccess', { description: formatCommandLabel(command) }),
       )
 
       updateReactiveState()
@@ -332,12 +341,12 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       const command = commands[commandIndex]
       await command.execute()
 
-      console.log(`↪️ 已重做: ${command.description}`)
+      console.log('↪️ 已重做:', command.historyLabel.key)
       console.log(`📊 历史记录: ${currentIndex + 1}/${commands.length}`)
 
       // 显示成功通知
       useNaiveUIModule.messageSuccess(
-        t('notification.redoSuccess', { description: command.description }),
+        t('notification.redoSuccess', { description: formatCommandLabel(command) }),
       )
 
       updateReactiveState()
@@ -390,22 +399,29 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       canRedo: canRedoInternal(),
       commands: commands.map((cmd, index) => ({
         id: cmd.id,
-        description: cmd.description,
+        description: formatCommandLabel(cmd),
+        historyLabel: cmd.historyLabel,
         isCurrent: index === currentIndex,
         isExecuted: index <= currentIndex,
         isBatch: cmd instanceof BaseBatchCommand,
-        batchSummary: cmd instanceof BaseBatchCommand ? cmd.getBatchSummary() : undefined,
+        batchSummary:
+          cmd instanceof BaseBatchCommand
+            ? {
+                description: formatCommandLabel(cmd),
+                commandCount: cmd.commandCount,
+              }
+            : undefined,
       })),
     }
   }
 
   /**
    * 开始批量操作
-   * @param description 批量操作描述
+   * @param historyLabel 批量操作的语义标签
    * @returns 批量操作构建器
    */
-  function startBatch(description: string): BatchBuilder {
-    return new BatchBuilder(description)
+  function startBatch(historyLabel: HistoryLabel): BatchBuilder {
+    return new BatchBuilder(historyLabel)
   }
 
   /**
@@ -427,20 +443,19 @@ export function createUnifiedHistoryModule(registry: ModuleRegistry) {
       commands.push(batchCommand)
       currentIndex++
 
-      console.log(`✅ 批量命令已执行: ${batchCommand.getBatchSummary()}`)
+      console.log('✅ 批量命令已执行:', batchCommand.historyLabel.key)
 
       // 显示批量操作成功通知
       useNaiveUIModule.messageSuccess(
-        t('notification.batchSuccess', { summary: batchCommand.getBatchSummary() }),
+        t('notification.batchSuccess', { summary: formatCommandLabel(batchCommand) }),
       )
     } catch (error) {
-      console.error(`❌ 批量命令执行失败: ${batchCommand.description}`, error)
+      console.error('❌ 批量命令执行失败:', batchCommand.historyLabel.key, error)
 
       useNaiveUIModule.messageError(
         t('notification.batchFailed', {
-          description: batchCommand.description,
-          error:
-            error instanceof Error ? error.message : t('common.unknownError', {}, 'Unknown error'),
+          description: formatCommandLabel(batchCommand),
+          error: formatExecutionError(),
         }),
       )
 

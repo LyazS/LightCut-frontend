@@ -1,5 +1,6 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
@@ -17,7 +18,7 @@ type MediaModule = {
 
 export class RemoveASRRequestCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.removeSpeechRecognition()
   private originalProjectionItems: UnifiedTimelineItemData<MediaType>[] = []
   private _isDisposed = false
 
@@ -29,7 +30,6 @@ export class RemoveASRRequestCommand implements SimpleCommand {
     private readonly getTimelineItems: () => UnifiedTimelineItemData<MediaType>[],
   ) {
     this.id = generateCommandId()
-    this.description = `移除 ASR 请求投影: ${requestId}`
   }
 
   async execute(): Promise<void> {
@@ -41,7 +41,9 @@ export class RemoveASRRequestCommand implements SimpleCommand {
       }
 
       if (this.originalProjectionItems.length === 0) {
-        this.originalProjectionItems = currentProjectionItems.map((item) => TimelineItemFactory.clone(item))
+        this.originalProjectionItems = currentProjectionItems.map((item) =>
+          TimelineItemFactory.clone(item),
+        )
       }
 
       for (const item of currentProjectionItems) {
@@ -119,8 +121,13 @@ export class RemoveASRRequestCommand implements SimpleCommand {
     return this.getTimelineItems()
       .filter((item) => {
         const placeholderRequestId =
-          item.isPlaceholder && item.task?.kind === 'asr-subtitles' ? item.task.requestId : undefined
-        return placeholderRequestId === this.requestId || item.provenance?.asrRequestId === this.requestId
+          item.isPlaceholder && item.task?.kind === 'asr-subtitles'
+            ? item.task.requestId
+            : undefined
+        return (
+          placeholderRequestId === this.requestId ||
+          item.provenance?.asrRequestId === this.requestId
+        )
       })
       .sort((a, b) => {
         if (a.timeRange.timelineStartTime !== b.timeRange.timelineStartTime) {

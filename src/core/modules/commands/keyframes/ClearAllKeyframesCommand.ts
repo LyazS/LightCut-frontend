@@ -19,10 +19,11 @@ import {
   getAllKeyframeFrames,
 } from '@/core/utils/unifiedKeyframeUtils'
 import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 export class ClearAllKeyframesCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel = historyLabels.clearAllKeyframes()
   private beforeSnapshot: KeyframeSnapshot
   private afterSnapshot: KeyframeSnapshot | null = null
   private _isDisposed = false
@@ -34,7 +35,6 @@ export class ClearAllKeyframesCommand implements SimpleCommand {
     private playbackControls?: PlaybackControls,
   ) {
     this.id = generateCommandId()
-    this.description = `清除所有关键帧`
 
     // 保存执行前的状态快照
     const item = this.timelineModule.getTimelineItem(timelineItemId)

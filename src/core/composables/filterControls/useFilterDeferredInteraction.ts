@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, ref, watch, type ComputedRef } from 'vue'
 import { normalizeFilterParamColor } from '@/core/filter/color'
 import { propertyMutationCommitter } from '@/core/property-system'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { DirectPropertyBatchPlanEntry } from '@/core/property-system'
 import {
   clearFilterIntensityOverlay,
@@ -10,10 +11,7 @@ import {
   setFilterIntensityOverlay,
   setFilterParamOverlay,
 } from '@/core/property-system/render-state'
-import {
-  createFilterParamPropertyId,
-  isValidFilterParamKey,
-} from '@/core/property-system/schema'
+import { createFilterParamPropertyId, isValidFilterParamKey } from '@/core/property-system/schema'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { useUnifiedStore } from '@/core/unifiedStore'
 import type {
@@ -49,14 +47,16 @@ function isFilterParamVec2Value(value: unknown): value is FilterParamVec2Value {
 }
 
 function isFilterParamColorValue(value: unknown): value is FilterParamColorValue {
-  if (!(
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    'r' in value &&
-    'g' in value &&
-    'b' in value
-  )) {
+  if (
+    !(
+      typeof value === 'object' &&
+      value !== null &&
+      !Array.isArray(value) &&
+      'r' in value &&
+      'g' in value &&
+      'b' in value
+    )
+  ) {
     return false
   }
 
@@ -68,7 +68,9 @@ function isFilterParamColorValue(value: unknown): value is FilterParamColorValue
   }
 }
 
-function isSupportedFilterParamValue(value: unknown): value is number | FilterParamVec2Value | FilterParamColorValue {
+function isSupportedFilterParamValue(
+  value: unknown,
+): value is number | FilterParamVec2Value | FilterParamColorValue {
   return (
     (typeof value === 'number' && Number.isFinite(value)) ||
     isFilterParamVec2Value(value) ||
@@ -144,7 +146,12 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
 
   function setFilterParamDeferred(parameterKey: string, value: number) {
     const item = selectedTimelineItem.value
-    if (!hasFilterEffect(item) || !canOperateFilterNumbers.value || !isValidFilterParamKey(parameterKey)) return
+    if (
+      !hasFilterEffect(item) ||
+      !canOperateFilterNumbers.value ||
+      !isValidFilterParamKey(parameterKey)
+    )
+      return
 
     beginFilterInteraction(item)
     activeFilterParamKeys.value = new Set(activeFilterParamKeys.value).add(parameterKey)
@@ -158,7 +165,8 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
       !canOperateFilterNumbers.value ||
       !isValidFilterParamKey(parameterKey) ||
       !isFilterParamVec2Value(value)
-    ) return
+    )
+      return
 
     beginFilterInteraction(item)
     activeFilterParamKeys.value = new Set(activeFilterParamKeys.value).add(parameterKey)
@@ -172,7 +180,8 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
       !canOperateFilterNumbers.value ||
       !isValidFilterParamKey(parameterKey) ||
       !isFilterParamColorValue(value)
-    ) return
+    )
+      return
 
     beginFilterInteraction(item)
     activeFilterParamKeys.value = new Set(activeFilterParamKeys.value).add(parameterKey)
@@ -185,12 +194,16 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
     if (!timelineItemId || !item) return
 
     const overlay = getFilterIntensityOverlay(timelineItemId)
-    const nextIntensity = overlay?.intensity ?? TimelineItemQueries.getResolvedFilter(item)?.intensity
+    const nextIntensity =
+      overlay?.intensity ?? TimelineItemQueries.getResolvedFilter(item)?.intensity
     const filterParamOverlay = getFilterParamOverlay(timelineItemId)
     const paramEntries = [...activeFilterParamKeys.value]
       .map((parameterKey) => [parameterKey, filterParamOverlay?.params[parameterKey]] as const)
-      .filter((entry): entry is readonly [string, number | FilterParamVec2Value | FilterParamColorValue] =>
-        isSupportedFilterParamValue(entry[1]),
+      .filter(
+        (
+          entry,
+        ): entry is readonly [string, number | FilterParamVec2Value | FilterParamColorValue] =>
+          isSupportedFilterParamValue(entry[1]),
       )
 
     unregisterCancelCallback(timelineItemId)
@@ -212,7 +225,11 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
     }
 
     if (entries.length > 0) {
-      await propertyMutationCommitter.commitDirectBatch(getCommitContext(item), entries, '修改滤镜参数')
+      await propertyMutationCommitter.commitDirectBatch(
+        getCommitContext(item),
+        entries,
+        historyLabels.updateFilter(),
+      )
     }
 
     clearFilterIntensityOverlay(timelineItemId)
@@ -243,10 +260,19 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
 
   async function setFilterParamDirect(parameterKey: string, value: number) {
     const item = selectedTimelineItem.value
-    if (!hasFilterEffect(item) || !canOperateFilterNumbers.value || !isValidFilterParamKey(parameterKey)) return
+    if (
+      !hasFilterEffect(item) ||
+      !canOperateFilterNumbers.value ||
+      !isValidFilterParamKey(parameterKey)
+    )
+      return
 
     await cancelDeferredUpdates()
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), createFilterParamPropertyId(parameterKey), value)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      createFilterParamPropertyId(parameterKey),
+      value,
+    )
   }
 
   async function setFilterParamVec2Direct(parameterKey: string, value: FilterParamVec2Value) {
@@ -256,18 +282,32 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
       !canOperateFilterNumbers.value ||
       !isValidFilterParamKey(parameterKey) ||
       !isFilterParamVec2Value(value)
-    ) return
+    )
+      return
 
     await cancelDeferredUpdates()
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), createFilterParamPropertyId(parameterKey), value)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      createFilterParamPropertyId(parameterKey),
+      value,
+    )
   }
 
   async function setFilterParamBooleanDirect(parameterKey: string, value: boolean) {
     const item = selectedTimelineItem.value
-    if (!hasFilterEffect(item) || !canOperateFilterNumbers.value || !isValidFilterParamKey(parameterKey)) return
+    if (
+      !hasFilterEffect(item) ||
+      !canOperateFilterNumbers.value ||
+      !isValidFilterParamKey(parameterKey)
+    )
+      return
 
     await cancelDeferredUpdates()
-    await propertyMutationCommitter.commitDirect(getCommitContext(item), createFilterParamPropertyId(parameterKey), value)
+    await propertyMutationCommitter.commitDirect(
+      getCommitContext(item),
+      createFilterParamPropertyId(parameterKey),
+      value,
+    )
   }
 
   async function setFilterParamColorDirect(parameterKey: string, value: FilterParamColorValue) {
@@ -277,7 +317,8 @@ export function useFilterDeferredInteraction(options: FilterDeferredInteractionO
       !canOperateFilterNumbers.value ||
       !isValidFilterParamKey(parameterKey) ||
       !isFilterParamColorValue(value)
-    ) return
+    )
+      return
 
     await cancelDeferredUpdates()
     await propertyMutationCommitter.commitDirect(

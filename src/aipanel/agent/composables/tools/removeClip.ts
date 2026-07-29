@@ -1,5 +1,6 @@
 import type { ToolDefinition } from '../core/toolTypes'
 import { createTimelineCommandHelpers } from './timelineEditShared'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 export async function executeRemoveClip(args: Record<string, any>) {
   const { clipIds } = args
@@ -15,7 +16,11 @@ export async function executeRemoveClip(args: Record<string, any>) {
   if (!clipIds.every((id) => typeof id === 'string' && id)) {
     return {
       success: false,
-      output: JSON.stringify({ tool: 'remove_clip', error: 'clipIds 中的每一项都必须是非空字符串。' }, null, 2),
+      output: JSON.stringify(
+        { tool: 'remove_clip', error: 'clipIds 中的每一项都必须是非空字符串。' },
+        null,
+        2,
+      ),
       error: 'clipIds 中的每一项都必须是非空字符串。',
     }
   }
@@ -32,7 +37,7 @@ export async function executeRemoveClip(args: Record<string, any>) {
       }
     }
 
-    const batch = store.startBatch(`删除 ${clipIds.length} 个片段`)
+    const batch = store.startBatch(historyLabels.deleteClips(clipIds.length))
     for (const clipId of clipIds) {
       batch.addCommand(createRemoveTimelineItemCommand(clipId))
     }
@@ -40,10 +45,14 @@ export async function executeRemoveClip(args: Record<string, any>) {
 
     return {
       success: true,
-      output: JSON.stringify({
-        tool: 'remove_clip',
-        removedClipIds: clipIds,
-      }, null, 2),
+      output: JSON.stringify(
+        {
+          tool: 'remove_clip',
+          removedClipIds: clipIds,
+        },
+        null,
+        2,
+      ),
     }
   } catch (error: any) {
     const message = error instanceof Error ? error.message : String(error)

@@ -17,6 +17,7 @@ import { framesToTimecode } from '@/core/utils/timeUtils'
 import { getCurrentGroupValue, hasAnimation } from '@/core/animation/engine'
 import type { DirectPropertyBatchPlanEntry } from '@/core/property-system/mutation'
 import { propertyMutationCommitter } from '@/core/property-system/commit/PropertyMutationCommitter'
+import { historyLabels } from '@/core/modules/historyLabel'
 import {
   AGENT_TOOL_STATIC_PROPERTY_TO_ANIMATION_GROUP_MAP,
   CLIP_PROPERTY_PATH_DEFINITIONS,
@@ -53,7 +54,11 @@ type ReadSampleContext = {
 
 type PathDefinition = {
   groupId: ClipPropertyGroupId
-  validate: (value: unknown) => { ok: true; value: unknown } | { ok: false; code: string; message: string; details?: Record<string, any> }
+  validate: (
+    value: unknown,
+  ) =>
+    | { ok: true; value: unknown }
+    | { ok: false; code: string; message: string; details?: Record<string, any> }
 }
 
 const MASK_ANIMATION_GROUP_IDS = [
@@ -306,7 +311,11 @@ export class ClipPropertyEditService {
     return this.buildGroupProperties(item, groupId, frame)
   }
 
-  private buildGroupProperties(item: UnifiedTimelineItemData, groupId: ClipPropertyGroupId, frame?: number) {
+  private buildGroupProperties(
+    item: UnifiedTimelineItemData,
+    groupId: ClipPropertyGroupId,
+    frame?: number,
+  ) {
     if (groupId === 'visual') {
       const resolved = TimelineItemQueries.getResolvedRenderConfig(item)
       if (!('visual' in resolved)) {
@@ -318,7 +327,8 @@ export class ClipPropertyEditService {
       }
       const animatedPosition =
         frame !== undefined ? getCurrentGroupValue(item, frame, 'visual.position') : null
-      const animatedSize = frame !== undefined ? getCurrentGroupValue(item, frame, 'visual.size') : null
+      const animatedSize =
+        frame !== undefined ? getCurrentGroupValue(item, frame, 'visual.size') : null
       const animatedRotation =
         frame !== undefined ? getCurrentGroupValue(item, frame, 'visual.rotation') : null
       const animatedBlendIntensity =
@@ -350,7 +360,8 @@ export class ClipPropertyEditService {
           groupId,
         })
       }
-      const animatedVolume = frame !== undefined ? getCurrentGroupValue(item, frame, 'audio.volume') : null
+      const animatedVolume =
+        frame !== undefined ? getCurrentGroupValue(item, frame, 'audio.volume') : null
       return {
         volume: roundNumeric(animatedVolume?.volume ?? resolved.audio.volume),
         isMuted: resolved.audio.isMuted,
@@ -697,17 +708,11 @@ export class ClipPropertyEditService {
       directEntries.push({ propertyId: 'mask.center', value: nextMaskCenter })
     }
 
-    if (
-      keys.includes('mask.rectangle.size.width') ||
-      keys.includes('mask.rectangle.size.height')
-    ) {
+    if (keys.includes('mask.rectangle.size.width') || keys.includes('mask.rectangle.size.height')) {
       directEntries.push({ propertyId: 'mask.rectangle.size', value: nextMaskRectangleSize })
     }
 
-    if (
-      keys.includes('mask.ellipse.size.width') ||
-      keys.includes('mask.ellipse.size.height')
-    ) {
+    if (keys.includes('mask.ellipse.size.width') || keys.includes('mask.ellipse.size.height')) {
       directEntries.push({ propertyId: 'mask.ellipse.size', value: nextMaskEllipseSize })
     }
 
@@ -757,7 +762,7 @@ export class ClipPropertyEditService {
 
     return {
       propertyId: getPlanPropertyId(keys),
-      description: '修改 clip 属性',
+      historyLabel: historyLabels.updateClipProperties(),
       operations,
     }
   }
@@ -788,7 +793,9 @@ function clampFrame(frame: number, min: number, max: number) {
   return Math.min(Math.max(frame, min), max)
 }
 
-function mergeDirectEntries(entries: DirectPropertyBatchPlanEntry[]): DirectPropertyBatchPlanEntry[] {
+function mergeDirectEntries(
+  entries: DirectPropertyBatchPlanEntry[],
+): DirectPropertyBatchPlanEntry[] {
   const grouped = new Map<string, DirectPropertyBatchPlanEntry>()
 
   for (const entry of entries) {
@@ -810,7 +817,9 @@ function getPlanPropertyId(keys: ClipPropertyPath[]): ChangePlan['propertyId'] {
   return 'visual.position'
 }
 
-function getSupportedGroups(mediaType: UnifiedTimelineItemData['mediaType']): ClipPropertyGroupId[] {
+function getSupportedGroups(
+  mediaType: UnifiedTimelineItemData['mediaType'],
+): ClipPropertyGroupId[] {
   return [...getSupportedClipPropertyGroups(mediaType)]
 }
 
@@ -890,7 +899,10 @@ function getResultKeys(
 
 function getCommitFrame(item: UnifiedTimelineItemData): number {
   const currentFrame = useUnifiedStore().currentFrame
-  if (currentFrame >= item.timeRange.timelineStartTime && currentFrame < item.timeRange.timelineEndTime) {
+  if (
+    currentFrame >= item.timeRange.timelineStartTime &&
+    currentFrame < item.timeRange.timelineEndTime
+  ) {
     return currentFrame
   }
   return item.timeRange.timelineStartTime
@@ -908,7 +920,10 @@ function validateApplyPayload(match: Record<string, unknown>, apply: Record<stri
     throw toolError('invalid_arguments', 'match 和 apply 不能为空')
   }
 
-  if (matchKeys.length !== applyKeys.length || matchKeys.some((key, index) => key !== applyKeys[index])) {
+  if (
+    matchKeys.length !== applyKeys.length ||
+    matchKeys.some((key, index) => key !== applyKeys[index])
+  ) {
     throw toolError('invalid_arguments', 'match 与 apply 的 key 集合必须一致', {
       matchKeys,
       applyKeys,
@@ -986,7 +1001,11 @@ function validateString(path: string) {
 function validateOptionalString(path: string) {
   return (value: unknown) => {
     if (value !== undefined && typeof value !== 'string') {
-      return { ok: false as const, code: 'invalid_value_type', message: `${path} 必须是字符串或 undefined` }
+      return {
+        ok: false as const,
+        code: 'invalid_value_type',
+        message: `${path} 必须是字符串或 undefined`,
+      }
     }
     return { ok: true as const, value }
   }

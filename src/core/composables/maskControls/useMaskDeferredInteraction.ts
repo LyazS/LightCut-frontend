@@ -1,6 +1,7 @@
 import { onBeforeUnmount, ref, watch, type ComputedRef } from 'vue'
 import type { useUnifiedStore } from '@/core/unifiedStore'
 import { propertyMutationCommitter } from '@/core/property-system'
+import { historyLabels } from '@/core/modules/historyLabel'
 import type { DirectPropertyBatchPlanEntry } from '@/core/property-system'
 import {
   clearMaskCenterOverlay,
@@ -20,10 +21,7 @@ import {
   setMaskRectangleSizeOverlay,
   setMaskRotationOverlay,
 } from '@/core/property-system/render-state'
-import type {
-  MaskDeferredPatch,
-  UnifiedMaskKeyframeControlsOptions,
-} from './types'
+import type { MaskDeferredPatch, UnifiedMaskKeyframeControlsOptions } from './types'
 
 type UnifiedStoreInstance = ReturnType<typeof useUnifiedStore>
 
@@ -189,7 +187,10 @@ export function useMaskDeferredInteraction(options: MaskDeferredInteractionOptio
       entries.push({ propertyId: 'mask.rectangle.size', value })
     }
 
-    if (typeof patch['mask.ellipseWidth'] === 'number' || typeof patch['mask.ellipseHeight'] === 'number') {
+    if (
+      typeof patch['mask.ellipseWidth'] === 'number' ||
+      typeof patch['mask.ellipseHeight'] === 'number'
+    ) {
       const value: { ellipseWidth?: number; ellipseHeight?: number } = {}
       if (typeof patch['mask.ellipseWidth'] === 'number') {
         value.ellipseWidth = patch['mask.ellipseWidth']
@@ -227,7 +228,7 @@ export function useMaskDeferredInteraction(options: MaskDeferredInteractionOptio
     await propertyMutationCommitter.commitDirectBatch(
       getCommitContext(item),
       entries,
-      '修改蒙版属性',
+      historyLabels.updateProperties(),
     )
   }
 

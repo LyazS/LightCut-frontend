@@ -1,5 +1,6 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
+import { historyLabels } from '@/core/modules/historyLabel'
 
 /**
  * 移动轨道命令
@@ -7,7 +8,7 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
  */
 export class MoveTrackCommand implements SimpleCommand {
   public readonly id: string
-  public readonly description: string
+  public readonly historyLabel: ReturnType<typeof historyLabels.moveTrack>
   private _isDisposed = false
 
   constructor(
@@ -16,10 +17,13 @@ export class MoveTrackCommand implements SimpleCommand {
     private toPosition: number,
     private trackModule: {
       moveTrack: (trackId: string, newPosition: number) => void
+      getTrack?: (trackId: string) => { name: string } | undefined
     },
   ) {
     this.id = generateCommandId()
-    this.description = `移动轨道: 从位置 ${fromPosition} 到 ${toPosition}`
+    this.historyLabel = historyLabels.moveTrack(
+      this.trackModule.getTrack?.(trackId)?.name ?? trackId,
+    )
   }
 
   /**
@@ -27,7 +31,9 @@ export class MoveTrackCommand implements SimpleCommand {
    */
   async execute(): Promise<void> {
     try {
-      console.log(`🔄 执行移动轨道操作: ${this.trackId} 从 ${this.fromPosition} 到 ${this.toPosition}...`)
+      console.log(
+        `🔄 执行移动轨道操作: ${this.trackId} 从 ${this.fromPosition} 到 ${this.toPosition}...`,
+      )
 
       // 调用 trackModule 的 moveTrack 方法
       this.trackModule.moveTrack(this.trackId, this.toPosition)
@@ -44,7 +50,9 @@ export class MoveTrackCommand implements SimpleCommand {
    */
   async undo(): Promise<void> {
     try {
-      console.log(`🔄 撤销移动轨道操作：${this.trackId} 从 ${this.toPosition} 回到 ${this.fromPosition}...`)
+      console.log(
+        `🔄 撤销移动轨道操作：${this.trackId} 从 ${this.toPosition} 回到 ${this.fromPosition}...`,
+      )
 
       // 将轨道移回原位置
       this.trackModule.moveTrack(this.trackId, this.fromPosition)
