@@ -35,10 +35,7 @@ export type {
 export type { BlendMode } from './blendMode'
 export type { MaskConfig, MaskType } from '../features/mask'
 
-import type {
-  VisualProps,
-  AudioProps,
-} from './render'
+import type { VisualProps, AudioProps } from './render'
 
 // ==================== 基础类型定义 ====================
 
@@ -142,6 +139,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   mediaType: T
   // ==================== 时间范围 ====================
   timeRange: UnifiedTimeRange
+  /** 片段内标记，相对于 timelineStartTime 的整帧偏移量 */
+  markers?: number[]
   // ==================== 配置（类型安全） ====================
   baseRenderConfig: TimelineBaseRenderConfig<T>
   /** schema v2 迁移期扩展渲染配置 */

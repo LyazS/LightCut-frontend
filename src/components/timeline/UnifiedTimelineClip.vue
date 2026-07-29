@@ -53,6 +53,22 @@
         <div class="keyframe-diamond"></div>
       </div>
     </div>
+
+    <div v-if="visibleMarkers.length > 0" class="timeline-markers-container">
+      <button
+        v-for="marker in visibleMarkers"
+        :key="marker.offsetFrames"
+        class="timeline-marker"
+        :style="getTimelineMarkerStyles(marker.pixelPosition)"
+        :aria-label="t('toolbar.clip.marker')"
+        draggable="false"
+        @mousedown.stop
+        @dragstart.prevent
+        @click.stop="jumpToMarker(marker.absoluteFrame)"
+      >
+        <span class="timeline-marker__flag"></span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -81,6 +97,10 @@ import { IconComponents } from '@/constants/iconComponents'
 import { getDefaultTrackHeight, mapMediaTypeToTrackType } from '@/core/track/TrackUtils'
 import { DragSourceType, type TimelineItemDragParams } from '@/core/types/drag'
 import { buildClipSelectionId } from '@/core/types/timelineSelection'
+import {
+  getVisibleTimelineMarkers,
+  timelineMarkerToAbsoluteFrame,
+} from '@/core/utils/timelineMarkerUtils'
 
 // ==================== 组件定义 ====================
 
@@ -113,7 +133,10 @@ const timelineEdgeEditMode = computed(() => unifiedStore.timelineEdgeEditMode)
 
 const hasEffectWarning = computed(() => {
   const transitionPackageId = TimelineItemQueries.getBaseTransition(props.data)?.effectPackageId
-  if (transitionPackageId && effectTemplateRegistry.getPackageState(transitionPackageId)?.status !== 'ready') {
+  if (
+    transitionPackageId &&
+    effectTemplateRegistry.getPackageState(transitionPackageId)?.status !== 'ready'
+  ) {
     return true
   }
 
@@ -283,7 +306,7 @@ const visibleKeyframes = computed(() => {
         cachedFrame: keyframe.cachedFrame,
         absoluteFrame,
         pixelPosition: relativePixelPosition,
-        percentage: keyframe.position,  // 可用于显示百分比信息
+        percentage: keyframe.position, // 可用于显示百分比信息
         isVisible: relativePixelPosition >= 0 && relativePixelPosition <= clipWidth,
       }
     })
@@ -303,6 +326,23 @@ function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> 
   return {
     left: `${pixelPosition + offset}px`,
   }
+}
+
+const visibleMarkers = computed(() => {
+  const renderFrame = clipRenderFrame.value
+  const clipWidth = renderFrame.widthPixels
+
+  return getVisibleTimelineMarkers(props.data)
+    .map((offsetFrames) => {
+      const absoluteFrame = timelineMarkerToAbsoluteFrame(props.data, offsetFrames)
+      const pixelPosition = renderFrame.frameToLocalPixel(absoluteFrame)
+      return { offsetFrames, absoluteFrame, pixelPosition }
+    })
+    .filter((marker) => marker.pixelPosition >= 0 && marker.pixelPosition <= clipWidth)
+})
+
+function getTimelineMarkerStyles(pixelPosition: number): Record<string, string> {
+  return { left: `${pixelPosition - 12}px` }
 }
 
 // ==================== 事件处理 ====================
@@ -539,11 +579,19 @@ function handleResize(event: MouseEvent) {
     const timelineDuration = timeRange.timelineEndTime - timeRange.timelineStartTime
     const sourceDuration = timeRange.clipEndTime - timeRange.clipStartTime
 
-    if ((props.data.mediaType === 'video' || props.data.mediaType === 'audio') && timelineDuration > 0) {
+    if (
+      (props.data.mediaType === 'video' || props.data.mediaType === 'audio') &&
+      timelineDuration > 0
+    ) {
       const playbackRate = sourceDuration / timelineDuration
       if (resizeDirection.value === 'left') {
-        const minStartBySource = timeRange.timelineStartTime - timeRange.clipStartTime / playbackRate
-        newTimelinePositionFrames = Math.max(newTimelinePositionFrames, Math.ceil(minStartBySource), 0)
+        const minStartBySource =
+          timeRange.timelineStartTime - timeRange.clipStartTime / playbackRate
+        newTimelinePositionFrames = Math.max(
+          newTimelinePositionFrames,
+          Math.ceil(minStartBySource),
+          0,
+        )
         newTimelinePositionFrames = Math.min(
           newTimelinePositionFrames,
           timeRange.timelineEndTime - 1,
@@ -681,6 +729,11 @@ function jumpToKeyframe(absoluteFrame: number) {
   } catch (error) {
     console.error('❌ [CleanTimelineClip] 关键帧跳转失败:', error)
   }
+}
+
+function jumpToMarker(absoluteFrame: number) {
+  unifiedStore.pause()
+  unifiedStore.seekToFrame(absoluteFrame)
 }
 
 // ==================== 生命周期 ====================

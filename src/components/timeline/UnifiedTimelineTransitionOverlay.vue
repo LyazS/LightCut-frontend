@@ -97,13 +97,17 @@ const transitionLabel = computed(() => {
     return t('properties.transition.title')
   }
 
-  return effectTemplateRegistry.getPackageState(effectPackageId)?.meta?.name.zh
-    || transitionConfig?.packagePayload?.manifestSnapshot.name.zh
-    || t('properties.transition.title')
+  return (
+    effectTemplateRegistry.getPackageState(effectPackageId)?.meta?.name.zh ||
+    transitionConfig?.packagePayload?.manifestSnapshot.name.zh ||
+    t('properties.transition.title')
+  )
 })
 
 const hasPackageWarning = computed(() => {
-  const effectPackageId = TimelineItemQueries.getBaseTransition(sourceTimelineItem.value)?.effectPackageId
+  const effectPackageId = TimelineItemQueries.getBaseTransition(
+    sourceTimelineItem.value,
+  )?.effectPackageId
   if (!effectPackageId) {
     return false
   }
@@ -164,9 +168,7 @@ const overlayStyles = computed(() => {
   // 1. center the thumbnail strip inside the clip body
   // 2. apply the additional thumbnail top offset
   const thumbnailTopInTrack = Math.max(
-    DEFAULT_TRACK_PADDING +
-      (clipHeight - overlayHeight) / 2 +
-      THUMBNAIL_CONSTANTS.TOP_OFFSET,
+    DEFAULT_TRACK_PADDING + (clipHeight - overlayHeight) / 2 + THUMBNAIL_CONSTANTS.TOP_OFFSET,
     0,
   )
 
@@ -208,7 +210,10 @@ function handleResize(event: MouseEvent) {
   let nextDurationFrames = resizeStartDurationFrames.value
 
   if (resizeDirection.value === 'left') {
-    const currentLeftPixel = unifiedStore.frameToPixel(initialDisplayRange.startFrame, props.timelineWidth)
+    const currentLeftPixel = unifiedStore.frameToPixel(
+      initialDisplayRange.startFrame,
+      props.timelineWidth,
+    )
     const newLeftPixel = currentLeftPixel + deltaX
     let newLeftFrame = alignFramesToFrame(
       unifiedStore.pixelToFrame(newLeftPixel, props.timelineWidth),
@@ -221,9 +226,15 @@ function handleResize(event: MouseEvent) {
       emit('updateSnapResult', null)
     }
     const desiredLeftHalfFrames = Math.max(1, props.overlay.seamFrame - newLeftFrame)
-    nextDurationFrames = Math.max(MIN_TRANSITION_DURATION_FRAMES, desiredLeftHalfFrames * 2 + parity)
+    nextDurationFrames = Math.max(
+      MIN_TRANSITION_DURATION_FRAMES,
+      desiredLeftHalfFrames * 2 + parity,
+    )
   } else {
-    const currentRightPixel = unifiedStore.frameToPixel(initialDisplayRange.endFrame, props.timelineWidth)
+    const currentRightPixel = unifiedStore.frameToPixel(
+      initialDisplayRange.endFrame,
+      props.timelineWidth,
+    )
     const newRightPixel = currentRightPixel + deltaX
     let newRightFrame = alignFramesToFrame(
       unifiedStore.pixelToFrame(newRightPixel, props.timelineWidth),
@@ -236,7 +247,10 @@ function handleResize(event: MouseEvent) {
       emit('updateSnapResult', null)
     }
     const desiredRightHalfFrames = Math.max(1, newRightFrame - props.overlay.seamFrame)
-    nextDurationFrames = Math.max(MIN_TRANSITION_DURATION_FRAMES, desiredRightHalfFrames * 2 - parity)
+    nextDurationFrames = Math.max(
+      MIN_TRANSITION_DURATION_FRAMES,
+      desiredRightHalfFrames * 2 - parity,
+    )
   }
 
   tempDurationFrames.value = clampResizeDurationFrames(nextDurationFrames)
@@ -278,6 +292,7 @@ function resolveTransitionBoundarySnap(frame: number): {
     includePlayhead: unifiedStore.snapConfig.playhead,
     includeTimelineStart: unifiedStore.snapConfig.timelineStart,
     includeKeyframes: unifiedStore.snapConfig.keyframes,
+    includeMarkers: unifiedStore.snapConfig.markers,
   })
 
   const filteredTargets = snapTargets.filter((target) => {
@@ -296,8 +311,7 @@ function resolveTransitionBoundarySnap(frame: number): {
   })
 
   const pixelsPerFrame =
-    (props.timelineWidth * unifiedStore.zoomLevel) /
-    Math.max(1, unifiedStore.totalDurationFrames)
+    (props.timelineWidth * unifiedStore.zoomLevel) / Math.max(1, unifiedStore.totalDurationFrames)
   const frameThreshold = unifiedStore.snapConfig.threshold / Math.max(pixelsPerFrame, 0.0001)
 
   let bestTarget: SnapPoint | null = null

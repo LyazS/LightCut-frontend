@@ -73,6 +73,7 @@ export function useTimelineSnap() {
       includePlayhead: unifiedStore.snapConfig.playhead,
       includeTimelineStart: unifiedStore.snapConfig.timelineStart,
       includeKeyframes: unifiedStore.snapConfig.keyframes,
+      includeMarkers: unifiedStore.snapConfig.markers,
     })
 
     // 获取像素阈值并转换为帧数阈值

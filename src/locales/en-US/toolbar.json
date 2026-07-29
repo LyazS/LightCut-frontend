@@ -7,6 +7,10 @@
       "redoTooltip": "Redo next operation (Ctrl+Y)"
     },
     "clip": {
+      "marker": "Marker",
+      "unmark": " Unmarker",
+      "unmarkTooltip": "Remove the clip marker at the current playhead position",
+      "markerOutOfRangeTooltip": "The playhead is outside the selected clip",
       "split": "Split",
       "splitTooltip": "Split selected clip at current time position",
       "delete": "Delete",

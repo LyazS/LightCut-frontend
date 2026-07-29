@@ -109,9 +109,10 @@
   z-index: 30;
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.7);
-  background:
-    linear-gradient(135deg, rgba(90, 109, 144, 0.72), rgba(74, 93, 128, 0.56));
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), var(--clip-shadow);
+  background: linear-gradient(135deg, rgba(90, 109, 144, 0.72), rgba(74, 93, 128, 0.56));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    var(--clip-shadow);
   backdrop-filter: saturate(120%);
   opacity: 0.82;
 }
@@ -119,9 +120,10 @@
 .unified-timeline-transition-overlay[data-transition-binding-state='invalid-overlap'],
 .unified-timeline-transition-overlay[data-transition-binding-state='invalid-target'],
 .unified-timeline-transition-overlay[data-transition-binding-state='unbound'] {
-  background:
-    linear-gradient(135deg, rgba(140, 86, 96, 0.78), rgba(92, 74, 82, 0.62));
-  box-shadow: 0 0 0 1px rgba(255, 160, 160, 0.16), var(--clip-shadow);
+  background: linear-gradient(135deg, rgba(140, 86, 96, 0.78), rgba(92, 74, 82, 0.62));
+  box-shadow:
+    0 0 0 1px rgba(255, 160, 160, 0.16),
+    var(--clip-shadow);
 }
 
 .unified-timeline-transition-overlay.selected,
@@ -130,9 +132,10 @@
 .unified-timeline-transition-overlay.selected[data-transition-binding-state='unbound'] {
   z-index: 31;
   opacity: 0.92;
-  background:
-    linear-gradient(135deg, rgba(170, 150, 104, 0.86), rgba(108, 98, 76, 0.68));
-  box-shadow: 0 0 0 1px rgba(255, 224, 138, 0.2), var(--clip-shadow);
+  background: linear-gradient(135deg, rgba(170, 150, 104, 0.86), rgba(108, 98, 76, 0.68));
+  box-shadow:
+    0 0 0 1px rgba(255, 224, 138, 0.2),
+    var(--clip-shadow);
 }
 
 /* 重叠状态 */
@@ -281,6 +284,57 @@
 .keyframe-marker:active .keyframe-diamond {
   background-color: var(--color-keyframe-active);
   transform: rotate(45deg) scale(1.1);
+}
+
+/* ==================== 片段标记 ==================== */
+
+.timeline-markers-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 17;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: -6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #39d4c2;
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  transform: scale(1);
+  transition-property: transform, filter;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.timeline-marker__flag {
+  width: 10px;
+  height: 13px;
+  margin-top: 3px;
+  border-radius: 1px 1px 2px 2px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 0, 100% 76%, 50% 100%, 0 76%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  transition-property: transform, filter;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.timeline-marker:hover .timeline-marker__flag {
+  transform: translateY(1px) scale(1.16);
+  filter: brightness(1.15);
+}
+
+.timeline-marker:active {
+  transform: scale(0.96);
 }
 
 /* ==================== 素材名称覆盖层样式 ==================== */

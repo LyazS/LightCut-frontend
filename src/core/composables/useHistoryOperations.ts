@@ -1,5 +1,9 @@
 import type { MediaType } from '@/core'
-import type { UnifiedTimelineItemData, VideoMediaConfig, AudioMediaConfig } from '@/core/timelineitem/model/timelineItem'
+import type {
+  UnifiedTimelineItemData,
+  VideoMediaConfig,
+  AudioMediaConfig,
+} from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
 import type {
@@ -35,6 +39,7 @@ import {
   DeleteEmptyDirectoryCommand,
   RenameAssetCommand,
   MoveLibraryItemsCommand,
+  UpdateTimelineMarkersCommand,
 } from '@/core/modules/commands/timelineCommands'
 import { ApplyChangePlanCommand } from '@/core/modules/commands/ApplyChangePlanCommand'
 import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchCommands'
@@ -62,6 +67,10 @@ import type { ChangePlan } from '@/core/property-system'
 import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
 import type { TrimTimelineItemSide } from '@/core/modules/commands/timelineCommands'
 import { useAppI18n } from '@/core/composables/useI18n'
+import {
+  getVisibleTimelineMarkers,
+  normalizeTimelineMarkers,
+} from '@/core/utils/timelineMarkerUtils'
 
 interface PlaybackRateUpdate {
   playbackRate: number
@@ -291,10 +300,7 @@ export function useHistoryOperations(
     await unifiedHistoryModule.executeCommand(command)
   }
 
-  async function updatePlaybackRateWithHistory(
-    timelineItemId: string,
-    newPlaybackRate: number,
-  ) {
+  async function updatePlaybackRateWithHistory(timelineItemId: string, newPlaybackRate: number) {
     const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '更新播放速度')
     if (!timelineItem) {
       return
@@ -322,7 +328,10 @@ export function useHistoryOperations(
     const timeRange = timelineItem.timeRange
     const clipDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
     const targetPlaybackRate = Math.max(0.1, Math.min(100, newPlaybackRate))
-    const newTimelineDurationFrames = Math.max(1, Math.round(clipDurationFrames / targetPlaybackRate))
+    const newTimelineDurationFrames = Math.max(
+      1,
+      Math.round(clipDurationFrames / targetPlaybackRate),
+    )
     const newTimeRange: UnifiedTimeRange = {
       timelineStartTime: timeRange.timelineStartTime,
       timelineEndTime: timeRange.timelineStartTime + newTimelineDurationFrames,
@@ -390,10 +399,7 @@ export function useHistoryOperations(
       ? normalizeClipFilterConfig(nextFilterConfig)
       : undefined
 
-    const hasSameValue = areClipFilterConfigsEqual(
-      currentFilterConfig,
-      normalizedNextFilterConfig,
-    )
+    const hasSameValue = areClipFilterConfigsEqual(currentFilterConfig, normalizedNextFilterConfig)
 
     if (hasSameValue) {
       return
@@ -451,12 +457,10 @@ export function useHistoryOperations(
     const currentFilterEffect = timelineItem.exRenderConfig?.filter
       ? normalizeClipFilterConfig(timelineItem.exRenderConfig.filter)
       : undefined
-    const filterIntensityTrack = (timelineItem.animation?.groups as
-      | Record<string, { keyframes?: unknown[] }>
-      | undefined)?.['filter.intensity']
-    const hasFilterIntensityKeyframes = Boolean(
-      filterIntensityTrack?.keyframes?.length,
-    )
+    const filterIntensityTrack = (
+      timelineItem.animation?.groups as Record<string, { keyframes?: unknown[] }> | undefined
+    )?.['filter.intensity']
+    const hasFilterIntensityKeyframes = Boolean(filterIntensityTrack?.keyframes?.length)
 
     if (!currentFilterEffect && !hasFilterIntensityKeyframes) {
       return
@@ -465,26 +469,25 @@ export function useHistoryOperations(
     const batch = unifiedHistoryModule.startBatch('移除片段滤镜')
 
     if (currentFilterEffect) {
-      batch.addCommand(new UpdateFilterConfigCommand(
-        timelineItemId,
-        currentFilterEffect,
-        undefined,
-        unifiedTimelineModule,
-        unifiedMediaModule,
-      ))
+      batch.addCommand(
+        new UpdateFilterConfigCommand(
+          timelineItemId,
+          currentFilterEffect,
+          undefined,
+          unifiedTimelineModule,
+          unifiedMediaModule,
+        ),
+      )
     }
 
     if (hasFilterIntensityKeyframes) {
-      batch.addCommand(new ClearAllKeyframesCommand(
-        timelineItemId,
-        'filter.intensity',
-        unifiedTimelineModule,
-        {
+      batch.addCommand(
+        new ClearAllKeyframesCommand(timelineItemId, 'filter.intensity', unifiedTimelineModule, {
           seekTo: (nextFrame: number) => {
             console.log('🔍 滤镜关键帧清除播放头控制:', nextFrame)
           },
-        },
-      ))
+        }),
+      )
     }
 
     await unifiedHistoryModule.executeBatchCommand(batch.build())
@@ -513,6 +516,60 @@ export function useHistoryOperations(
       ensureTimelineItemResolved,
     )
     await unifiedHistoryModule.executeCommand(command)
+  }
+
+  async function toggleTimelineItemMarkerWithHistory(
+    timelineItemId: string,
+    absoluteFrame: number,
+  ): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '更新片段标记')
+    if (!timelineItem) {
+      return false
+    }
+
+    const { timelineStartTime, timelineEndTime } = timelineItem.timeRange
+    if (absoluteFrame < timelineStartTime || absoluteFrame > timelineEndTime) {
+      return false
+    }
+
+    const markerOffset = absoluteFrame - timelineStartTime
+    const beforeMarkers = getVisibleTimelineMarkers(timelineItem)
+    const afterMarkers = beforeMarkers.includes(markerOffset)
+      ? beforeMarkers.filter((marker) => marker !== markerOffset)
+      : normalizeTimelineMarkers([...beforeMarkers, markerOffset])
+
+    await unifiedHistoryModule.executeCommand(
+      new UpdateTimelineMarkersCommand(
+        timelineItemId,
+        beforeMarkers,
+        afterMarkers,
+        unifiedTimelineModule,
+      ),
+    )
+    return true
+  }
+
+  async function clearTimelineItemMarkersWithHistory(timelineItemId: string): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '清除片段标记')
+    if (!timelineItem) {
+      return false
+    }
+
+    const beforeMarkers = normalizeTimelineMarkers(timelineItem.markers)
+    if (beforeMarkers.length === 0) {
+      return false
+    }
+
+    await unifiedHistoryModule.executeCommand(
+      new UpdateTimelineMarkersCommand(
+        timelineItemId,
+        beforeMarkers,
+        [],
+        unifiedTimelineModule,
+        t('timeline.contextMenu.clip.clearAllMarkers'),
+      ),
+    )
+    return true
   }
 
   /**
@@ -871,15 +928,11 @@ export function useHistoryOperations(
     }
 
     try {
-      const command = new ApplyChangePlanCommand(
-        plan,
-        unifiedTimelineModule,
-        {
-          seekTo: (nextFrame: number) => {
-            console.log('🔍 属性修改计划播放头控制:', nextFrame)
-          },
+      const command = new ApplyChangePlanCommand(plan, unifiedTimelineModule, {
+        seekTo: (nextFrame: number) => {
+          console.log('🔍 属性修改计划播放头控制:', nextFrame)
         },
-      )
+      })
 
       await unifiedHistoryModule.executeCommand(command)
     } catch (error) {
@@ -936,6 +989,8 @@ export function useHistoryOperations(
     commitFilterConfigWithHistory,
     removeFilterEffectWithHistory,
     splitTimelineItemAtTimeWithHistory,
+    toggleTimelineItemMarkerWithHistory,
+    clearTimelineItemMarkersWithHistory,
     duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory,
     trimTimelineItemWithHistory,

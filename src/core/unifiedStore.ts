@@ -135,7 +135,10 @@ export const useUnifiedStore = defineStore('unified', () => {
   const unifiedUserModule = createUnifiedUserModule(registry)
   registry.register(MODULE_NAMES.USER, unifiedUserModule)
 
-  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(registry, unifiedViewportModule.contentEndTimeFrames)
+  const unifiedMediaBunnyModule = createUnifiedMediaBunnyModule(
+    registry,
+    unifiedViewportModule.contentEndTimeFrames,
+  )
   registry.register(MODULE_NAMES.MEDIABUNNY, unifiedMediaBunnyModule)
 
   const unifiedUIModule = createUnifiedUIModule(registry)
@@ -443,9 +446,7 @@ export const useUnifiedStore = defineStore('unified', () => {
       requestScrollAndHighlight: unifiedUIModule.requestLibraryAssetReveal,
     })
 
-    return result.success
-      ? { success: true }
-      : { success: false, error: '未找到素材或所属文件夹' }
+    return result.success ? { success: true } : { success: false, error: '未找到素材或所属文件夹' }
   }
 
   // ==================== 导出接口 ====================
@@ -464,6 +465,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     commitFilterConfigWithHistory: historyOperations.commitFilterConfigWithHistory,
     removeFilterEffectWithHistory: historyOperations.removeFilterEffectWithHistory,
     splitTimelineItemAtTimeWithHistory: historyOperations.splitTimelineItemAtTimeWithHistory,
+    toggleTimelineItemMarkerWithHistory: historyOperations.toggleTimelineItemMarkerWithHistory,
+    clearTimelineItemMarkersWithHistory: historyOperations.clearTimelineItemMarkersWithHistory,
     duplicateTimelineItemWithHistory: historyOperations.duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory: historyOperations.resizeTimelineItemWithHistory,
     trimTimelineItemWithHistory: historyOperations.trimTimelineItemWithHistory,
@@ -511,10 +514,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     getAllAssets: unifiedMediaModule.getAllAssets,
     updateAssetName: unifiedMediaModule.updateAssetName,
     renameAsset: unifiedMediaModule.renameAsset,
-    createTransitionTemplatePlaceholder:
-      unifiedMediaModule.createTransitionTemplatePlaceholder,
-    createFilterTemplatePlaceholder:
-      unifiedMediaModule.createFilterTemplatePlaceholder,
+    createTransitionTemplatePlaceholder: unifiedMediaModule.createTransitionTemplatePlaceholder,
+    createFilterTemplatePlaceholder: unifiedMediaModule.createFilterTemplatePlaceholder,
     startTemplateProcessing: ensureEffectTemplateReady,
     retryTemplateProcessing: retryEffectTemplateReady,
     cancelTemplateProcessing: cancelEffectTemplateReady,
@@ -578,8 +579,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     setTimelineItemTimeRangeForCmd: unifiedTimelineModule.setTimelineItemTimeRangeForCmd,
     setTimelineItemTransitionConfigForCmd:
       unifiedTimelineModule.setTimelineItemTransitionConfigForCmd,
-    setTimelineItemFilterConfigForCmd:
-      unifiedTimelineModule.setTimelineItemFilterConfigForCmd,
+    setTimelineItemFilterConfigForCmd: unifiedTimelineModule.setTimelineItemFilterConfigForCmd,
     refreshTransitionItems: unifiedTimelineModule.refreshTransitionItems,
     getTransitionOverlay: unifiedTimelineModule.getTransitionOverlay,
     getTransitionOverlaysByTrack: unifiedTimelineModule.getTransitionOverlaysByTrack,
@@ -765,8 +765,7 @@ export const useUnifiedStore = defineStore('unified', () => {
     // 选择状态
     selectedTimelineSelectionId: unifiedSelectionModule.selectedTimelineSelectionId,
     selectedTimelineSelectionIds: unifiedSelectionModule.selectedTimelineSelectionIds,
-    isTimelineSelectionMultiSelectMode:
-      unifiedSelectionModule.isTimelineSelectionMultiSelectMode,
+    isTimelineSelectionMultiSelectMode: unifiedSelectionModule.isTimelineSelectionMultiSelectMode,
     hasSelection: unifiedSelectionModule.hasSelection,
     selectedClipTimelineItemId: unifiedSelectionModule.selectedClipTimelineItemId,
     selectedClipTimelineItemIds: unifiedSelectionModule.selectedClipTimelineItemIds,

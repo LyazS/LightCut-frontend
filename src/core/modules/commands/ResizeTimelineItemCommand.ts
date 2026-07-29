@@ -3,6 +3,7 @@ import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SimpleCommand } from '@/core/modules/commands/types'
 import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUtils'
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
+import { resizeTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
@@ -24,6 +25,8 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   private oldDurationFrames: number
   private newDurationFrames: number
   private hasAnimation: boolean = false
+  private originalMarkers: number[]
+  private newMarkers: number[]
   private _isDisposed = false
 
   constructor(
@@ -32,10 +35,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     newTimeRange: UnifiedTimeRange, // 新的时间范围
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setTimelineItemTimeRangeForCmd: (
-        id: string,
-        timeRange: Partial<UnifiedTimeRange>,
-      ) => void
+      setTimelineItemTimeRangeForCmd: (id: string, timeRange: Partial<UnifiedTimeRange>) => void
     },
     private mediaModule: {
       getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
@@ -46,6 +46,13 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     // 保存原始和新的时间范围
     this.originalTimeRange = { ...originalTimeRange }
     this.newTimeRange = { ...newTimeRange }
+    const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
+    this.originalMarkers = [...(timelineItem?.markers ?? [])]
+    this.newMarkers = resizeTimelineMarkers(
+      this.originalMarkers,
+      this.originalTimeRange,
+      this.newTimeRange,
+    )
 
     // 计算时长变化
     this.oldDurationFrames =
@@ -53,7 +60,6 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     this.newDurationFrames = this.newTimeRange.timelineEndTime - this.newTimeRange.timelineStartTime
 
     // 获取时间轴项目信息用于描述
-    const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
     let itemName = '未知素材'
 
     // 根据项目类型获取名称
@@ -84,6 +90,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
    */
   private async applyTimeRange(
     timeRange: UnifiedTimeRange,
+    markers: number[],
     isUndo: boolean = false,
   ): Promise<void> {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
@@ -93,6 +100,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     // 同步 timeRange 到 TimelineItem，并在模块内统一刷新转场绑定
     this.timelineModule.setTimelineItemTimeRangeForCmd(this.timelineItemId, timeRange)
+    timelineItem.markers = [...markers]
 
     // 如果时长有变化且有关键帧，调整关键帧位置
     if (this.hasAnimation && this.oldDurationFrames !== this.newDurationFrames) {
@@ -124,7 +132,6 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
         `🎬 [ResizeTimelineItemCommand] Animation duration updated after clip resize (${isUndo ? 'undo' : 'execute'})`,
       )
     }
-
   }
 
   /**
@@ -134,7 +141,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 执行调整时间范围操作: ${this.timelineItemId}...`)
 
-      await this.applyTimeRange(this.newTimeRange, false)
+      await this.applyTimeRange(this.newTimeRange, this.newMarkers, false)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem
@@ -161,7 +168,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     try {
       console.log(`🔄 撤销调整时间范围操作：恢复 ${this.timelineItemId} 的原始时间范围...`)
 
-      await this.applyTimeRange(this.originalTimeRange, true)
+      await this.applyTimeRange(this.originalTimeRange, this.originalMarkers, true)
 
       const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
       const mediaItem = timelineItem

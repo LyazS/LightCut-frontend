@@ -173,6 +173,14 @@ export function useTimelineContextMenu(
         onClick: () => duplicateClip(),
       })
 
+      if (timelineItem.markers?.length) {
+        menuItems.push({
+          label: t('timeline.contextMenu.clip.clearAllMarkers'),
+          icon: IconComponents.MARKER_OFF,
+          onClick: () => clearClipMarkers(),
+        })
+      }
+
       // 分隔符
       menuItems.push({ type: 'separator' } as MenuItem)
     }
@@ -456,6 +464,17 @@ export function useTimelineContextMenu(
       } catch (error) {
         console.error('❌ 复制时间轴项目时出错:', error)
       }
+      showContextMenu.value = false
+    }
+  }
+
+  async function clearClipMarkers() {
+    const clipId = contextMenuTarget.value.clipId
+    if (!clipId) return
+
+    try {
+      await unifiedStore.clearTimelineItemMarkersWithHistory(clipId)
+    } finally {
       showContextMenu.value = false
     }
   }

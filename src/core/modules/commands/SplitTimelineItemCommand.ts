@@ -22,6 +22,7 @@ import type {
   GetAnimation,
 } from '@/core/timelineitem/model/render'
 import { sliceKeyframesToSegment } from '@/core/utils/keyframePositionUtils'
+import { splitTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 
 // ==================== 新架构工具导入 ====================
 
@@ -70,7 +71,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
 
     // 已知项目处理逻辑
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
-    const splitPointsDesc = splitTimeFrames.map(t => framesToTimecode(t)).join(', ')
+    const splitPointsDesc = splitTimeFrames.map((t) => framesToTimecode(t)).join(', ')
     this.description = `分割时间轴项目: ${mediaItem?.name || '未知素材'} (在 ${splitPointsDesc})`
 
     // 保存原始项目的完整重建元数据
@@ -136,19 +137,23 @@ export class SplitTimelineItemCommand implements SimpleCommand {
         const fragmentStartTime = allSplitPoints[i]
         const fragmentEndTime = allSplitPoints[i + 1]
 
-        const fragmentStartRatio = timelineDurationFrames === 0
-          ? 0
-          : (fragmentStartTime - timelineStartTimeFrames) / timelineDurationFrames
-        const fragmentEndRatio = timelineDurationFrames === 0
-          ? 1
-          : (fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames
+        const fragmentStartRatio =
+          timelineDurationFrames === 0
+            ? 0
+            : (fragmentStartTime - timelineStartTimeFrames) / timelineDurationFrames
+        const fragmentEndRatio =
+          timelineDurationFrames === 0
+            ? 1
+            : (fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames
 
         // 计算片段时长
         const fragmentDurationFrames = fragmentEndTime - fragmentStartTime
 
         // 计算片段在素材中的起始和结束时间
-        const fragmentClipStartTime = clipStartTimeFrames + Math.round(clipDurationFrames * fragmentStartRatio)
-        const fragmentClipEndTime = clipStartTimeFrames + Math.round(clipDurationFrames * fragmentEndRatio)
+        const fragmentClipStartTime =
+          clipStartTimeFrames + Math.round(clipDurationFrames * fragmentStartRatio)
+        const fragmentClipEndTime =
+          clipStartTimeFrames + Math.round(clipDurationFrames * fragmentEndRatio)
 
         console.log(`🎬 [Split] 片段 ${i + 1} 关键帧切割参数:`, {
           fragmentStartTime,
@@ -207,10 +212,14 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       const relativeRatio = relativeTimelineFrames / timelineDurationFrames
 
       // 计算片段在素材中的起始和结束时间
-      const fragmentClipStartTime = clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
-      const fragmentClipEndTime = clipStartTimeFrames + Math.round(
-        clipDurationFrames * ((fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames)
-      )
+      const fragmentClipStartTime =
+        clipStartTimeFrames + Math.round(clipDurationFrames * relativeRatio)
+      const fragmentClipEndTime =
+        clipStartTimeFrames +
+        Math.round(
+          clipDurationFrames *
+            ((fragmentEndTime - timelineStartTimeFrames) / timelineDurationFrames),
+        )
 
       // 创建片段的时间范围
       const fragmentTimeRange: UnifiedTimeRange = {
@@ -230,6 +239,11 @@ export class SplitTimelineItemCommand implements SimpleCommand {
           ...this.originalTimelineItemData,
           id: this.splitItemIds[i],
           timeRange: fragmentTimeRange,
+          markers: splitTimelineMarkers(
+            this.originalTimelineItemData.markers,
+            originalTimeRange,
+            fragmentTimeRange,
+          ),
           animation: animations[i] || undefined,
         },
         getMediaItem: this.mediaModule.getMediaItem,
@@ -326,7 +340,7 @@ export class SplitTimelineItemCommand implements SimpleCommand {
       this.timelineModule.refreshTransitionItems?.()
 
       const mediaItem = this.mediaModule.getMediaItem(this.originalTimelineItemData.mediaItemId)
-      const splitPointsDesc = this.splitTimeFrames.map(t => framesToTimecode(t)).join(', ')
+      const splitPointsDesc = this.splitTimeFrames.map((t) => framesToTimecode(t)).join(', ')
       console.log(
         `🔪 已分割时间轴项目: ${mediaItem?.name || '未知素材'} 在 ${splitPointsDesc}，产生 ${splitItems.length} 个片段`,
       )

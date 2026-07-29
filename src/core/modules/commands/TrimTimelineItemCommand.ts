@@ -20,6 +20,7 @@ import {
   interpolateKeyframeAtPosition,
   percentageToFrame,
 } from '@/core/utils/keyframePositionUtils'
+import { trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 
 export type TrimTimelineItemSide = 'start' | 'end'
 
@@ -46,7 +47,9 @@ function getSourceDuration(timeRange: UnifiedTimeRange): number {
   return timeRange.clipEndTime - timeRange.clipStartTime
 }
 
-function cloneAnimation(animation: GetAnimation<MediaType> | undefined): GetAnimation<MediaType> | undefined {
+function cloneAnimation(
+  animation: GetAnimation<MediaType> | undefined,
+): GetAnimation<MediaType> | undefined {
   return animation ? cloneDeep(animation) : undefined
 }
 
@@ -269,8 +272,10 @@ export class TrimTimelineItemCommand implements SimpleCommand {
   public readonly description: string
   private originalTimeRange: UnifiedTimeRange
   private originalAnimation?: GetAnimation<MediaType>
+  private originalMarkers: number[]
   private newTimeRange: UnifiedTimeRange
   private nextAnimation?: GetAnimation<MediaType>
+  private nextMarkers: number[]
   private _isDisposed = false
 
   constructor(
@@ -280,10 +285,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
     targetBoundaryFrame: number,
     private timelineModule: {
       getTimelineItem: (id: string) => UnifiedTimelineItemData<MediaType> | undefined
-      setTimelineItemTimeRangeForCmd: (
-        id: string,
-        timeRange: Partial<UnifiedTimeRange>,
-      ) => void
+      setTimelineItemTimeRangeForCmd: (id: string, timeRange: Partial<UnifiedTimeRange>) => void
     },
     private mediaModule: {
       getMediaItem: (id: string | null) => UnifiedMediaItemData | undefined
@@ -292,6 +294,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
     this.id = generateCommandId()
     this.originalTimeRange = { ...originalTimelineItem.timeRange }
     this.originalAnimation = cloneAnimation(originalTimelineItem.animation)
+    this.originalMarkers = [...(originalTimelineItem.markers ?? [])]
 
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
     this.newTimeRange = calculateTrimTimeRange({
@@ -303,12 +306,16 @@ export class TrimTimelineItemCommand implements SimpleCommand {
 
     const originalDuration = getTimelineDuration(this.originalTimeRange)
     const nextDuration = getTimelineDuration(this.newTimeRange)
-    const keptStartRatio = originalDuration <= 0
-      ? 0
-      : (this.newTimeRange.timelineStartTime - this.originalTimeRange.timelineStartTime) / originalDuration
-    const keptEndRatio = originalDuration <= 0
-      ? 1
-      : (this.newTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) / originalDuration
+    const keptStartRatio =
+      originalDuration <= 0
+        ? 0
+        : (this.newTimeRange.timelineStartTime - this.originalTimeRange.timelineStartTime) /
+          originalDuration
+    const keptEndRatio =
+      originalDuration <= 0
+        ? 1
+        : (this.newTimeRange.timelineEndTime - this.originalTimeRange.timelineStartTime) /
+          originalDuration
     this.nextAnimation = rebuildAnimationForTrim(
       this.originalAnimation,
       originalDuration,
@@ -316,11 +323,20 @@ export class TrimTimelineItemCommand implements SimpleCommand {
       keptEndRatio,
       nextDuration,
     )
+    this.nextMarkers = trimTimelineMarkers(
+      this.originalMarkers,
+      this.originalTimeRange,
+      this.newTimeRange,
+    )
 
     this.description = `Trim 时间轴项目: ${mediaItem?.name || '未知素材'} (${side === 'start' ? '开始' : '结束'} → ${framesToTimecode(side === 'start' ? this.newTimeRange.timelineStartTime : this.newTimeRange.timelineEndTime)})`
   }
 
-  private applyState(timeRange: UnifiedTimeRange, animation?: GetAnimation<MediaType>): void {
+  private applyState(
+    timeRange: UnifiedTimeRange,
+    animation: GetAnimation<MediaType> | undefined,
+    markers: number[],
+  ): void {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
       throw new Error(`找不到时间轴项目: ${this.timelineItemId}`)
@@ -328,14 +344,15 @@ export class TrimTimelineItemCommand implements SimpleCommand {
 
     this.timelineModule.setTimelineItemTimeRangeForCmd(this.timelineItemId, timeRange)
     timelineItem.animation = cloneAnimation(animation)
+    timelineItem.markers = [...markers]
   }
 
   async execute(): Promise<void> {
-    this.applyState(this.newTimeRange, this.nextAnimation)
+    this.applyState(this.newTimeRange, this.nextAnimation, this.nextMarkers)
   }
 
   async undo(): Promise<void> {
-    this.applyState(this.originalTimeRange, this.originalAnimation)
+    this.applyState(this.originalTimeRange, this.originalAnimation, this.originalMarkers)
   }
 
   get isDisposed(): boolean {

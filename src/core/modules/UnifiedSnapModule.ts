@@ -8,6 +8,7 @@ import type {
   ClipBoundarySnapPoint,
   TransitionBoundarySnapPoint,
   KeyframeSnapPoint,
+  MarkerSnapPoint,
   PlayheadSnapPoint,
   TimelineStartSnapPoint,
 } from '@/types/snap'
@@ -16,6 +17,10 @@ import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timeline
 import { hasEnabledClipTransitionOut } from '@/core/timelineitem/features/transition'
 import { relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
 import { getVisibleKeyframesForTimeline } from '@/core/utils/unifiedKeyframeUtils'
+import {
+  getVisibleTimelineMarkers,
+  timelineMarkerToAbsoluteFrame,
+} from '@/core/utils/timelineMarkerUtils'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
@@ -57,7 +62,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
 
   const timelineItems = timelineModule.timelineItems
   const currentFrame = playbackModule.currentFrame
-  
+
   // 延迟获取 viewport 模块（避免循环依赖）
   let viewportModule: UnifiedViewportModule | null = null
   const getViewportModule = (): UnifiedViewportModule => {
@@ -90,6 +95,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
     const {
       includeClipBoundaries = true,
       includeKeyframes = true, // 启用关键帧吸附
+      includeMarkers = true,
       includePlayhead = true, // 启用播放头吸附
       includeTimelineStart = true,
       excludeClipIds = [],
@@ -219,6 +225,33 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
               targets.push(keyframePoint)
             })
           }
+        })
+      }
+
+      if (includeMarkers) {
+        timelineItems.value.forEach((item) => {
+          if (excludeClipIds.includes(item.id)) {
+            return
+          }
+
+          if (frameRange) {
+            const itemStart = item.timeRange.timelineStartTime
+            const itemEnd = item.timeRange.timelineEndTime
+            if (itemEnd < frameRange.start || itemStart > frameRange.end) {
+              return
+            }
+          }
+
+          getVisibleTimelineMarkers(item).forEach((markerOffset) => {
+            const markerPoint: MarkerSnapPoint = {
+              type: 'marker',
+              frame: timelineMarkerToAbsoluteFrame(item, markerOffset),
+              priority: 2,
+              clipId: item.id,
+              markerOffset,
+            }
+            targets.push(markerPoint)
+          })
         })
       }
 
@@ -393,6 +426,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
       collectSnapTargets({
         includeClipBoundaries: snapConfig.value.clipBoundaries,
         includeKeyframes: snapConfig.value.keyframes,
+        includeMarkers: snapConfig.value.markers,
         includePlayhead: snapConfig.value.playhead,
         includeTimelineStart: snapConfig.value.timelineStart,
         excludeClipIds,

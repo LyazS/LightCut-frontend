@@ -7,6 +7,10 @@
       "redoTooltip": "重做下一个操作 (Ctrl+Y)"
     },
     "clip": {
+      "marker": "标记",
+      "unmark": "反标记",
+      "unmarkTooltip": "反标记当前播放头位置",
+      "markerOutOfRangeTooltip": "播放头不在选中片段内，无法添加标记",
       "split": "裁剪",
       "splitTooltip": "在当前时间位置裁剪选中的片段",
       "delete": "删除",

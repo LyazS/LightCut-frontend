@@ -42,6 +42,16 @@ export interface KeyframeSnapPoint extends BaseSnapPoint {
 }
 
 /**
+ * 片段标记吸附点
+ */
+export interface MarkerSnapPoint extends BaseSnapPoint {
+  type: 'marker'
+  clipId: string
+  markerOffset: number
+  priority: 2 // 与关键帧同级
+}
+
+/**
  * 播放头位置吸附点
  */
 export interface PlayheadSnapPoint extends BaseSnapPoint {
@@ -65,6 +75,7 @@ export type SnapPoint =
   | ClipBoundarySnapPoint
   | TransitionBoundarySnapPoint
   | KeyframeSnapPoint
+  | MarkerSnapPoint
   | PlayheadSnapPoint
   | TimelineStartSnapPoint
 
@@ -78,6 +89,7 @@ export interface SnapConfig {
   // 分类型开关
   clipBoundaries: boolean // 片段边界吸附
   keyframes: boolean // 关键帧吸附
+  markers: boolean // 片段标记吸附
   playhead: boolean // 播放头吸附
   timelineStart: boolean // 时间轴起始位置吸附
 
@@ -124,6 +136,9 @@ export interface SnapPointCollectionOptions {
   // 是否包含关键帧点
   includeKeyframes?: boolean
 
+  // 是否包含片段标记点
+  includeMarkers?: boolean
+
   // 是否包含播放头位置
   includePlayhead?: boolean
 
@@ -147,6 +162,7 @@ export const DEFAULT_SNAP_CONFIG: SnapConfig = {
   enabled: true,
   clipBoundaries: true,
   keyframes: true,
+  markers: true,
   playhead: true, // 启用播放头吸附
   timelineStart: true,
   threshold: 20, // 20像素

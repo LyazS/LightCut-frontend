@@ -28,6 +28,28 @@
     <div v-if="timelineItems.length > 0" class="toolbar-section">
       <HoverButton
         v-if="unifiedStore.selectedClipTimelineItemId"
+        :disabled="!canToggleMarker"
+        @click="toggleSelectedClipMarker"
+        :title="markerButtonTooltip"
+      >
+        <template #icon>
+          <span
+            class="marker-action-icon"
+            :class="{ 'marker-action-icon--remove': hasMarkerAtPlayhead }"
+          >
+            <component :is="IconComponents.MARKER" size="14px" aria-hidden="true" />
+            <component
+              :is="IconComponents.MARKER_OFF"
+              size="14px"
+              class="marker-action-icon__remove"
+              aria-hidden="true"
+            />
+          </span>
+        </template>
+        {{ markerButtonLabel }}
+      </HoverButton>
+      <HoverButton
+        v-if="unifiedStore.selectedClipTimelineItemId"
         :disabled="isSplitButtonDisabled"
         @click="splitSelectedClip"
         :title="t('toolbar.clip.splitTooltip')"
@@ -67,10 +89,7 @@
       </div>
 
       <!-- 边界编辑模式切换 -->
-      <HoverButton
-        @click="toggleEdgeEditMode"
-        :title="edgeEditModeTooltip"
-      >
+      <HoverButton @click="toggleEdgeEditMode" :title="edgeEditModeTooltip">
         <template #icon>
           <component :is="edgeEditModeIcon" size="14px" />
         </template>
@@ -88,7 +107,6 @@
         </template>
         {{ t('toolbar.snap.snap') }}
       </HoverButton>
-
     </div>
   </div>
 </template>
@@ -167,9 +185,7 @@ const edgeEditModeTooltip = computed(() =>
 )
 
 const edgeEditModeIcon = computed(() =>
-  unifiedStore.timelineEdgeEditMode === 'trim'
-    ? IconComponents.TRIM
-    : IconComponents.RESIZE_WIDTH,
+  unifiedStore.timelineEdgeEditMode === 'trim' ? IconComponents.TRIM : IconComponents.RESIZE_WIDTH,
 )
 
 // 切换吸附功能
@@ -201,6 +217,51 @@ const selectedItemSupportsSplit = computed(() => {
   // 视频和音频支持裁剪，图片和文本不支持
   return item.mediaType === 'video' || item.mediaType === 'audio'
 })
+
+const selectedTimelineItem = computed(() => {
+  const selectedId = unifiedStore.selectedClipTimelineItemId
+  return selectedId ? unifiedStore.getTimelineItem(selectedId) : undefined
+})
+
+const markerOffsetAtPlayhead = computed(() => {
+  const item = selectedTimelineItem.value
+  if (!item) return null
+
+  const currentFrame = unifiedStore.currentFrame
+  if (
+    currentFrame < item.timeRange.timelineStartTime ||
+    currentFrame > item.timeRange.timelineEndTime
+  ) {
+    return null
+  }
+  return currentFrame - item.timeRange.timelineStartTime
+})
+
+const canToggleMarker = computed(() => markerOffsetAtPlayhead.value !== null)
+
+const hasMarkerAtPlayhead = computed(() => {
+  const item = selectedTimelineItem.value
+  const markerOffset = markerOffsetAtPlayhead.value
+  return Boolean(item && markerOffset !== null && item.markers?.includes(markerOffset))
+})
+
+const markerButtonLabel = computed(() =>
+  hasMarkerAtPlayhead.value ? t('toolbar.clip.unmark') : t('toolbar.clip.marker'),
+)
+
+const markerButtonTooltip = computed(() => {
+  if (!canToggleMarker.value) {
+    return t('toolbar.clip.markerOutOfRangeTooltip')
+  }
+  return hasMarkerAtPlayhead.value ? t('toolbar.clip.unmarkTooltip') : undefined
+})
+
+async function toggleSelectedClipMarker() {
+  const selectedId = unifiedStore.selectedClipTimelineItemId
+  if (!selectedId || !canToggleMarker.value) return
+
+  await unifiedStore.toggleTimelineItemMarkerWithHistory(selectedId, unifiedStore.currentFrame)
+}
 
 // 检查选中的项目是否处于ready状态
 const isSelectedItemReady = computed(() => {
@@ -253,7 +314,10 @@ async function splitSelectedClip() {
 
 async function deleteSelectedSelection() {
   if (selectedTransitionSourceItemId.value) {
-    await unifiedStore.updateTransitionConfigWithHistory(selectedTransitionSourceItemId.value, undefined)
+    await unifiedStore.updateTransitionConfigWithHistory(
+      selectedTransitionSourceItemId.value,
+      undefined,
+    )
     console.log('✅ 转场删除成功')
     return
   }
@@ -485,7 +549,6 @@ function debugHistory() {
 
   console.groupEnd()
 }
-
 </script>
 
 <style scoped>
@@ -602,6 +665,34 @@ function debugHistory() {
 .toolbar-btn svg {
   width: 14px;
   height: 14px;
+}
+
+.marker-action-icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  flex: 0 0 14px;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.marker-action-icon__remove {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(0.25);
+  filter: blur(4px);
+  transition-property: opacity, transform, filter;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.marker-action-icon--remove .marker-action-icon__remove {
+  opacity: 1;
+  transform: scale(1);
+  filter: blur(0);
 }
 
 .overlap-warning {
