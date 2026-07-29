@@ -1,4 +1,4 @@
-import { ref, type Ref, computed } from 'vue'
+import { ref } from 'vue'
 import type {
   SnapConfig,
   SnapPoint,
@@ -13,19 +13,17 @@ import type {
   TimelineStartSnapPoint,
 } from '@/types/snap'
 import { DEFAULT_SNAP_CONFIG } from '@/types/snap'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import { hasEnabledClipTransitionOut } from '@/core/timelineitem/features/transition'
 import { relativeFrameToAbsoluteFrame } from '@/core/utils/unifiedKeyframeUtils'
 import { getVisibleKeyframesForTimeline } from '@/core/utils/unifiedKeyframeUtils'
 import {
-  getVisibleTimelineMarkers,
+  getSnapTimelineMarkerOffsets,
   timelineMarkerToAbsoluteFrame,
 } from '@/core/utils/timelineMarkerUtils'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedPlaybackModule } from './UnifiedPlaybackModule'
-import type { UnifiedConfigModule } from './UnifiedConfigModule'
 import type { UnifiedMediaModule } from './UnifiedMediaModule'
 import type { UnifiedViewportModule } from './UnifiedViewportModule'
 
@@ -57,7 +55,6 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
   // 通过注册中心获取依赖模块
   const timelineModule = registry.get<UnifiedTimelineModule>(MODULE_NAMES.TIMELINE)
   const playbackModule = registry.get<UnifiedPlaybackModule>(MODULE_NAMES.PLAYBACK)
-  const configModule = registry.get<UnifiedConfigModule>(MODULE_NAMES.CONFIG)
   const mediaModule = registry.get<UnifiedMediaModule>(MODULE_NAMES.MEDIA)
 
   const timelineItems = timelineModule.timelineItems
@@ -242,7 +239,7 @@ export function createUnifiedSnapModule(registry: ModuleRegistry) {
             }
           }
 
-          getVisibleTimelineMarkers(item).forEach((markerOffset) => {
+          getSnapTimelineMarkerOffsets(item).forEach((markerOffset) => {
             const markerPoint: MarkerSnapPoint = {
               type: 'marker',
               frame: timelineMarkerToAbsoluteFrame(item, markerOffset),

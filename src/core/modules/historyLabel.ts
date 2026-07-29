@@ -25,6 +25,9 @@ export type HistoryLabelKey =
   | 'notification.history.command.addMarker'
   | 'notification.history.command.removeMarker'
   | 'notification.history.command.clearAllMarkers'
+  | 'notification.history.command.generateAIMarks'
+  | 'notification.history.command.updateAIMarksMode'
+  | 'notification.history.command.clearAIMarks'
   | 'notification.history.command.clearAllKeyframes'
   | 'notification.history.command.selectItems'
   | 'notification.history.command.clearSelection'
@@ -91,6 +94,9 @@ export const historyLabels = {
   addMarker: () => label('notification.history.command.addMarker'),
   removeMarker: () => label('notification.history.command.removeMarker'),
   clearAllMarkers: () => label('notification.history.command.clearAllMarkers'),
+  generateAIMarks: () => label('notification.history.command.generateAIMarks'),
+  updateAIMarksMode: () => label('notification.history.command.updateAIMarksMode'),
+  clearAIMarks: () => label('notification.history.command.clearAIMarks'),
   clearAllKeyframes: () => label('notification.history.command.clearAllKeyframes'),
   selectItems: (count: number) => label('notification.history.command.selectItems', { count }),
   clearSelection: () => label('notification.history.command.clearSelection'),

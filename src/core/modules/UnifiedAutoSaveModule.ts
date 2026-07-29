@@ -1,4 +1,4 @@
-import { ref, watch, type Ref, computed } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { debounce, throttle } from 'lodash'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
@@ -215,7 +215,7 @@ export function createUnifiedAutoSaveModule(
     console.log(`🧹 [AutoSave] 清理所有 mediaItem watchers，共 ${mediaItemWatchers.size} 个`)
 
     // 清理所有 watch
-    mediaItemWatchers.forEach((unwatch, mediaItemId) => {
+    mediaItemWatchers.forEach((unwatch) => {
       unwatch()
     })
     mediaItemWatchers.clear()
@@ -464,6 +464,7 @@ export function createUnifiedAutoSaveModule(
           provenance: item.provenance,
           timeRange: item.timeRange,
           markers: item.markers,
+          aiMarks: item.aiMarks,
           baseRenderConfig: item.baseRenderConfig, // ✅ 监听
           exRenderConfig: item.exRenderConfig, // ✅ 监听
           animation: item.animation, // ✅ 监听

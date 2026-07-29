@@ -22,7 +22,7 @@ import type {
   GetAnimation,
 } from '@/core/timelineitem/model/render'
 import { sliceKeyframesToSegment } from '@/core/utils/keyframePositionUtils'
-import { splitTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { splitAIMarks, splitTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
 
 // ==================== 新架构工具导入 ====================
@@ -241,6 +241,11 @@ export class SplitTimelineItemCommand implements SimpleCommand {
           timeRange: fragmentTimeRange,
           markers: splitTimelineMarkers(
             this.originalTimelineItemData.markers,
+            originalTimeRange,
+            fragmentTimeRange,
+          ),
+          aiMarks: splitAIMarks(
+            this.originalTimelineItemData.aiMarks,
             originalTimeRange,
             fragmentTimeRange,
           ),

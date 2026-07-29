@@ -38,9 +38,16 @@
       },
       "clip": {
         "smartSceneDetection": "Scene Detection",
+        "autoBeatMarks": "Auto Beat Marks",
+        "regenerateBeatMarks": "Regenerate Beat Marks",
+        "hideAIMarks": "Hide Auto Beat Marks",
+        "showBeat1": "Show Beat 1",
+        "showBeat1234": "Show Beats 1 2 3 4",
+        "clearAIMarks": "Clear Auto Beat Marks",
         "speechRecognition": "Speech Recognition",
         "duplicateClip": "Duplicate Clip",
         "clearAllMarkers": "Clear All Markers",
+        "clearManualMarkers": "Clear Manual Markers",
         "revealInLibrary": "Show in Media Library",
         "revealInLibraryFailed": "Source media or its folder was not found",
         "regenerateThumbnail": "Regenerate Thumbnail",
@@ -87,6 +94,26 @@
       "noScenes": "No obvious scene boundaries detected",
       "cancelled": "Scene detection cancelled",
       "error": "Scene detection failed: {message}"
+    },
+    "beatDetection": {
+      "title": "Smart Beat Detection",
+      "tip": "Analyzing audio beats...",
+      "progress": {
+        "loadingModel": "Loading beat model...",
+        "checkingCache": "Checking local model cache...",
+        "loadingFromCache": "Loading local model cache...",
+        "downloadingModel": "Downloading beat model {percent}%",
+        "initializingModel": "Initializing beat model...",
+        "modelReady": "Beat model ready",
+        "decodingAudio": "Decoding audio...",
+        "extractingFeatures": "Extracting audio features {current}/{total}s",
+        "detectingBeats": "Detecting beats...",
+        "finalizingBeats": "Finalizing complete bars..."
+      },
+      "success": "Generated {count} auto beat marks",
+      "noCompleteBars": "No complete four-beat bars detected",
+      "cancelled": "Auto beat detection cancelled",
+      "error": "Auto beat detection failed: {message}"
     },
     "speechRecognition": {
       "title": "Speech Recognition",

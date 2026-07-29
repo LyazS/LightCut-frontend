@@ -1,11 +1,11 @@
 import type { MediaType } from '@/core'
 import type {
+  AIMarkMode,
+  AIMarks,
   UnifiedTimelineItemData,
-  VideoMediaConfig,
-  AudioMediaConfig,
 } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import type { UnifiedTrackType, UnifiedTrackData } from '@/core/track/TrackTypes'
+import type { UnifiedTrackType } from '@/core/track/TrackTypes'
 import type {
   UnifiedHistoryModule,
   UnifiedTimelineModule,
@@ -39,6 +39,7 @@ import {
   DeleteEmptyDirectoryCommand,
   RenameAssetCommand,
   MoveLibraryItemsCommand,
+  UpdateAIMarksCommand,
   UpdateTimelineMarkersCommand,
 } from '@/core/modules/commands/timelineCommands'
 import { ApplyChangePlanCommand } from '@/core/modules/commands/ApplyChangePlanCommand'
@@ -48,8 +49,6 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { duplicateTimelineItem } from '@/core/timelineitem/runtime/factory'
 import {
   ClearAllKeyframesCommand,
-  type TimelineModule as KeyframeTimelineModule,
-  type PlaybackControls,
 } from '@/core/modules/commands/keyframeCommands'
 import type { ClipTransitionOutConfig } from '@/core/transition/types'
 import type { TimelineSelectionId } from '@/core/types/timelineSelection'
@@ -67,7 +66,8 @@ import type { ChangePlan } from '@/core/property-system'
 import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
 import type { TrimTimelineItemSide } from '@/core/modules/commands/timelineCommands'
 import {
-  getVisibleTimelineMarkers,
+  cloneAIMarks,
+  getVisibleManualTimelineMarkers,
   normalizeTimelineMarkers,
 } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
@@ -502,7 +502,7 @@ export function useHistoryOperations(
     }
 
     const markerOffset = absoluteFrame - timelineStartTime
-    const beforeMarkers = getVisibleTimelineMarkers(timelineItem)
+    const beforeMarkers = getVisibleManualTimelineMarkers(timelineItem)
     const afterMarkers = beforeMarkers.includes(markerOffset)
       ? beforeMarkers.filter((marker) => marker !== markerOffset)
       : normalizeTimelineMarkers([...beforeMarkers, markerOffset])
@@ -539,6 +539,54 @@ export function useHistoryOperations(
       ),
     )
     return true
+  }
+
+  async function updateAIMarksWithHistory(
+    timelineItemId: string,
+    aiMarks: AIMarks | undefined,
+    historyLabel = historyLabels.generateAIMarks(),
+  ): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '更新 AI 节拍')
+    if (!timelineItem) {
+      return false
+    }
+
+    await unifiedHistoryModule.executeCommand(
+      new UpdateAIMarksCommand(
+        timelineItemId,
+        timelineItem.aiMarks,
+        aiMarks,
+        unifiedTimelineModule,
+        historyLabel,
+      ),
+    )
+    return true
+  }
+
+  async function setAIMarksModeWithHistory(
+    timelineItemId: string,
+    mode: AIMarkMode,
+  ): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '修改 AI 节拍显示')
+    const beforeAIMarks = cloneAIMarks(timelineItem?.aiMarks)
+    if (!timelineItem || !beforeAIMarks || beforeAIMarks.mode === mode) {
+      return false
+    }
+
+    return updateAIMarksWithHistory(
+      timelineItemId,
+      { ...beforeAIMarks, mode },
+      historyLabels.updateAIMarksMode(),
+    )
+  }
+
+  async function clearAIMarksWithHistory(timelineItemId: string): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '清除 AI 节拍')
+    if (!timelineItem || !timelineItem.aiMarks) {
+      return false
+    }
+
+    return updateAIMarksWithHistory(timelineItemId, undefined, historyLabels.clearAIMarks())
   }
 
   /**
@@ -954,6 +1002,9 @@ export function useHistoryOperations(
     splitTimelineItemAtTimeWithHistory,
     toggleTimelineItemMarkerWithHistory,
     clearTimelineItemMarkersWithHistory,
+    updateAIMarksWithHistory,
+    setAIMarksModeWithHistory,
+    clearAIMarksWithHistory,
     duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory,
     trimTimelineItemWithHistory,

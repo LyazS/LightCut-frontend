@@ -6,7 +6,7 @@
 import { cloneDeep } from 'lodash'
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
+import type { AIMarks, UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type {
@@ -19,7 +19,7 @@ import {
   interpolateKeyframeAtPosition,
   percentageToFrame,
 } from '@/core/utils/keyframePositionUtils'
-import { trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { cloneAIMarks, trimAIMarks, trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
 
 export type TrimTimelineItemSide = 'start' | 'end'
@@ -273,9 +273,11 @@ export class TrimTimelineItemCommand implements SimpleCommand {
   private originalTimeRange: UnifiedTimeRange
   private originalAnimation?: GetAnimation<MediaType>
   private originalMarkers: number[]
+  private originalAIMarks: AIMarks | undefined
   private newTimeRange: UnifiedTimeRange
   private nextAnimation?: GetAnimation<MediaType>
   private nextMarkers: number[]
+  private nextAIMarks: AIMarks | undefined
   private _isDisposed = false
 
   constructor(
@@ -295,6 +297,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
     this.originalTimeRange = { ...originalTimelineItem.timeRange }
     this.originalAnimation = cloneAnimation(originalTimelineItem.animation)
     this.originalMarkers = [...(originalTimelineItem.markers ?? [])]
+    this.originalAIMarks = cloneAIMarks(originalTimelineItem.aiMarks)
 
     const mediaItem = this.mediaModule.getMediaItem(originalTimelineItem.mediaItemId)
     this.newTimeRange = calculateTrimTimeRange({
@@ -328,6 +331,11 @@ export class TrimTimelineItemCommand implements SimpleCommand {
       this.originalTimeRange,
       this.newTimeRange,
     )
+    this.nextAIMarks = trimAIMarks(
+      this.originalAIMarks,
+      this.originalTimeRange,
+      this.newTimeRange,
+    )
 
     this.historyLabel = historyLabels.trimTimelineItem(mediaItem?.name)
   }
@@ -336,6 +344,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
     timeRange: UnifiedTimeRange,
     animation: GetAnimation<MediaType> | undefined,
     markers: number[],
+    aiMarks: AIMarks | undefined,
   ): void {
     const timelineItem = this.timelineModule.getTimelineItem(this.timelineItemId)
     if (!timelineItem) {
@@ -345,14 +354,20 @@ export class TrimTimelineItemCommand implements SimpleCommand {
     this.timelineModule.setTimelineItemTimeRangeForCmd(this.timelineItemId, timeRange)
     timelineItem.animation = cloneAnimation(animation)
     timelineItem.markers = [...markers]
+    timelineItem.aiMarks = cloneAIMarks(aiMarks)
   }
 
   async execute(): Promise<void> {
-    this.applyState(this.newTimeRange, this.nextAnimation, this.nextMarkers)
+    this.applyState(this.newTimeRange, this.nextAnimation, this.nextMarkers, this.nextAIMarks)
   }
 
   async undo(): Promise<void> {
-    this.applyState(this.originalTimeRange, this.originalAnimation, this.originalMarkers)
+    this.applyState(
+      this.originalTimeRange,
+      this.originalAnimation,
+      this.originalMarkers,
+      this.originalAIMarks,
+    )
   }
 
   get isDisposed(): boolean {

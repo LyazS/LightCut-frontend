@@ -38,9 +38,16 @@
       },
       "clip": {
         "smartSceneDetection": "智能分镜头",
+        "autoBeatMarks": "自动节拍",
+        "regenerateBeatMarks": "重新识别节拍",
+        "hideAIMarks": "隐藏自动节拍",
+        "showBeat1": "显示节拍 1",
+        "showBeat1234": "显示节拍 1 2 3 4",
+        "clearAIMarks": "清除自动节拍",
         "speechRecognition": "语音识别",
         "duplicateClip": "复制片段",
         "clearAllMarkers": "清除所有标记",
+        "clearManualMarkers": "清除手动标记",
         "revealInLibrary": "在素材库中显示",
         "revealInLibraryFailed": "未找到源素材或所属文件夹",
         "regenerateThumbnail": "重新生成缩略图",
@@ -87,6 +94,26 @@
       "noScenes": "未检测到明显的场景边界",
       "cancelled": "场景检测已取消",
       "error": "场景检测失败: {message}"
+    },
+    "beatDetection": {
+      "title": "智能节拍识别",
+      "tip": "正在分析音频节拍，请耐心等待...",
+      "progress": {
+        "loadingModel": "加载节拍模型...",
+        "checkingCache": "检查本地模型缓存...",
+        "loadingFromCache": "加载本地模型缓存...",
+        "downloadingModel": "下载节拍模型 {percent}%",
+        "initializingModel": "初始化节拍模型...",
+        "modelReady": "节拍模型就绪",
+        "decodingAudio": "解码音频...",
+        "extractingFeatures": "提取音频特征 {current}/{total} 秒",
+        "detectingBeats": "识别节拍...",
+        "finalizingBeats": "整理完整四拍..."
+      },
+      "success": "已生成 {count} 个自动节拍",
+      "noCompleteBars": "未检测到完整四拍",
+      "cancelled": "自动节拍已取消",
+      "error": "自动节拍失败: {message}"
     },
     "speechRecognition": {
       "title": "语音识别",

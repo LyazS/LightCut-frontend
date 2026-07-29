@@ -18,7 +18,11 @@ function isModelCacheEnabled(config: OnnxModelConfig): boolean {
 }
 
 function canUseCacheStorage(): boolean {
-  return typeof window !== 'undefined' && 'caches' in window
+  return typeof caches !== 'undefined'
+}
+
+function getRuntimeOrigin(): string {
+  return globalThis.location?.origin ?? 'http://localhost'
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
@@ -58,7 +62,7 @@ async function pruneOldModelVersions(config: OnnxModelConfig): Promise<void> {
     await Promise.all(
       keys
         .filter((request) => request.url.includes(`${MODEL_CACHE_PREFIX}/${config.modelId}/`))
-        .filter((request) => request.url !== new URL(getCacheKey(config), window.location.origin).href)
+        .filter((request) => request.url !== new URL(getCacheKey(config), getRuntimeOrigin()).href)
         .map((request) => cache.delete(request)),
     )
   } catch {

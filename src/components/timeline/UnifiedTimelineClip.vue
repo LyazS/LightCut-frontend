@@ -69,6 +69,7 @@
         <span class="timeline-marker__flag"></span>
       </button>
     </div>
+
   </div>
 </template>
 
@@ -291,7 +292,6 @@ const visibleKeyframes = computed(() => {
 
   const keyframes = getVisibleKeyframesForTimeline(props.data)
   const renderFrame = clipRenderFrame.value
-  const timeRange = renderFrame.timeRange
   const clipWidth = renderFrame.widthPixels
 
   return keyframes
@@ -437,7 +437,7 @@ function handleDragStart(event: DragEvent) {
 /**
  * 处理拖拽结束事件（新架构）
  */
-function handleDragEnd(_event: DragEvent) {
+function handleDragEnd() {
   console.log('🏁 [CleanTimelineClip] 拖拽结束:', props.data.id)
 
   // 清理拖拽状态

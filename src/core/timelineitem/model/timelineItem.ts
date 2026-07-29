@@ -15,7 +15,6 @@ import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import type { ClipTransitionOutConfig } from '@/core/transition/types'
 import type { ClipFilterConfig } from '@/core/filter/types'
-import type { BlendMode } from './blendMode'
 import type { GetAnimation, TimelineBaseRenderConfig } from './render'
 import type { ClipTransitionRuntime } from '../features/transition'
 import type { MaskConfig } from '../features/mask'
@@ -117,6 +116,22 @@ export interface UnifiedTimelineItemRuntime<T extends MediaType = MediaType> {
  */
 export type MediaItemIdType<T extends MediaType> = T extends 'text' ? string | null : string
 
+export type AIMarkMode = 'none' | 'beat1' | 'beat1234'
+
+export interface AIMark {
+  /** 片段本地帧偏移量。 */
+  offsetFrames: number
+  /** 完整节拍中的拍号。 */
+  beat: 1 | 2 | 3 | 4
+}
+
+export interface AIMarks {
+  /** AI 节拍在时间轴上的显示方式。 */
+  mode: AIMarkMode
+  /** 模型生成的完整四拍结果。 */
+  marks: AIMark[]
+}
+
 /**
  * 统一时间轴项目数据接口（泛型版本）
  *
@@ -141,6 +156,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   timeRange: UnifiedTimeRange
   /** 片段内标记，相对于 timelineStartTime 的整帧偏移量 */
   markers?: number[]
+  /** AI 生成的完整节拍标记；未识别时为 undefined。 */
+  aiMarks?: AIMarks
   // ==================== 配置（类型安全） ====================
   baseRenderConfig: TimelineBaseRenderConfig<T>
   /** schema v2 迁移期扩展渲染配置 */
