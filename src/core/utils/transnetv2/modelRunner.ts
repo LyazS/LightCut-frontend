@@ -1,9 +1,5 @@
-import * as ort from 'onnxruntime-web/wasm'
-import {
-  loadOnnxModel,
-  type OnnxModelConfig,
-  type OnnxModelLoadOptions,
-} from '@/core/onnx'
+import * as ort from 'onnxruntime-web/webgpu'
+import { loadOnnxModel, type OnnxModelConfig, type OnnxModelLoadOptions } from '@/core/onnx'
 import { modelManifest } from '@/generated/model-manifest'
 import {
   TRANSNETV2_INPUT_CHANNELS,
@@ -17,7 +13,7 @@ const transNetV2ModelConfig: OnnxModelConfig = {
   modelId: TRANSNETV2_MODEL_ID,
   version: modelManifest.transnetv2.version,
   chunks: modelManifest.transnetv2.chunks,
-  executionProviders: ['wasm'],
+  executionProviders: ['webgpu', 'wasm'],
   graphOptimizationLevel: 'all',
   allowExtraOutputs: true,
   cache: {

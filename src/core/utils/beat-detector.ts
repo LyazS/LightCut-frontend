@@ -1,55 +1,10 @@
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
-import { RENDERER_FPS } from '@/core/mediabunny/constant'
 import {
-  BEAT_THIS_FEATURE_FPS,
-  BEAT_THIS_MODEL_ID,
   type BeatThisDetectorConfig,
   type BeatThisMarks,
   type BeatThisProgressEvent,
 } from './beatthis/types'
 import BeatThisWorker from './beatthis/beatThis.worker.ts?worker'
-
-interface RawBeat {
-  frame: number
-  beat: 1 | 2 | 3 | 4
-}
-
-function printDetectedBeats(
-  itemData: UnifiedTimelineItemData,
-  marks: BeatThisMarks,
-  rawBeats: RawBeat[],
-): void {
-  const sourceStartSeconds = itemData.timeRange.clipStartTime / RENDERER_FPS
-  const sourceEndSeconds = itemData.timeRange.clipEndTime / RENDERER_FPS
-  const timelineStartFrame = itemData.timeRange.timelineStartTime
-
-  console.info(
-    `[aiMarks] Beat This result (copy the JSON below)\n${JSON.stringify(
-      {
-        model: BEAT_THIS_MODEL_ID,
-        clipId: itemData.id,
-        featureFps: BEAT_THIS_FEATURE_FPS,
-        sourceRangeSeconds: {
-          start: sourceStartSeconds,
-          end: sourceEndSeconds,
-        },
-        beats: rawBeats.map(({ frame, beat }) => ({
-          beat,
-          modelFrame: frame,
-          sourceOffsetSeconds: frame / BEAT_THIS_FEATURE_FPS,
-          sourceTimeSeconds: sourceStartSeconds + frame / BEAT_THIS_FEATURE_FPS,
-        })),
-        timelineMarks: marks.map(({ offsetFrames, beat }) => ({
-          beat,
-          offsetFrames,
-          timelineFrame: timelineStartFrame + offsetFrames,
-        })),
-      },
-      null,
-      2,
-    )}`,
-  )
-}
 
 export async function detectBeatThis(
   itemData: UnifiedTimelineItemData,
@@ -96,7 +51,6 @@ export async function detectBeatThis(
       cleanup()
       if (event.data.type === 'done') {
         const marks = event.data.marks as BeatThisMarks
-        printDetectedBeats(itemData, marks, (event.data.rawBeats ?? []) as RawBeat[])
         resolve(marks)
       } else if (event.data.message === '自动节拍已取消') {
         reject(new DOMException(event.data.message, 'AbortError'))

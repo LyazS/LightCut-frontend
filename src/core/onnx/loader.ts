@@ -1,8 +1,9 @@
-import * as ort from 'onnxruntime-web/wasm'
-import localOrtWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url'
+import * as ort from 'onnxruntime-web/webgpu'
+import localOrtWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
 import { loadCachedOnnxModelBytes } from './modelCache'
 import type {
   OnnxDimensionExpectation,
+  OnnxExecutionProvider,
   OnnxModelConfig,
   OnnxModelLoadOptions,
   OnnxModelRunner,
@@ -11,7 +12,7 @@ import type {
 
 const modelCache = new Map<string, Promise<OnnxModelRunner>>()
 
-const ORT_WASM_FILE_NAME = 'ort-wasm-simd-threaded.wasm'
+const ORT_WASM_FILE_NAME = 'ort-wasm-simd-threaded.asyncify.wasm'
 const WASM_CDN_FETCH_TIMEOUT_MS = 5_000
 const ortWasmCdnUrls = [
   `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions.web}/dist/${ORT_WASM_FILE_NAME}`,
@@ -19,6 +20,55 @@ const ortWasmCdnUrls = [
 ]
 
 let wasmConfigurationPromise: Promise<void> | undefined
+
+interface WebGpuNavigator {
+  gpu?: {
+    requestAdapter(): Promise<unknown | null>
+  }
+}
+
+function formatDuration(durationMs: number): string {
+  return `${durationMs.toFixed(1)} ms`
+}
+
+function logOnnxDebug(modelId: string, message: string): void {
+  if (import.meta.env.DEV) {
+    console.info(`[ONNX][${modelId}] ${message}`)
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function isWebGpuAvailable(): Promise<boolean> {
+  const gpu = (globalThis.navigator as WebGpuNavigator | undefined)?.gpu
+  if (!gpu) {
+    return false
+  }
+
+  try {
+    return (await gpu.requestAdapter()) !== null
+  } catch {
+    return false
+  }
+}
+
+async function resolveExecutionProviders(
+  config: OnnxModelConfig,
+): Promise<OnnxExecutionProvider[]> {
+  if (!config.executionProviders.includes('webgpu') || (await isWebGpuAvailable())) {
+    return [...config.executionProviders]
+  }
+
+  const fallbackProviders = config.executionProviders.filter((provider) => provider !== 'webgpu')
+  if (fallbackProviders.length > 0) {
+    logOnnxDebug(config.modelId, 'WebGPU 不可用，回退到 WASM/CPU')
+    return fallbackProviders
+  }
+
+  return [...config.executionProviders]
+}
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -149,7 +199,9 @@ function validateTensorMetadata(
   }
 
   if (metadata.shape.length !== expected.shape.length) {
-    throw new Error(`${modelId} metadata ${metadata.name} 维度不符合预期: ${metadata.shape.join('x')}`)
+    throw new Error(
+      `${modelId} metadata ${metadata.name} 维度不符合预期: ${metadata.shape.join('x')}`,
+    )
   }
 
   expected.shape.forEach((expectedDimension, index) => {
@@ -193,6 +245,7 @@ async function createOnnxModelRunner(
   config: OnnxModelConfig,
   options?: OnnxModelLoadOptions,
 ): Promise<OnnxModelRunner> {
+  const modelLoadStartedAt = performance.now()
   await configureWasmRuntime()
 
   const modelBytes = await loadCachedOnnxModelBytes(config, options)
@@ -201,10 +254,34 @@ async function createOnnxModelRunner(
     stage: 'initializing-session',
   })
 
-  const session = await ort.InferenceSession.create(modelBytes, {
-    executionProviders: [...config.executionProviders],
+  const sessionOptions = {
     graphOptimizationLevel: config.graphOptimizationLevel ?? 'all',
-  })
+  }
+  const executionProviders = await resolveExecutionProviders(config)
+  let executionProvider = executionProviders[0] ?? 'wasm'
+  const sessionInitializationStartedAt = performance.now()
+  let session: ort.InferenceSession
+
+  try {
+    session = await ort.InferenceSession.create(modelBytes, {
+      ...sessionOptions,
+      executionProviders,
+    })
+  } catch (error) {
+    if (executionProvider !== 'webgpu' || !config.executionProviders.includes('wasm')) {
+      throw error
+    }
+
+    logOnnxDebug(
+      config.modelId,
+      `WebGPU 会话初始化失败 (${getErrorMessage(error)})，回退到 WASM/CPU`,
+    )
+    session = await ort.InferenceSession.create(modelBytes, {
+      ...sessionOptions,
+      executionProviders: ['wasm'],
+    })
+    executionProvider = 'wasm'
+  }
 
   validateMetadataList(
     config.modelId,
@@ -223,13 +300,41 @@ async function createOnnxModelRunner(
     config.allowExtraOutputs,
   )
 
+  logOnnxDebug(
+    config.modelId,
+    `执行提供程序: ${executionProvider === 'webgpu' ? 'WebGPU' : 'WASM/CPU'}，` +
+      `会话初始化 ${formatDuration(performance.now() - sessionInitializationStartedAt)}，` +
+      `模型加载总计 ${formatDuration(performance.now() - modelLoadStartedAt)}`,
+  )
+
+  let inferenceCount = 0
+  let totalInferenceDuration = 0
+
   return {
     modelId: config.modelId,
-    executionProvider: config.executionProviders[0] ?? 'wasm',
+    executionProvider,
     inputNames: session.inputNames,
     outputNames: session.outputNames,
-    run(feeds, options) {
-      return session.run(feeds, options)
+    async run(feeds, options) {
+      const currentInference = ++inferenceCount
+      const inferenceStartedAt = performance.now()
+      let inferenceFailed = false
+
+      try {
+        return await session.run(feeds, options)
+      } catch (error) {
+        inferenceFailed = true
+        throw error
+      } finally {
+        const inferenceDuration = performance.now() - inferenceStartedAt
+        totalInferenceDuration += inferenceDuration
+        logOnnxDebug(
+          config.modelId,
+          `${executionProvider === 'webgpu' ? 'WebGPU' : 'WASM/CPU'} 推理 #${currentInference}` +
+            `${inferenceFailed ? '失败，' : ': '}` +
+            `${formatDuration(inferenceDuration)}，累计 ${formatDuration(totalInferenceDuration)}`,
+        )
+      }
     },
     release() {
       return session.release()

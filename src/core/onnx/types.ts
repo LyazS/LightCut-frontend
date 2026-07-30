@@ -1,6 +1,6 @@
-import type * as ort from 'onnxruntime-web/wasm'
+import type * as ort from 'onnxruntime-web/webgpu'
 
-export type OnnxExecutionProvider = 'wasm'
+export type OnnxExecutionProvider = 'webgpu' | 'wasm'
 export type OnnxDimensionExpectation = number | 'any'
 
 export interface OnnxModelCacheOptions {

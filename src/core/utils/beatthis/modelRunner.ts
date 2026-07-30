@@ -1,16 +1,13 @@
-import * as ort from 'onnxruntime-web/wasm'
+import * as ort from 'onnxruntime-web/webgpu'
 import { loadOnnxModel, type OnnxModelConfig, type OnnxModelLoadOptions } from '@/core/onnx'
 import { modelManifest } from '@/generated/model-manifest'
-import {
-  BEAT_THIS_MEL_BINS,
-  BEAT_THIS_MODEL_ID,
-} from './types'
+import { BEAT_THIS_MEL_BINS, BEAT_THIS_MODEL_ID } from './types'
 
 const beatThisModelConfig: OnnxModelConfig = {
   modelId: BEAT_THIS_MODEL_ID,
   version: modelManifest.beat_this_small0.version,
   chunks: modelManifest.beat_this_small0.chunks,
-  executionProviders: ['wasm'],
+  executionProviders: ['webgpu', 'wasm'],
   graphOptimizationLevel: 'all',
   cache: {
     enabled: true,
