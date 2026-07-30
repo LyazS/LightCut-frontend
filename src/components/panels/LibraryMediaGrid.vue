@@ -294,6 +294,12 @@ import FolderIcon from '@/components/utils/FolderIcon.vue'
 import LibraryBreadcrumb from './LibraryBreadcrumb.vue'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { resetAIGeneratedMediaForRetry } from '@/core/jobs'
+import {
+  captureDroppedImportRoots,
+  createExternalMediaImportService,
+  type DirectoryImportSummary,
+  type ExternalImportRoot,
+} from '@/core/media-import'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
@@ -321,6 +327,8 @@ function isFileDrag(event: DragEvent): boolean {
 // 组件状态
 const isDragOver = ref(false)
 const fileInput = ref<HTMLInputElement>()
+type ExternalImportKind = 'directory' | 'file'
+let mediaImportAbortController: AbortController | null = null
 const showCreateDirModal = ref(false)
 const libraryScrollbar = ref<ScrollbarInst | null>(null)
 const mediaGridScrollViewport = ref<HTMLElement>()
@@ -383,6 +391,13 @@ type MenuItem =
 
 // 从 store 获取状态
 const currentDir = computed(() => unifiedStore.currentDir)
+const externalMediaImportService = createExternalMediaImportService({
+  getDirectory: (directoryId) => unifiedStore.getDirectory(directoryId),
+  getAllDirectories: () => unifiedStore.getAllDirectories(),
+  createDirectory: (name, parentDirectoryId) =>
+    unifiedStore.createDirectory(name, parentDirectoryId),
+  importMedia: addMediaItem,
+})
 const revealedAssetId = ref<string | null>(null)
 let revealedAssetTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -412,6 +427,7 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  mediaImportAbortController?.abort()
   if (revealedAssetTimer) clearTimeout(revealedAssetTimer)
   librarySelectionSurfaceResizeObserver?.disconnect()
   stopLibraryAutoScroll()
@@ -559,6 +575,14 @@ const currentMenuItems = computed((): MenuItem[] => {
             icon: IconComponents.UPLOAD,
             onClick: () => {
               triggerFileInput()
+              showContextMenu.value = false
+            },
+          },
+          {
+            label: t('media.importDirectory'),
+            icon: IconComponents.FOLDER_OPEN,
+            onClick: () => {
+              void triggerDirectoryImport()
               showContextMenu.value = false
             },
           },
@@ -1240,10 +1264,15 @@ function handleDrop(event: DragEvent): void {
   isDragOver.value = false
 
   if (isFileDrag(event)) {
-    const files = Array.from(event.dataTransfer?.files || [])
-    if (files.length > 0) {
-      processFiles(files)
+    const targetDirectoryId = currentDir.value?.id
+    if (!targetDirectoryId) {
+      unifiedStore.messageError(t('media.selectDirectoryFirst'))
+      return
     }
+
+    const dataTransfer = event.dataTransfer
+    const roots = captureDroppedImportRoots(dataTransfer?.items ?? [], dataTransfer?.files ?? [])
+    void importCapturedDropRoots(roots, targetDirectoryId)
   }
 }
 
@@ -1317,6 +1346,10 @@ async function handleCreateFolder(folderName: string): Promise<void> {
 
 // 触发文件选择
 function triggerFileInput(): void {
+  if (!currentDir.value) {
+    unifiedStore.messageError(t('media.selectDirectoryFirst'))
+    return
+  }
   fileInput.value?.click()
 }
 
@@ -1324,7 +1357,7 @@ function triggerFileInput(): void {
 function handleFileSelect(event: Event): void {
   const target = event.target as HTMLInputElement
   const files = Array.from(target.files || [])
-  processFiles(files)
+  void processFiles(files)
   target.value = ''
 }
 
@@ -1335,19 +1368,125 @@ async function processFiles(files: File[]): Promise<void> {
     return
   }
 
-  console.log(`📁 开始处理 ${files.length} 个文件`)
+  await importExternalRoots(
+    files.map((file) => ({ kind: 'file', file }) satisfies ExternalImportRoot),
+    currentDir.value.id,
+    'file',
+  )
+}
 
-  const results = await Promise.allSettled(files.map((file) => addMediaItem(file)))
-
-  const successful = results.filter((result) => result.status === 'fulfilled').length
-  const failed = results.filter((result) => result.status === 'rejected').length
-
-  if (successful === 0 && failed > 0) {
-    unifiedStore.messageError(t('media.allFilesProcessFailed'))
+async function triggerDirectoryImport(): Promise<void> {
+  const targetDirectoryId = currentDir.value?.id
+  if (!targetDirectoryId) {
+    unifiedStore.messageError(t('media.selectDirectoryFirst'))
     return
   }
 
-  console.log(t('media.fileProcessComplete', { success: successful, failed: failed }))
+  if (!('showDirectoryPicker' in window)) {
+    unifiedStore.messageError(t('media.directoryImportNotSupported'))
+    return
+  }
+
+  try {
+    const handle = await window.showDirectoryPicker()
+    await importExternalRoots([{ kind: 'directory', handle }], targetDirectoryId, 'directory')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+
+    console.error('选择导入目录失败:', error)
+    unifiedStore.messageError(
+      t('media.directoryImportFailed', {
+        error: error instanceof Error ? error.message : t('media.unknown'),
+      }),
+    )
+  }
+}
+
+async function importCapturedDropRoots(
+  rootsPromise: Promise<ExternalImportRoot[]>,
+  targetDirectoryId: string,
+): Promise<void> {
+  try {
+    await importExternalRoots(await rootsPromise, targetDirectoryId, 'directory')
+  } catch (error) {
+    console.error('读取拖放项目失败:', error)
+    unifiedStore.messageError(
+      t('media.directoryImportFailed', {
+        error: error instanceof Error ? error.message : t('media.unknown'),
+      }),
+    )
+  }
+}
+
+async function importExternalRoots(
+  roots: ExternalImportRoot[],
+  targetDirectoryId: string,
+  kind: ExternalImportKind,
+): Promise<void> {
+  if (mediaImportAbortController) {
+    unifiedStore.messageWarning(t('media.directoryImportInProgress'))
+    return
+  }
+
+  const abortController = new AbortController()
+  mediaImportAbortController = abortController
+
+  try {
+    const summary = await externalMediaImportService.importExternalMedia(roots, targetDirectoryId, {
+      signal: abortController.signal,
+      concurrency: 2,
+    })
+    reportMediaImportSummary(summary, kind)
+  } catch (error) {
+    console.error('导入素材失败:', error)
+    unifiedStore.messageError(
+      t('media.directoryImportFailed', {
+        error: error instanceof Error ? error.message : t('media.unknown'),
+      }),
+    )
+  } finally {
+    if (mediaImportAbortController === abortController) {
+      mediaImportAbortController = null
+    }
+  }
+}
+
+function reportMediaImportSummary(summary: DirectoryImportSummary, kind: ExternalImportKind): void {
+  if (summary.cancelled) {
+    unifiedStore.messageInfo(t('media.directoryImportCancelled'))
+    return
+  }
+
+  if (summary.queued === 0) {
+    if (summary.started === 0) {
+      unifiedStore.messageWarning(
+        kind === 'directory' ? t('media.directoryImportNoMedia') : t('media.allFilesProcessFailed'),
+      )
+    } else {
+      unifiedStore.messageError(t('media.allFilesProcessFailed'))
+    }
+    return
+  }
+
+  if (kind === 'directory') {
+    unifiedStore.messageSuccess(
+      t('media.directoryImportComplete', {
+        queued: summary.queued,
+        skipped: summary.skipped.length,
+      }),
+    )
+  } else {
+    unifiedStore.messageSuccess(
+      t('media.fileProcessComplete', {
+        success: summary.queued,
+        failed: summary.skipped.length,
+      }),
+    )
+  }
+
+  if (summary.skipped.length > 0) {
+    console.warn('素材导入跳过的项目:', summary.skipped)
+  }
 }
 
 // 从系统剪贴板粘贴图片
@@ -1410,10 +1549,9 @@ async function handlePasteFromClipboard(): Promise<void> {
 }
 
 // 添加媒体项
-async function addMediaItem(file: File): Promise<void> {
-  const targetDirectory = currentDir.value
-  if (!targetDirectory || !unifiedStore.getDirectory(targetDirectory.id)) {
-    throw new Error('当前文件夹不存在，无法导入素材')
+async function addMediaItem(file: File, targetDirectoryId: string): Promise<void> {
+  if (!unifiedStore.getDirectory(targetDirectoryId)) {
+    throw new Error('目标文件夹不存在，无法导入素材')
   }
 
   try {
@@ -1429,7 +1567,7 @@ async function addMediaItem(file: File): Promise<void> {
       mediaId,
       file.name,
       userSelectedSource,
-      { parentDirectoryId: targetDirectory.id },
+      { parentDirectoryId: targetDirectoryId },
     )
 
     // 添加到媒体库
@@ -1450,6 +1588,7 @@ async function addMediaItem(file: File): Promise<void> {
     console.log(t('media.fileProcessStarted', { name: file.name }))
   } catch (error) {
     console.error(t('media.fileProcessFailed', { name: file.name }), error)
+    throw error
   }
 }
 
