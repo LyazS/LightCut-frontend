@@ -118,6 +118,11 @@ export type MediaItemIdType<T extends MediaType> = T extends 'text' ? string | n
 
 export type AIMarkMode = 'none' | 'beat1' | 'beat1234'
 
+export interface TimelineMarker {
+  /** 原始媒体中的绝对帧位置，不随片段编辑而改变。 */
+  sourceFrame: number
+}
+
 export interface AIMark {
   /** 原始媒体中的绝对帧位置，不随片段编辑而改变。 */
   sourceFrame: number
@@ -164,8 +169,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   mediaType: T
   // ==================== 时间范围 ====================
   timeRange: UnifiedTimeRange
-  /** 片段内标记，相对于 timelineStartTime 的整帧偏移量 */
-  markers?: number[]
+  /** 手工标记，使用原始媒体坐标。 */
+  markers?: TimelineMarker[]
   /** AI 生成的完整节拍标记；未识别时为 undefined。 */
   aiMarks?: AIMarks
   // ==================== 配置（类型安全） ====================

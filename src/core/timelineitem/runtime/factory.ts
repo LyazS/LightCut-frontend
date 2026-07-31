@@ -22,6 +22,7 @@ import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { MediaItemQueries } from '@/core/mediaitem'
 import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
+import { normalizeTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 
 // ==================== 克隆和复制函数 ====================
 
@@ -44,6 +45,9 @@ export function cloneTimelineItem<T extends MediaType>(
   // 深拷贝原始对象，排除不需要克隆的 runtime 属性
   const cloned = cloneDeep({
     ...original,
+    // Legacy projects stored markers as timeline-local offsets. Convert them while
+    // their original time range is still available.
+    markers: normalizeTimelineMarkers(original.markers, original.timeRange),
     exRenderConfig: original.exRenderConfig ?? createDefaultTimelineExtraRenderConfig(),
     runtime: {
       // ✅ 只保留 isInitialized，其他 runtime 字段（bunnyClip、textBitmap 等）会在后续重建

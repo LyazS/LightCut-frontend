@@ -67,8 +67,9 @@ import type { AnimationChannelKey } from '@/core/timelineitem/model/render'
 import type { TrimTimelineItemSide } from '@/core/modules/commands/timelineCommands'
 import {
   cloneAIMarks,
-  getVisibleManualTimelineMarkers,
+  getTimelineMarkerSourceFramesAtTimelineFrame,
   normalizeTimelineMarkers,
+  timelineFrameToSourceFrame,
 } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
 
@@ -497,15 +498,26 @@ export function useHistoryOperations(
     }
 
     const { timelineStartTime, timelineEndTime } = timelineItem.timeRange
-    if (absoluteFrame < timelineStartTime || absoluteFrame > timelineEndTime) {
+    if (absoluteFrame < timelineStartTime || absoluteFrame >= timelineEndTime) {
       return false
     }
 
-    const markerOffset = absoluteFrame - timelineStartTime
-    const beforeMarkers = getVisibleManualTimelineMarkers(timelineItem)
-    const afterMarkers = beforeMarkers.includes(markerOffset)
-      ? beforeMarkers.filter((marker) => marker !== markerOffset)
-      : normalizeTimelineMarkers([...beforeMarkers, markerOffset])
+    const beforeMarkers = normalizeTimelineMarkers(timelineItem.markers, timelineItem.timeRange)
+    const sourceFramesAtTimelineFrame = getTimelineMarkerSourceFramesAtTimelineFrame(
+      timelineItem,
+      absoluteFrame,
+    )
+    const sourceFrame = timelineFrameToSourceFrame(timelineItem, absoluteFrame)
+    if (sourceFramesAtTimelineFrame.length === 0 && sourceFrame === undefined) {
+      return false
+    }
+
+    const afterMarkers =
+      sourceFramesAtTimelineFrame.length > 0
+        ? beforeMarkers.filter(
+            (marker) => !sourceFramesAtTimelineFrame.includes(marker.sourceFrame),
+          )
+        : normalizeTimelineMarkers([...beforeMarkers, { sourceFrame }])
 
     await unifiedHistoryModule.executeCommand(
       new UpdateTimelineMarkersCommand(
@@ -524,7 +536,7 @@ export function useHistoryOperations(
       return false
     }
 
-    const beforeMarkers = normalizeTimelineMarkers(timelineItem.markers)
+    const beforeMarkers = normalizeTimelineMarkers(timelineItem.markers, timelineItem.timeRange)
     if (beforeMarkers.length === 0) {
       return false
     }

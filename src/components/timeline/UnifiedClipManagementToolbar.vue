@@ -125,7 +125,10 @@ import { useBeatMarkDetection } from '@/core/composables/useBeatMarkDetection'
 import type { AIMarkMode } from '@/core/timelineitem/model/timelineItem'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
-import { getAIMarksStatus } from '@/core/utils/timelineMarkerUtils'
+import {
+  getAIMarksStatus,
+  getTimelineMarkerSourceFramesAtTimelineFrame,
+} from '@/core/utils/timelineMarkerUtils'
 import HoverButton from '@/components/base/HoverButton.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
 import { IconComponents, getSnapIcon } from '@/constants/iconComponents'
@@ -297,7 +300,7 @@ const markerOffsetAtPlayhead = computed(() => {
   const currentFrame = unifiedStore.currentFrame
   if (
     currentFrame < item.timeRange.timelineStartTime ||
-    currentFrame > item.timeRange.timelineEndTime
+    currentFrame >= item.timeRange.timelineEndTime
   ) {
     return null
   }
@@ -309,7 +312,11 @@ const canToggleMarker = computed(() => markerOffsetAtPlayhead.value !== null)
 const hasMarkerAtPlayhead = computed(() => {
   const item = selectedTimelineItem.value
   const markerOffset = markerOffsetAtPlayhead.value
-  return Boolean(item && markerOffset !== null && item.markers?.includes(markerOffset))
+  return Boolean(
+    item &&
+      markerOffset !== null &&
+      getTimelineMarkerSourceFramesAtTimelineFrame(item, unifiedStore.currentFrame).length > 0,
+  )
 })
 
 const markerButtonTooltip = computed(() => {

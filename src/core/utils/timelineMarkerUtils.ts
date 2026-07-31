@@ -2,11 +2,17 @@ import type {
   AIMark,
   AIMarks,
   AIMarksGeneratedFor,
+  TimelineMarker,
   UnifiedTimelineItemData,
 } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 
 export type AIMarksStatus = 'available' | 'partial' | 'stale' | 'notGenerated' | 'unsupported'
+
+export interface ResolvedTimelineMarker extends TimelineMarker {
+  /** 当前片段中的时间轴本地偏移量，由 sourceFrame 派生。 */
+  offsetFrames: number
+}
 
 export interface ResolvedAIMark extends AIMark {
   /** 当前片段中的时间轴本地偏移量，由 sourceFrame 派生。 */
@@ -30,15 +36,147 @@ function isSourceBackedMediaType(item: UnifiedTimelineItemData): boolean {
   return item.mediaType === 'video' || item.mediaType === 'audio'
 }
 
-/** Normalizes clip-local manual marker offsets so they are safe to render and persist. */
-export function normalizeTimelineMarkers(markers: number[] | undefined): number[] {
+function normalizeTimelineMarkerOffsets(offsets: number[]): number[] {
   return Array.from(
     new Set(
-      (markers ?? [])
-        .filter((marker) => Number.isInteger(marker) && marker >= 0)
-        .map((marker) => Math.floor(marker)),
+      offsets
+        .filter((offset) => Number.isInteger(offset) && offset >= 0)
+        .map((offset) => Math.floor(offset)),
     ),
   ).sort((a, b) => a - b)
+}
+
+function sourceFrameToTimelineOffset(
+  timeRange: UnifiedTimeRange,
+  sourceFrame: number,
+): number | undefined {
+  const sourceDurationFrames = getSourceDuration(timeRange)
+  const timelineDurationFrames = getTimelineDuration(timeRange)
+  if (
+    sourceDurationFrames <= 0 ||
+    timelineDurationFrames <= 0 ||
+    sourceFrame < timeRange.clipStartTime ||
+    sourceFrame >= timeRange.clipEndTime
+  ) {
+    return undefined
+  }
+
+  return Math.round(
+    ((sourceFrame - timeRange.clipStartTime) / sourceDurationFrames) * timelineDurationFrames,
+  )
+}
+
+function timelineOffsetToSourceFrame(
+  timeRange: UnifiedTimeRange,
+  timelineOffset: number,
+  allowEndBoundary: boolean,
+): number | undefined {
+  const sourceDurationFrames = getSourceDuration(timeRange)
+  const timelineDurationFrames = getTimelineDuration(timeRange)
+  if (
+    !Number.isInteger(timelineOffset) ||
+    timelineOffset < 0 ||
+    timelineOffset > timelineDurationFrames ||
+    (!allowEndBoundary && timelineOffset === timelineDurationFrames) ||
+    sourceDurationFrames <= 0 ||
+    timelineDurationFrames <= 0
+  ) {
+    return undefined
+  }
+
+  const sourceFrame = Math.round(
+    timeRange.clipStartTime + (timelineOffset / timelineDurationFrames) * sourceDurationFrames,
+  )
+  return Math.min(timeRange.clipEndTime - 1, Math.max(timeRange.clipStartTime, sourceFrame))
+}
+
+/**
+ * Normalizes source-frame manual markers. Legacy numeric values are interpreted as
+ * timeline-local offsets only when the time range from which they came is provided.
+ */
+export function normalizeTimelineMarkers(
+  markers: unknown,
+  legacyTimeRange?: UnifiedTimeRange,
+): TimelineMarker[] {
+  if (!Array.isArray(markers)) {
+    return []
+  }
+
+  const markerBySourceFrame = new Map<number, TimelineMarker>()
+  for (const marker of markers) {
+    const sourceFrame =
+      typeof marker === 'number'
+        ? legacyTimeRange
+          ? timelineOffsetToSourceFrame(legacyTimeRange, marker, true)
+          : undefined
+        : marker && typeof marker === 'object' && Number.isInteger(marker.sourceFrame)
+          ? marker.sourceFrame
+          : undefined
+    if (sourceFrame === undefined || sourceFrame < 0) {
+      continue
+    }
+
+    markerBySourceFrame.set(Math.floor(sourceFrame), { sourceFrame: Math.floor(sourceFrame) })
+  }
+
+  return Array.from(markerBySourceFrame.values()).sort(
+    (left, right) => left.sourceFrame - right.sourceFrame,
+  )
+}
+
+export function cloneTimelineMarkers(markers: unknown): TimelineMarker[] {
+  return normalizeTimelineMarkers(markers).map((marker) => ({ ...marker }))
+}
+
+/** Returns the source frame corresponding to an editable timeline frame in the item. */
+export function timelineFrameToSourceFrame(
+  item: UnifiedTimelineItemData,
+  absoluteTimelineFrame: number,
+): number | undefined {
+  const { timelineStartTime, timelineEndTime } = item.timeRange
+  if (absoluteTimelineFrame < timelineStartTime || absoluteTimelineFrame >= timelineEndTime) {
+    return undefined
+  }
+
+  return timelineOffsetToSourceFrame(
+    item.timeRange,
+    absoluteTimelineFrame - timelineStartTime,
+    false,
+  )
+}
+
+/** Resolves manual source-frame markers to the current clip-local timeline offsets. */
+export function resolveTimelineMarkersForTimelineItem(
+  item: UnifiedTimelineItemData,
+): ResolvedTimelineMarker[] {
+  const markerByOffset = new Map<number, ResolvedTimelineMarker>()
+  for (const marker of normalizeTimelineMarkers(item.markers, item.timeRange)) {
+    const offsetFrames = sourceFrameToTimelineOffset(item.timeRange, marker.sourceFrame)
+    if (offsetFrames === undefined || markerByOffset.has(offsetFrames)) {
+      continue
+    }
+
+    markerByOffset.set(offsetFrames, { ...marker, offsetFrames })
+  }
+
+  return Array.from(markerByOffset.values()).sort((left, right) => left.offsetFrames - right.offsetFrames)
+}
+
+/** Returns every source-frame marker currently rendered at an absolute timeline frame. */
+export function getTimelineMarkerSourceFramesAtTimelineFrame(
+  item: UnifiedTimelineItemData,
+  absoluteTimelineFrame: number,
+): number[] {
+  const timelineOffset = absoluteTimelineFrame - item.timeRange.timelineStartTime
+  if (timelineOffset < 0 || timelineOffset >= getTimelineDuration(item.timeRange)) {
+    return []
+  }
+
+  return normalizeTimelineMarkers(item.markers, item.timeRange)
+    .filter(
+      (marker) => sourceFrameToTimelineOffset(item.timeRange, marker.sourceFrame) === timelineOffset,
+    )
+    .map((marker) => marker.sourceFrame)
 }
 
 function isAIMarkBeat(value: unknown): value is AIMark['beat'] {
@@ -162,19 +300,13 @@ export function resolveAIMarksForTimelineItem(item: UnifiedTimelineItemData): Re
     return { status, marks: [] }
   }
 
-  const sourceDurationFrames = getSourceDuration(item.timeRange)
-  const timelineDurationFrames = getTimelineDuration(item.timeRange)
-  const { clipStartTime, clipEndTime } = item.timeRange
   const markByOffset = new Map<number, ResolvedAIMark>()
-
   for (const mark of aiMarks.marks) {
-    if (mark.sourceFrame < clipStartTime || mark.sourceFrame >= clipEndTime) {
+    const offsetFrames = sourceFrameToTimelineOffset(item.timeRange, mark.sourceFrame)
+    if (offsetFrames === undefined) {
       continue
     }
 
-    const offsetFrames = Math.round(
-      ((mark.sourceFrame - clipStartTime) / sourceDurationFrames) * timelineDurationFrames,
-    )
     const existing = markByOffset.get(offsetFrames)
     if (!existing || mark.beat === 1) {
       markByOffset.set(offsetFrames, { ...mark, offsetFrames })
@@ -187,10 +319,9 @@ export function resolveAIMarksForTimelineItem(item: UnifiedTimelineItemData): Re
   }
 }
 
-/** Returns manual marker offsets that are visible inside the clip, including its end boundary. */
+/** Returns manual marker offsets that are visible inside the current clip. */
 export function getVisibleManualTimelineMarkers(item: UnifiedTimelineItemData): number[] {
-  const duration = getTimelineDuration(item.timeRange)
-  return normalizeTimelineMarkers(item.markers).filter((marker) => marker <= duration)
+  return resolveTimelineMarkersForTimelineItem(item).map((marker) => marker.offsetFrames)
 }
 
 /** Returns the AI beats selected by the current display mode. */
@@ -200,7 +331,7 @@ export function getVisibleAIMarks(item: UnifiedTimelineItemData): ResolvedAIMark
 
 /** Returns manual markers and the AI marks selected by the current display mode. */
 export function getVisibleTimelineMarkers(item: UnifiedTimelineItemData): number[] {
-  return normalizeTimelineMarkers([
+  return normalizeTimelineMarkerOffsets([
     ...getVisibleManualTimelineMarkers(item),
     ...getVisibleAIMarks(item).map((mark) => mark.offsetFrames),
   ])
@@ -208,7 +339,7 @@ export function getVisibleTimelineMarkers(item: UnifiedTimelineItemData): number
 
 /** Returns markers that may be used as timeline snapping targets. */
 export function getSnapTimelineMarkerOffsets(item: UnifiedTimelineItemData): number[] {
-  return normalizeTimelineMarkers([
+  return normalizeTimelineMarkerOffsets([
     ...getVisibleManualTimelineMarkers(item),
     ...resolveAIMarksForTimelineItem(item).marks.map((mark) => mark.offsetFrames),
   ])
@@ -220,65 +351,4 @@ export function timelineMarkerToAbsoluteFrame(
   markerOffset: number,
 ): number {
   return item.timeRange.timelineStartTime + markerOffset
-}
-
-/** Keeps only manual markers that survive a trim and re-bases them to the new clip start. */
-export function trimTimelineMarkers(
-  markers: number[] | undefined,
-  originalTimeRange: UnifiedTimeRange,
-  nextTimeRange: UnifiedTimeRange,
-): number[] {
-  const originalStart = originalTimeRange.timelineStartTime
-  const nextStart = nextTimeRange.timelineStartTime
-  const nextEnd = nextTimeRange.timelineEndTime
-
-  return normalizeTimelineMarkers(markers)
-    .map((marker) => originalStart + marker)
-    .filter((absoluteFrame) => absoluteFrame >= nextStart && absoluteFrame <= nextEnd)
-    .map((absoluteFrame) => absoluteFrame - nextStart)
-}
-
-/** Re-scales manual markers for resize mode. */
-export function resizeTimelineMarkers(
-  markers: number[] | undefined,
-  originalTimeRange: UnifiedTimeRange,
-  nextTimeRange: UnifiedTimeRange,
-): number[] {
-  const originalDuration = getTimelineDuration(originalTimeRange)
-  const nextDuration = getTimelineDuration(nextTimeRange)
-  if (originalDuration === 0 || nextDuration === 0) {
-    return []
-  }
-
-  return normalizeTimelineMarkers(markers)
-    .filter((marker) => marker <= originalDuration)
-    .map((marker) => Math.round((marker / originalDuration) * nextDuration))
-    .filter((marker) => marker <= nextDuration)
-    .filter((marker) => marker >= 0)
-}
-
-/**
- * Selects manual markers that belong to a split fragment and re-bases them locally.
- * A marker on a split boundary belongs to the fragment on its right. A marker on the
- * original clip's end boundary belongs to the final fragment.
- */
-export function splitTimelineMarkers(
-  markers: number[] | undefined,
-  originalTimeRange: UnifiedTimeRange,
-  fragmentTimeRange: UnifiedTimeRange,
-): number[] {
-  const originalStart = originalTimeRange.timelineStartTime
-  const originalEnd = originalTimeRange.timelineEndTime
-  const fragmentStart = fragmentTimeRange.timelineStartTime
-  const fragmentEnd = fragmentTimeRange.timelineEndTime
-
-  return normalizeTimelineMarkers(markers)
-    .map((marker) => originalStart + marker)
-    .filter(
-      (absoluteFrame) =>
-        absoluteFrame >= fragmentStart &&
-        (absoluteFrame < fragmentEnd ||
-          (absoluteFrame === originalEnd && fragmentEnd === originalEnd)),
-    )
-    .map((absoluteFrame) => absoluteFrame - fragmentStart)
 }

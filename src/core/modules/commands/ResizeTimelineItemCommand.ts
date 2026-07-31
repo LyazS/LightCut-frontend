@@ -5,12 +5,17 @@ import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUt
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
 import {
   cloneAIMarks,
-  resizeTimelineMarkers,
+  cloneTimelineMarkers,
+  normalizeTimelineMarkers,
 } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
 
 // 类型导入
-import type { AIMarks, UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
+import type {
+  AIMarks,
+  TimelineMarker,
+  UnifiedTimelineItemData,
+} from '@/core/timelineitem/model/timelineItem'
 
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
@@ -29,8 +34,8 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
   private oldDurationFrames: number
   private newDurationFrames: number
   private hasAnimation: boolean = false
-  private originalMarkers: number[]
-  private newMarkers: number[]
+  private originalMarkers: TimelineMarker[]
+  private newMarkers: TimelineMarker[]
   private originalAIMarks: AIMarks | undefined
   private newAIMarks: AIMarks | undefined
   private _isDisposed = false
@@ -53,13 +58,9 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
     this.originalTimeRange = { ...originalTimeRange }
     this.newTimeRange = { ...newTimeRange }
     const timelineItem = this.timelineModule.getTimelineItem(timelineItemId)
-    this.originalMarkers = [...(timelineItem?.markers ?? [])]
+    this.originalMarkers = normalizeTimelineMarkers(timelineItem?.markers, this.originalTimeRange)
     this.originalAIMarks = cloneAIMarks(timelineItem?.aiMarks)
-    this.newMarkers = resizeTimelineMarkers(
-      this.originalMarkers,
-      this.originalTimeRange,
-      this.newTimeRange,
-    )
+    this.newMarkers = cloneTimelineMarkers(this.originalMarkers)
     this.newAIMarks = cloneAIMarks(this.originalAIMarks)
 
     // 计算时长变化
@@ -98,7 +99,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
    */
   private async applyTimeRange(
     timeRange: UnifiedTimeRange,
-    markers: number[],
+    markers: TimelineMarker[],
     aiMarks: AIMarks | undefined,
     isUndo: boolean = false,
   ): Promise<void> {
@@ -109,7 +110,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
 
     // 同步 timeRange 到 TimelineItem，并在模块内统一刷新转场绑定
     this.timelineModule.setTimelineItemTimeRangeForCmd(this.timelineItemId, timeRange)
-    timelineItem.markers = [...markers]
+    timelineItem.markers = cloneTimelineMarkers(markers)
     timelineItem.aiMarks = cloneAIMarks(aiMarks)
 
     // 如果时长有变化且有关键帧，调整关键帧位置
