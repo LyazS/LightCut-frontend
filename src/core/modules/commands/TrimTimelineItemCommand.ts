@@ -19,7 +19,7 @@ import {
   interpolateKeyframeAtPosition,
   percentageToFrame,
 } from '@/core/utils/keyframePositionUtils'
-import { cloneAIMarks, trimAIMarks, trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
+import { cloneAIMarks, trimTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
 
 export type TrimTimelineItemSide = 'start' | 'end'
@@ -331,11 +331,7 @@ export class TrimTimelineItemCommand implements SimpleCommand {
       this.originalTimeRange,
       this.newTimeRange,
     )
-    this.nextAIMarks = trimAIMarks(
-      this.originalAIMarks,
-      this.originalTimeRange,
-      this.newTimeRange,
-    )
+    this.nextAIMarks = cloneAIMarks(this.originalAIMarks)
 
     this.historyLabel = historyLabels.trimTimelineItem(mediaItem?.name)
   }

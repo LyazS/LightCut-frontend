@@ -119,17 +119,27 @@ export type MediaItemIdType<T extends MediaType> = T extends 'text' ? string | n
 export type AIMarkMode = 'none' | 'beat1' | 'beat1234'
 
 export interface AIMark {
-  /** 片段本地帧偏移量。 */
-  offsetFrames: number
+  /** 原始媒体中的绝对帧位置，不随片段编辑而改变。 */
+  sourceFrame: number
   /** 完整节拍中的拍号。 */
   beat: 1 | 2 | 3 | 4
 }
 
+export interface AIMarksGeneratedFor {
+  /** 识别时关联的原始媒体。 */
+  mediaItemId: string
+  /** 已分析素材区间，采用 [start, end) 语义。 */
+  sourceStartFrame: number
+  sourceEndFrame: number
+}
+
 export interface AIMarks {
-  /** AI 节拍在时间轴上的显示方式。 */
+  /** 仅影响 UI 显示方式。 */
   mode: AIMarkMode
-  /** 模型生成的完整四拍结果。 */
+  /** 模型生成的完整四拍结果，使用原始媒体坐标。 */
   marks: AIMark[]
+  /** 这份结果实际分析过的素材范围。 */
+  generatedFor: AIMarksGeneratedFor
 }
 
 /**

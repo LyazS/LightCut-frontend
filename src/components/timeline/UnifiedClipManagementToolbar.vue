@@ -125,6 +125,7 @@ import { useBeatMarkDetection } from '@/core/composables/useBeatMarkDetection'
 import type { AIMarkMode } from '@/core/timelineitem/model/timelineItem'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
+import { getAIMarksStatus } from '@/core/utils/timelineMarkerUtils'
 import HoverButton from '@/components/base/HoverButton.vue'
 import SliderInput from '@/components/base/SliderInput.vue'
 import { IconComponents, getSnapIcon } from '@/constants/iconComponents'
@@ -249,12 +250,17 @@ const isAIMarkerButtonDisabled = computed(
     !supportsAIMarkDetection.value || !isAIMarkDetectionReady.value || isDetectingBeatMarks.value,
 )
 
+const aiMarksStatus = computed(() => {
+  const item = selectedTimelineItem.value
+  return item ? getAIMarksStatus(item) : 'unsupported'
+})
+
 const aiMarkerButtonTooltip = computed(() =>
   !supportsAIMarkDetection.value
     ? t('toolbar.clip.aiMarkerUnsupportedTooltip')
     : !isAIMarkDetectionReady.value
       ? t('toolbar.clip.aiMarkerUnavailableTooltip')
-      : selectedTimelineItem.value?.aiMarks
+      : aiMarksStatus.value === 'available'
         ? t('toolbar.clip.aiMarkerTooltip')
         : t('toolbar.clip.aiMarkerDetectTooltip'),
 )
@@ -267,12 +273,19 @@ async function handleAIMarkModeSelect(value: string | number) {
   const selectedId = unifiedStore.selectedClipTimelineItemId
   if (!selectedId || !isAIMarkMode(value)) return
 
-  if (selectedTimelineItem.value?.aiMarks) {
+  if (value === 'none') {
+    if (selectedTimelineItem.value?.aiMarks) {
+      await unifiedStore.setAIMarksModeWithHistory(selectedId, value)
+    }
+    return
+  }
+
+  if (aiMarksStatus.value === 'available') {
     await unifiedStore.setAIMarksModeWithHistory(selectedId, value)
     return
   }
 
-  if (value !== 'none') {
+  if (aiMarksStatus.value !== 'unsupported') {
     await detectBeatMarks(selectedId, value)
   }
 }

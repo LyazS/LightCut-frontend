@@ -6,6 +6,7 @@ import { detectBeatThis } from '@/core/utils/beat-detector'
 import type { BeatThisProgressEvent } from '@/core/utils/beatthis/types'
 
 type DetectableAIMarkMode = Exclude<AIMarkMode, 'none'>
+const detectingTimelineItemIds = new Set<string>()
 
 export function useBeatMarkDetection() {
   const unifiedStore = useUnifiedStore()
@@ -16,12 +17,26 @@ export function useBeatMarkDetection() {
     timelineItemId: string,
     mode: DetectableAIMarkMode,
   ): Promise<void> {
-    if (isDetectingBeatMarks.value) return
+    if (isDetectingBeatMarks.value || detectingTimelineItemIds.has(timelineItemId)) return
 
     const timelineItem = unifiedStore.getTimelineItem(timelineItemId)
-    if (!timelineItem) return
+    if (
+      !timelineItem ||
+      timelineItem.timelineStatus !== 'ready' ||
+      (timelineItem.mediaType !== 'video' && timelineItem.mediaType !== 'audio') ||
+      typeof timelineItem.mediaItemId !== 'string'
+    ) {
+      return
+    }
+
+    const generatedFor = {
+      mediaItemId: timelineItem.mediaItemId,
+      sourceStartFrame: timelineItem.timeRange.clipStartTime,
+      sourceEndFrame: timelineItem.timeRange.clipEndTime,
+    }
 
     isDetectingBeatMarks.value = true
+    detectingTimelineItemIds.add(timelineItemId)
     await unifiedStore.pause()
 
     const abortController = new AbortController()
@@ -90,7 +105,7 @@ export function useBeatMarkDetection() {
         throw new Error('无法获取原始文件')
       }
 
-      const marks = await detectBeatThis(timelineItem, originalFile, {
+      const marks = await detectBeatThis(generatedFor, originalFile, {
         signal: abortController.signal,
         onProgress: updateProgress,
       })
@@ -98,10 +113,19 @@ export function useBeatMarkDetection() {
         throw new DOMException('自动节拍已取消', 'AbortError')
       }
 
-      await unifiedStore.updateAIMarksWithHistory(timelineItemId, {
-        mode: marks.length > 0 ? mode : 'none',
+      const currentTimelineItem = unifiedStore.getTimelineItem(timelineItemId)
+      if (!currentTimelineItem || currentTimelineItem.mediaItemId !== generatedFor.mediaItemId) {
+        return
+      }
+
+      const wasUpdated = await unifiedStore.updateAIMarksWithHistory(timelineItemId, {
+        mode,
         marks,
+        generatedFor,
       })
+      if (!wasUpdated) {
+        return
+      }
 
       if (marks.length === 0) {
         unifiedStore.messageWarning(t('timeline.beatDetection.noCompleteBars'))
@@ -121,6 +145,7 @@ export function useBeatMarkDetection() {
     } finally {
       loading.close()
       isDetectingBeatMarks.value = false
+      detectingTimelineItemIds.delete(timelineItemId)
     }
   }
 

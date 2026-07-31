@@ -1,4 +1,3 @@
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import {
   type BeatThisDetectorConfig,
   type BeatThisMarks,
@@ -7,7 +6,7 @@ import {
 import BeatThisWorker from './beatthis/beatThis.worker.ts?worker'
 
 export async function detectBeatThis(
-  itemData: UnifiedTimelineItemData,
+  sourceRange: { sourceStartFrame: number; sourceEndFrame: number },
   file: File,
   config: BeatThisDetectorConfig = {},
 ): Promise<BeatThisMarks> {
@@ -15,12 +14,6 @@ export async function detectBeatThis(
     throw new Error('当前浏览器不支持 AudioData')
   }
 
-  const timeRange = {
-    timelineStartTime: itemData.timeRange.timelineStartTime,
-    timelineEndTime: itemData.timeRange.timelineEndTime,
-    clipStartTime: itemData.timeRange.clipStartTime,
-    clipEndTime: itemData.timeRange.clipEndTime,
-  }
   return new Promise<BeatThisMarks>((resolve, reject) => {
     const worker = new BeatThisWorker()
     let settled = false
@@ -68,7 +61,7 @@ export async function detectBeatThis(
     worker.postMessage({
       type: 'detect',
       file,
-      timeRange,
+      sourceRange,
     })
   })
 }

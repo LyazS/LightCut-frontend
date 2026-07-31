@@ -5,7 +5,6 @@ import { adjustKeyframesForDurationChange } from '@/core/utils/unifiedKeyframeUt
 import { hasAnimation } from '@/core/utils/unifiedKeyframeUtils'
 import {
   cloneAIMarks,
-  resizeAIMarks,
   resizeTimelineMarkers,
 } from '@/core/utils/timelineMarkerUtils'
 import { historyLabels } from '@/core/modules/historyLabel'
@@ -61,11 +60,7 @@ export class ResizeTimelineItemCommand implements SimpleCommand {
       this.originalTimeRange,
       this.newTimeRange,
     )
-    this.newAIMarks = resizeAIMarks(
-      this.originalAIMarks,
-      this.originalTimeRange,
-      this.newTimeRange,
-    )
+    this.newAIMarks = cloneAIMarks(this.originalAIMarks)
 
     // 计算时长变化
     this.oldDurationFrames =

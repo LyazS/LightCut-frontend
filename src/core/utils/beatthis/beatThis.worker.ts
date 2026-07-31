@@ -23,11 +23,9 @@ const INFERENCE_PROGRESS_END = 95
 interface BeatDetectionMessage {
   type: 'detect'
   file: File
-  timeRange: {
-    timelineStartTime: number
-    timelineEndTime: number
-    clipStartTime: number
-    clipEndTime: number
+  sourceRange: {
+    sourceStartFrame: number
+    sourceEndFrame: number
   }
 }
 
@@ -171,42 +169,41 @@ function copyMonoFrames(
   return mono
 }
 
-function mapMarksToTimeline(
+function mapMarksToSource(
   beatMarks: Array<{ frame: number; beat: AIMark['beat'] }>,
-  timeRange: BeatDetectionMessage['timeRange'],
+  sourceRange: BeatDetectionMessage['sourceRange'],
 ): BeatThisMarks {
-  const sourceDurationFrames = timeRange.clipEndTime - timeRange.clipStartTime
-  const timelineDurationFrames = timeRange.timelineEndTime - timeRange.timelineStartTime
-  if (sourceDurationFrames <= 0 || timelineDurationFrames <= 0) {
+  if (sourceRange.sourceEndFrame <= sourceRange.sourceStartFrame) {
     return []
   }
 
-  const marksByOffset = new Map<number, AIMark>()
+  const marksBySourceFrame = new Map<number, AIMark>()
   for (const mark of beatMarks) {
-    const sourceSeconds = mark.frame / BEAT_THIS_FEATURE_FPS
-    const offsetFrames = Math.round(
-      (sourceSeconds * RENDERER_FPS * timelineDurationFrames) / sourceDurationFrames,
-    )
-    if (offsetFrames < 0 || offsetFrames > timelineDurationFrames) {
+    const sourceFrame =
+      sourceRange.sourceStartFrame + Math.round((mark.frame / BEAT_THIS_FEATURE_FPS) * RENDERER_FPS)
+    if (
+      sourceFrame < sourceRange.sourceStartFrame ||
+      sourceFrame >= sourceRange.sourceEndFrame
+    ) {
       continue
     }
 
-    const existing = marksByOffset.get(offsetFrames)
+    const existing = marksBySourceFrame.get(sourceFrame)
     if (!existing || mark.beat === 1) {
-      marksByOffset.set(offsetFrames, { offsetFrames, beat: mark.beat })
+      marksBySourceFrame.set(sourceFrame, { sourceFrame, beat: mark.beat })
     }
   }
 
-  return Array.from(marksByOffset.values()).sort(
-    (left, right) => left.offsetFrames - right.offsetFrames,
+  return Array.from(marksBySourceFrame.values()).sort(
+    (left, right) => left.sourceFrame - right.sourceFrame,
   )
 }
 
 async function detect(message: BeatDetectionMessage): Promise<void> {
   aborted = false
-  const { file, timeRange } = message
-  const sourceStartSeconds = timeRange.clipStartTime / RENDERER_FPS
-  const sourceEndSeconds = timeRange.clipEndTime / RENDERER_FPS
+  const { file, sourceRange } = message
+  const sourceStartSeconds = sourceRange.sourceStartFrame / RENDERER_FPS
+  const sourceEndSeconds = sourceRange.sourceEndFrame / RENDERER_FPS
   const sourceDurationSeconds = sourceEndSeconds - sourceStartSeconds
 
   if (sourceDurationSeconds <= 0) {
@@ -329,7 +326,7 @@ async function detect(message: BeatDetectionMessage): Promise<void> {
 
     const { beatFrames, downbeatFrames } = postprocessBeatFrames(beatPeakFrames, downbeatPeakFrames)
     const rawBeats = labelBeatFrames(beatFrames, downbeatFrames)
-    const marks = mapMarksToTimeline(rawBeats, timeRange)
+    const marks = mapMarksToSource(rawBeats, sourceRange)
 
     self.postMessage({ type: 'done', marks, rawBeats })
   } finally {
