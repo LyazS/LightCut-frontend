@@ -12,6 +12,7 @@
       "aiMarkerDetectTooltip": "选择节拍模式并自动识别 AI 节拍标记",
       "aiMarkerUnsupportedTooltip": "只有音频和视频片段支持 AI 节拍标记",
       "aiMarkerUnavailableTooltip": "片段尚未就绪，暂时无法识别 AI 节拍标记",
+      "musicStructureAnalysis": "音乐结构分析（实验性）",
       "aiMarkerModes": {
         "none": "无",
         "beat1": "舒缓节拍",

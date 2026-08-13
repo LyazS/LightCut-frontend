@@ -123,6 +123,10 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useBeatMarkDetection } from '@/core/composables/useBeatMarkDetection'
 import type { AIMarkMode } from '@/core/timelineitem/model/timelineItem'
+import {
+  MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
+  MUSIC_ANALYSIS_MIN_DURATION_SECONDS,
+} from '@/core/utils/music-analysis'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
 import {
@@ -234,6 +238,12 @@ const aiMarkModeOptions = computed<DropdownOption[]>(() => [
   { label: t('toolbar.clip.aiMarkerModes.none'), key: 'none' },
   { label: t('toolbar.clip.aiMarkerModes.beat1'), key: 'beat1' },
   { label: t('toolbar.clip.aiMarkerModes.beat1234'), key: 'beat1234' },
+  { type: 'divider', key: 'music-structure-divider' },
+  {
+    label: t('toolbar.clip.musicStructureAnalysis'),
+    key: 'music-structure',
+    disabled: isMusicStructureMenuDisabled.value,
+  },
 ])
 
 const supportsAIMarkDetection = computed(() => {
@@ -258,6 +268,46 @@ const aiMarksStatus = computed(() => {
   return item ? getAIMarksStatus(item) : 'unsupported'
 })
 
+const selectedMusicAnalysis = computed(() => {
+  const mediaItemId = selectedTimelineItem.value?.mediaItemId
+  return typeof mediaItemId === 'string'
+    ? unifiedStore.getMediaItem(mediaItemId)?.metadata?.musicAnalysis
+    : undefined
+})
+
+const isMusicStructureOverlayVisible = computed(
+  () => selectedTimelineItem.value?.musicStructureOverlay?.visible === true,
+)
+
+const supportsMusicStructureOverlay = computed(
+  () => selectedTimelineItem.value?.mediaType === 'audio',
+)
+
+const canStartMusicStructureAnalysis = computed(() => {
+  const item = selectedTimelineItem.value
+  if (!item || item.timelineStatus !== 'ready' || item.mediaType !== 'audio') return false
+
+  const mediaItem = unifiedStore.getMediaItem(item.mediaItemId)
+  const bunnyMedia = mediaItem?.runtime.bunny?.bunnyMedia
+  const duration = bunnyMedia?.duration
+  return (
+    mediaItem?.mediaStatus === 'ready' &&
+    typeof duration === 'number' &&
+    Number.isFinite(duration) &&
+    duration >= MUSIC_ANALYSIS_MIN_DURATION_SECONDS &&
+    duration <= MUSIC_ANALYSIS_MAX_DURATION_SECONDS &&
+    Boolean(bunnyMedia?.getAudioTrackInfo())
+  )
+})
+
+const isMusicStructureMenuDisabled = computed(
+  () =>
+    !supportsMusicStructureOverlay.value ||
+    (!isMusicStructureOverlayVisible.value &&
+      !selectedMusicAnalysis.value &&
+      !canStartMusicStructureAnalysis.value),
+)
+
 const aiMarkerButtonTooltip = computed(() =>
   !supportsAIMarkDetection.value
     ? t('toolbar.clip.aiMarkerUnsupportedTooltip')
@@ -273,6 +323,11 @@ function isAIMarkMode(value: string | number): value is AIMarkMode {
 }
 
 async function handleAIMarkModeSelect(value: string | number) {
+  if (value === 'music-structure') {
+    await toggleSelectedClipMusicStructure()
+    return
+  }
+
   const selectedId = unifiedStore.selectedClipTimelineItemId
   if (!selectedId || !isAIMarkMode(value)) return
 
@@ -290,6 +345,43 @@ async function handleAIMarkModeSelect(value: string | number) {
 
   if (aiMarksStatus.value !== 'unsupported') {
     await detectBeatMarks(selectedId, value)
+  }
+}
+
+async function toggleSelectedClipMusicStructure(): Promise<void> {
+  const timelineItem = selectedTimelineItem.value
+  if (!timelineItem || typeof timelineItem.mediaItemId !== 'string') return
+
+  if (timelineItem.musicStructureOverlay?.visible) {
+    await unifiedStore.setMusicStructureOverlayVisibleWithHistory(timelineItem.id, false)
+    return
+  }
+
+  if (isMusicStructureMenuDisabled.value) return
+
+  const wasUpdated = await unifiedStore.setMusicStructureOverlayVisibleWithHistory(
+    timelineItem.id,
+    true,
+  )
+  if (!wasUpdated || selectedMusicAnalysis.value) return
+
+  const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
+  if (!mediaItem) return
+
+  unifiedStore.messageSuccess(t('media.musicAnalysisStarted', { name: mediaItem.name }))
+  try {
+    await unifiedStore.ensureMusicStructureAnalysis(mediaItem.id)
+    unifiedStore.messageSuccess(t('media.musicAnalysisSuccess', { name: mediaItem.name }))
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+
+    console.error('音乐结构分析失败:', error)
+    unifiedStore.messageError(
+      t('media.musicAnalysisFailed', {
+        name: mediaItem.name,
+        error: error instanceof Error ? error.message : t('media.unknown'),
+      }),
+    )
   }
 }
 

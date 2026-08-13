@@ -484,6 +484,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     updateAIMarksWithHistory: historyOperations.updateAIMarksWithHistory,
     setAIMarksModeWithHistory: historyOperations.setAIMarksModeWithHistory,
     clearAIMarksWithHistory: historyOperations.clearAIMarksWithHistory,
+    setMusicStructureOverlayVisibleWithHistory:
+      historyOperations.setMusicStructureOverlayVisibleWithHistory,
     duplicateTimelineItemWithHistory: historyOperations.duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory: historyOperations.resizeTimelineItemWithHistory,
     trimTimelineItemWithHistory: historyOperations.trimTimelineItemWithHistory,

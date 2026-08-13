@@ -5,19 +5,6 @@
         <component :is="IconComponents.MUSIC" size="16px" />
         <h3 class="section-title">{{ t('properties.mediaItem.musicAnalysis.title') }}</h3>
       </div>
-      <n-button
-        v-if="hasAnalysis && canStartAnalysis"
-        class="music-analysis-icon-button"
-        quaternary
-        circle
-        :title="t('properties.mediaItem.musicAnalysis.reanalyze')"
-        :aria-label="t('properties.mediaItem.musicAnalysis.reanalyze')"
-        @click="handleStartAnalysis(true)"
-      >
-        <template #icon>
-          <component :is="IconComponents.REFRESH" size="16px" />
-        </template>
-      </n-button>
     </div>
 
     <template v-if="isAnalysisActive">
@@ -79,22 +66,6 @@
       </div>
 
       <div v-if="displaySegments.length > 0" class="music-analysis-structure">
-        <div class="music-analysis-structure__bar" role="list">
-          <div
-            v-for="segment in displaySegments"
-            :key="`${segment.start}-${segment.end}-${segment.label}`"
-            class="music-analysis-structure__segment"
-            :class="segmentColorClass(segment.label)"
-            :style="{ flexGrow: segment.end - segment.start }"
-            :title="segmentTooltip(segment)"
-            role="listitem"
-          >
-            <span v-if="segment.end - segment.start >= 9">
-              {{ formatSegmentLabel(segment.label) }}
-            </span>
-          </div>
-        </div>
-
         <div class="music-analysis-segment-list">
           <div
             v-for="segment in displaySegments"
@@ -118,11 +89,6 @@
 
       <div v-else class="music-analysis-empty-segments">
         {{ t('properties.mediaItem.musicAnalysis.emptySegments') }}
-      </div>
-
-      <div class="music-analysis-footnote">
-        <span>{{ t('properties.mediaItem.musicAnalysis.analyzedAt') }}</span>
-        <span>{{ formatAnalyzedAt(analysis.analyzedAt) }}</span>
       </div>
     </template>
 
@@ -158,6 +124,7 @@ import type {
   UnifiedMediaItemData,
 } from '@/core/mediaitem/types'
 import {
+  getMusicAnalysisSegmentColorKey,
   MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
   MUSIC_ANALYSIS_MIN_DURATION_SECONDS,
 } from '@/core/utils/music-analysis'
@@ -234,22 +201,13 @@ function formatMusicTime(seconds: number): string {
   return hours > 0 ? `${hours.toString().padStart(2, '0')}:${minuteSecond}` : minuteSecond
 }
 
-function formatAnalyzedAt(value: string): string {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-}
-
 function formatSegmentLabel(label: string): string {
   const key = MUSIC_ANALYSIS_SEGMENT_LABEL_KEYS[label]
   return key ? t(`properties.mediaItem.musicAnalysis.segmentLabels.${key}`) : label
 }
 
 function segmentColorClass(label: string): string {
-  return `music-analysis-segment--${MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS[label] ?? 'other'}`
-}
-
-function segmentTooltip(segment: MusicAnalysisSegment): string {
-  return `${formatSegmentLabel(segment.label)}: ${formatMusicTime(segment.start)} - ${formatMusicTime(segment.end)}`
+  return `music-analysis-segment--${getMusicAnalysisSegmentColorKey(label)}`
 }
 
 async function handleStartAnalysis(force: boolean): Promise<void> {
@@ -295,19 +253,6 @@ const MUSIC_ANALYSIS_SEGMENT_LABEL_KEYS: Record<string, string> = {
   verse: 'verse',
   chorus: 'chorus',
 }
-
-const MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS: Record<string, string> = {
-  start: 'intro',
-  intro: 'intro',
-  verse: 'verse',
-  chorus: 'chorus',
-  bridge: 'bridge',
-  break: 'break',
-  inst: 'instrumental',
-  solo: 'solo',
-  outro: 'outro',
-  end: 'outro',
-}
 </script>
 
 <style scoped>
@@ -335,11 +280,6 @@ const MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS: Record<string, string> = {
   margin-bottom: 0;
 }
 
-.music-analysis-icon-button {
-  width: 40px;
-  height: 40px;
-}
-
 .music-analysis-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -365,7 +305,6 @@ const MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS: Record<string, string> = {
 }
 
 .music-analysis-metric__label,
-.music-analysis-footnote,
 .music-analysis-progress__detail,
 .music-analysis-not-started__range {
   color: var(--color-text-secondary);
@@ -388,74 +327,48 @@ const MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS: Record<string, string> = {
   gap: var(--spacing-sm);
 }
 
-.music-analysis-structure__bar {
-  display: flex;
-  min-height: 34px;
-  overflow: hidden;
-  border-radius: var(--border-radius-small);
-  background: color-mix(in srgb, var(--color-bg-quaternary) 86%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border-default) 70%, transparent);
-}
-
-.music-analysis-structure__segment {
-  display: flex;
-  flex-basis: 0;
-  align-items: center;
-  justify-content: center;
-  min-width: 1px;
-  padding: 0 4px;
-  color: color-mix(in srgb, var(--color-text-primary) 92%, white 8%);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  overflow: hidden;
-  text-align: center;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 1px rgb(0 0 0 / 24%);
-  white-space: nowrap;
-  transition-property: filter, opacity;
-  transition-duration: 160ms;
-  transition-timing-function: ease;
-}
-
-.music-analysis-structure__segment:hover {
-  filter: brightness(1.12);
+.music-analysis-segment--start {
+  background: #e2b93b;
 }
 
 .music-analysis-segment--intro {
-  background: #4b93c6;
+  background: #2d7ff9;
 }
 
 .music-analysis-segment--verse {
-  background: #4e9d82;
+  background: #20a464;
 }
 
 .music-analysis-segment--chorus {
-  background: #c78c4c;
+  background: #e65b3d;
 }
 
 .music-analysis-segment--bridge {
-  background: #9a70ba;
+  background: #8b5cf6;
 }
 
 .music-analysis-segment--break {
-  background: #b96d77;
+  background: #19a7a3;
 }
 
 .music-analysis-segment--instrumental {
-  background: #5b9ca6;
+  background: #d99822;
 }
 
 .music-analysis-segment--solo {
-  background: #b17b62;
+  background: #c844b7;
 }
 
 .music-analysis-segment--outro {
-  background: #687ca7;
+  background: #a94e6d;
+}
+
+.music-analysis-segment--end {
+  background: #4b5563;
 }
 
 .music-analysis-segment--other {
-  background: #7d8793;
+  background: #78838f;
 }
 
 .music-analysis-segment-list {
@@ -553,13 +466,6 @@ const MUSIC_ANALYSIS_SEGMENT_COLOR_KEYS: Record<string, string> = {
   background: var(--color-bg-quaternary);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
-}
-
-.music-analysis-footnote {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  font-variant-numeric: tabular-nums;
 }
 
 .music-analysis-not-started {

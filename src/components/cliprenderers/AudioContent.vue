@@ -1,6 +1,20 @@
 <!-- AudioContentTemplate.vue -->
 <template>
   <div class="audio-content" :class="{ selected: isSelected }">
+    <div
+      v-if="musicStructureSegments.length > 0"
+      class="music-structure-overlay"
+      aria-hidden="true"
+    >
+      <span
+        v-for="segment in musicStructureSegments"
+        :key="segment.key"
+        class="music-structure-overlay__segment"
+        :class="`music-structure-overlay__segment--${segment.colorKey}`"
+        :style="{ left: `${segment.leftPercent}%`, width: `${segment.widthPercent}%` }"
+      />
+    </div>
+
     <!-- 波形Canvas容器 -->
     <!-- 音频波形Canvas - 添加拖拽事件处理 -->
     <canvas
@@ -24,7 +38,9 @@ import { AudioWaveformLODGenerator } from '@/core/audiowaveform/AudioWaveformLOD
 import { AudioWaveformLODSelector } from '@/core/audiowaveform/AudioWaveformLODSelector'
 import { AudioWaveformRenderer } from '@/core/audiowaveform/AudioWaveformRenderer'
 import type { BunnyMedia } from '@/core/mediabunny/bunny-media'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
+import type { MusicAnalysisSegment, UnifiedMediaItemData } from '@/core/mediaitem/types'
+import { getMusicAnalysisSegmentColorKey } from '@/core/utils/music-analysis'
+import { RENDERER_FPS } from '@/core/mediabunny/constant'
 
 const props = defineProps<ContentTemplateProps<'audio'>>()
 const unifiedStore = useUnifiedStore()
@@ -75,6 +91,31 @@ const sampleWaveform = computed(() => {
   }
 })
 
+const musicStructureSegments = computed(() => {
+  if (!props.data.musicStructureOverlay?.visible) return []
+
+  const analysis = unifiedStore.getMediaItem(props.data.mediaItemId)?.metadata?.musicAnalysis
+  if (!analysis) return []
+
+  const sourceStart = props.data.timeRange.clipStartTime / RENDERER_FPS
+  const sourceEnd = props.data.timeRange.clipEndTime / RENDERER_FPS
+  const sourceDuration = sourceEnd - sourceStart
+  if (sourceDuration <= 0) return []
+
+  return analysis.segments
+    .map((segment: MusicAnalysisSegment) => {
+      const start = Math.max(sourceStart, segment.start)
+      const end = Math.min(sourceEnd, segment.end)
+      return {
+        key: `${segment.start}-${segment.end}-${segment.label}`,
+        colorKey: getMusicAnalysisSegmentColorKey(segment.label),
+        leftPercent: ((start - sourceStart) / sourceDuration) * 100,
+        widthPercent: ((end - start) / sourceDuration) * 100,
+      }
+    })
+    .filter((segment) => Number.isFinite(segment.widthPercent) && segment.widthPercent > 0)
+})
+
 const canvasDisplayLeft = computed(() => {
   const renderFrame = props.renderFrame ?? latchedDisplayRenderFrame.value
   const sample = sampleWaveform.value
@@ -98,7 +139,7 @@ function renderWaveformInComponent() {
   if (!mediaItem?.runtime.bunny?.bunnyMedia) {
     return
   }
-  
+
   // ⚠️ 按需初始化LOD对象
   if (!mediaItem.runtime.bunny.waveformLOD) {
     mediaItem.runtime.bunny.waveformLOD = {
@@ -115,9 +156,9 @@ function renderWaveformInComponent() {
       version: 0,
     }
   }
-  
+
   const waveformLOD = mediaItem.runtime.bunny.waveformLOD
-  
+
   // ⚠️ 检查是否需要触发生成
   if (waveformLOD.status !== 'ready') {
     // 清空Canvas
@@ -125,16 +166,16 @@ function renderWaveformInComponent() {
     if (ctx) {
       ctx.clearRect(0, 0, waveformCanvas.value.width, waveformCanvas.value.height)
     }
-    
+
     // ⚠️ 防止重复生成
     if (!waveformLOD.isGenerating) {
       waveformLOD.isGenerating = true
       generateWaveformLODAsync(mediaItem, mediaItem.runtime.bunny.bunnyMedia)
     }
-    
+
     return
   }
-  
+
   // ⚠️ 检查版本号，如果LOD已更新，更新本地版本号
   if (currentLODVersion.value !== waveformLOD.version) {
     currentLODVersion.value = waveformLOD.version || 0
@@ -144,15 +185,15 @@ function renderWaveformInComponent() {
   const pixelsPerFrame = calculatePixelsPerFrame(
     clipWidthPixels,
     viewportTLEndFrame - viewportTLStartFrame,
-    unifiedStore.zoomLevel
+    unifiedStore.zoomLevel,
   )
-  
+
   const selectedLevel = lodSelector.selectLODLevel(
     unifiedStore.zoomLevel,
     pixelsPerFrame,
-    waveformLOD.metadata.sampleRate
+    waveformLOD.metadata.sampleRate,
   )
-  
+
   const lodData = waveformLOD.levels.get(selectedLevel)
   if (!lodData) {
     console.warn(`LOD层级 ${selectedLevel} 数据不存在`)
@@ -163,7 +204,8 @@ function renderWaveformInComponent() {
   const sourceTimeRange = props.data.timeRange
   const tlDurationFrames = sourceTimeRange.timelineEndTime - sourceTimeRange.timelineStartTime
   const sampleStartX =
-    ((viewportTLStartFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) * clipWidthPixels
+    ((viewportTLStartFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) *
+    clipWidthPixels
   const sampleEndX =
     ((viewportTLEndFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) * clipWidthPixels
   const sampleWidth = sampleEndX - sampleStartX
@@ -174,11 +216,19 @@ function renderWaveformInComponent() {
 
   // 计算时间范围（对应到clip内的时间）
   const clipDurationFrames = sourceTimeRange.clipEndTime - sourceTimeRange.clipStartTime
-  const startFrameInClip = sourceTimeRange.clipStartTime +
-    Math.round(((viewportTLStartFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) * clipDurationFrames)
-  const endFrameInClip = sourceTimeRange.clipStartTime +
-    Math.round(((viewportTLEndFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) * clipDurationFrames)
-  
+  const startFrameInClip =
+    sourceTimeRange.clipStartTime +
+    Math.round(
+      ((viewportTLStartFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) *
+        clipDurationFrames,
+    )
+  const endFrameInClip =
+    sourceTimeRange.clipStartTime +
+    Math.round(
+      ((viewportTLEndFrame - sourceTimeRange.timelineStartTime) / tlDurationFrames) *
+        clipDurationFrames,
+    )
+
   const startTime = framesToSeconds(startFrameInClip)
   const endTime = framesToSeconds(endFrameInClip)
 
@@ -187,24 +237,18 @@ function renderWaveformInComponent() {
   if (!ctx) return
   const gradient = waveformRenderer.createGradient(
     ctx,
-    DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING
+    DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING,
   )
 
   // 渲染波形（只渲染可见范围）
   const canvasHeight = DEFAULT_TRACK_HEIGHTS.audio - 2 * DEFAULT_TRACK_PADDING
-  waveformRenderer.renderRange(
-    waveformCanvas.value,
-    lodData,
-    startTime,
-    endTime,
-    {
-      width: Math.floor(sampleWidth),
-      height: canvasHeight,
-      amplitude: 1.0,
-      baselineY: canvasHeight, // baseline在Canvas底部
-      gradient,
-    }
-  )
+  waveformRenderer.renderRange(waveformCanvas.value, lodData, startTime, endTime, {
+    width: Math.floor(sampleWidth),
+    height: canvasHeight,
+    amplitude: 1.0,
+    baselineY: canvasHeight, // baseline在Canvas底部
+    gradient,
+  })
 }
 
 // 节流渲染函数（333ms，与视频缩略图一致）
@@ -283,7 +327,7 @@ watch(
       // ⚡ 版本号变化，触发重新渲染
       throttledRenderWaveform()
     }
-  }
+  },
 )
 
 // 组件卸载时清理
@@ -311,7 +355,7 @@ function handleInnerDrag(event: DragEvent) {
 function calculatePixelsPerFrame(
   clipWidthPixels: number,
   durationFrames: number,
-  zoomLevel: number
+  zoomLevel: number,
 ): number {
   return (clipWidthPixels * zoomLevel) / durationFrames
 }
@@ -327,22 +371,16 @@ function framesToSeconds(frames: number): number {
  * 异步生成LOD数据（按需触发）
  * 这个函数在AudioContent.vue首次渲染时被调用
  */
-async function generateWaveformLODAsync(
-  mediaItem: UnifiedMediaItemData,
-  bunnyMedia: BunnyMedia
-) {
+async function generateWaveformLODAsync(mediaItem: UnifiedMediaItemData, bunnyMedia: BunnyMedia) {
   try {
     const waveformLOD = mediaItem.runtime.bunny!.waveformLOD!
     waveformLOD.status = 'generating'
-    
+
     const generator = new AudioWaveformLODGenerator()
-    const result = await generator.generateFromBunnyMedia(
-      bunnyMedia,
-      (progress) => {
-        waveformLOD.progress = progress
-      }
-    )
-    
+    const result = await generator.generateFromBunnyMedia(bunnyMedia, (progress) => {
+      waveformLOD.progress = progress
+    })
+
     // 更新LOD数据
     waveformLOD.levels = result.levels
     waveformLOD.metadata = result.metadata
@@ -350,10 +388,10 @@ async function generateWaveformLODAsync(
     waveformLOD.progress = 100
     waveformLOD.generatedAt = Date.now()
     waveformLOD.isGenerating = false
-    
+
     // ⚠️ 关键：更新版本号，通知所有实例重新渲染
     waveformLOD.version = (waveformLOD.version || 0) + 1
-    
+
     // 触发当前实例重新渲染
     throttledRenderWaveform()
   } catch (error) {
@@ -375,6 +413,69 @@ async function generateWaveformLODAsync(
   border-radius: var(--border-radius-medium);
 }
 
+.music-structure-overlay {
+  position: absolute;
+  z-index: 0;
+  inset: 2px 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.music-structure-overlay__segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  opacity: 0.38;
+  box-shadow: inset 1px 0 rgb(255 255 255 / 30%);
+  transition-property: opacity;
+  transition-duration: 160ms;
+}
+
+.music-structure-overlay__segment--start {
+  background: #e2b93b;
+}
+
+.music-structure-overlay__segment--intro {
+  background: #2d7ff9;
+}
+
+.music-structure-overlay__segment--verse {
+  background: #20a464;
+}
+
+.music-structure-overlay__segment--chorus {
+  background: #e65b3d;
+}
+
+.music-structure-overlay__segment--bridge {
+  background: #8b5cf6;
+}
+
+.music-structure-overlay__segment--break {
+  background: #19a7a3;
+}
+
+.music-structure-overlay__segment--instrumental {
+  background: #d99822;
+}
+
+.music-structure-overlay__segment--solo {
+  background: #c844b7;
+}
+
+.music-structure-overlay__segment--outro {
+  background: #a94e6d;
+}
+
+.music-structure-overlay__segment--end {
+  background: #4b5563;
+}
+
+.music-structure-overlay__segment--other {
+  background: #78838f;
+}
+
 .waveform-canvas {
   /* 使用固定尺寸避免缩放问题 */
   width: auto;
@@ -382,6 +483,7 @@ async function generateWaveformLODAsync(
   background: rgba(0, 0, 0, 0); /* 添加背景以便调试 */
   display: block; /* 确保正确显示 */
   position: absolute; /* 使用absolute定位使left生效 */
+  z-index: 1;
 }
 
 /* 保持向后兼容的样式 */

@@ -1,4 +1,5 @@
 export { analyzeMusicStructure } from './music-analysis'
+export { getMusicAnalysisSegmentColorKey } from './segmentPresentation'
 export {
   MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
   MUSIC_ANALYSIS_MIN_DURATION_SECONDS,

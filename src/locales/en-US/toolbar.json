@@ -12,6 +12,7 @@
       "aiMarkerDetectTooltip": "Choose a beat mode to detect AI beat markers",
       "aiMarkerUnsupportedTooltip": "AI beat markers are available for audio and video clips only",
       "aiMarkerUnavailableTooltip": "The clip is not ready for AI beat detection yet",
+      "musicStructureAnalysis": "Music Structure Analysis (Experimental)",
       "aiMarkerModes": {
         "none": "None",
         "beat1": "Relaxed Beat",

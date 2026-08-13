@@ -148,6 +148,14 @@ export interface AIMarks {
 }
 
 /**
+ * Per-clip presentation state for music structure metadata stored on the source media.
+ * The analysis itself remains shared by every timeline use of that media item.
+ */
+export interface MusicStructureOverlay {
+  visible: boolean
+}
+
+/**
  * 统一时间轴项目数据接口（泛型版本）
  *
  * 设计特点：
@@ -173,6 +181,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   markers?: TimelineMarker[]
   /** AI 生成的完整节拍标记；未识别时为 undefined。 */
   aiMarks?: AIMarks
+  /** 是否在当前音频片段的波形上绘制音乐结构色带。 */
+  musicStructureOverlay?: MusicStructureOverlay
   // ==================== 配置（类型安全） ====================
   baseRenderConfig: TimelineBaseRenderConfig<T>
   /** schema v2 迁移期扩展渲染配置 */

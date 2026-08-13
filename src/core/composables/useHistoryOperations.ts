@@ -2,6 +2,7 @@ import type { MediaType } from '@/core'
 import type {
   AIMarkMode,
   AIMarks,
+  MusicStructureOverlay,
   UnifiedTimelineItemData,
 } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
@@ -40,6 +41,7 @@ import {
   RenameAssetCommand,
   MoveLibraryItemsCommand,
   UpdateAIMarksCommand,
+  UpdateMusicStructureOverlayCommand,
   UpdateTimelineMarkersCommand,
 } from '@/core/modules/commands/timelineCommands'
 import { ApplyChangePlanCommand } from '@/core/modules/commands/ApplyChangePlanCommand'
@@ -47,9 +49,7 @@ import { BatchAutoArrangeTrackCommand } from '@/core/modules/commands/batchComma
 import { MoveTrackCommand } from '@/core/modules/commands/MoveTrackCommand'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { duplicateTimelineItem } from '@/core/timelineitem/runtime/factory'
-import {
-  ClearAllKeyframesCommand,
-} from '@/core/modules/commands/keyframeCommands'
+import { ClearAllKeyframesCommand } from '@/core/modules/commands/keyframeCommands'
 import type { ClipTransitionOutConfig } from '@/core/transition/types'
 import type { TimelineSelectionId } from '@/core/types/timelineSelection'
 import {
@@ -601,6 +601,31 @@ export function useHistoryOperations(
     return updateAIMarksWithHistory(timelineItemId, undefined, historyLabels.clearAIMarks())
   }
 
+  async function setMusicStructureOverlayVisibleWithHistory(
+    timelineItemId: string,
+    visible: boolean,
+  ): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '修改音乐结构显示')
+    if (!timelineItem || timelineItem.musicStructureOverlay?.visible === visible) {
+      return false
+    }
+
+    const beforeOverlay: MusicStructureOverlay | undefined = timelineItem.musicStructureOverlay
+      ? { ...timelineItem.musicStructureOverlay }
+      : undefined
+    const afterOverlay: MusicStructureOverlay | undefined = visible ? { visible: true } : undefined
+
+    await unifiedHistoryModule.executeCommand(
+      new UpdateMusicStructureOverlayCommand(
+        timelineItemId,
+        beforeOverlay,
+        afterOverlay,
+        unifiedTimelineModule,
+      ),
+    )
+    return true
+  }
+
   /**
    * 带历史记录的复制时间轴项目方法
    * @param timelineItemId 要复制的时间轴项目ID
@@ -1017,6 +1042,7 @@ export function useHistoryOperations(
     updateAIMarksWithHistory,
     setAIMarksModeWithHistory,
     clearAIMarksWithHistory,
+    setMusicStructureOverlayVisibleWithHistory,
     duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory,
     trimTimelineItemWithHistory,
