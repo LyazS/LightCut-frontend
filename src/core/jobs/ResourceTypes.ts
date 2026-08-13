@@ -22,6 +22,7 @@ export type ResourceType =
   | 'media-index-task-submit'
   | 'media-index-task-complete'
   | 'media-index-metadata-writeback'
+  | 'music-structure-analysis'
   | 'timeline-item-ready'
   | 'ai-input-prepared'
   | 'ai-task-submitted'
@@ -39,13 +40,7 @@ export type ResourceType =
  * running: resolver.resolve() 正在执行。
  * succeeded / failed / cancelled: 终态。
  */
-export type ResourceStatus =
-  | 'idle'
-  | 'queued'
-  | 'running'
-  | 'succeeded'
-  | 'failed'
-  | 'cancelled'
+export type ResourceStatus = 'idle' | 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 /**
  * 调度队列。不同资源类型进入不同队列，避免重型本地计算、远程轮询和导出互相抢占。

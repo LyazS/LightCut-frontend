@@ -38,7 +38,7 @@ export interface BunnyObjects {
   thumbnailUrl?: string
   originalWidth?: number // 原始宽度（视频和图片）
   originalHeight?: number // 原始高度（视频和图片）
-  
+
   // 音频波形LOD数据（按需生成）
   waveformLOD?: AudioWaveformLOD
 }
@@ -80,6 +80,34 @@ export interface UnifiedMediaItemData {
 export interface UnifiedMediaItemMetadata {
   /** 素材 AI 索引结果 */
   indexing?: UnifiedMediaIndexMetadata
+  /** 本地 All-In-One 音乐结构分析结果 */
+  musicAnalysis?: MusicAnalysisMetadata
+}
+
+export interface MusicAnalysisSegment {
+  start: number
+  end: number
+  label: string
+}
+
+/**
+ * Persisted result of the local All-In-One pipeline. Runtime progress and errors
+ * belong to JobRuntime; this object only records a completed analysis.
+ */
+export interface MusicAnalysisMetadata {
+  schemaVersion: 1
+  pipelineVersion: string
+  analyzedAt: string
+  input: {
+    durationSeconds: number
+    sampleRate: 44_100
+  }
+  bpm: number | null
+  meter: number
+  beats: number[]
+  downbeats: number[]
+  beatPositions: number[]
+  segments: MusicAnalysisSegment[]
 }
 
 export type MediaIndexStatus =

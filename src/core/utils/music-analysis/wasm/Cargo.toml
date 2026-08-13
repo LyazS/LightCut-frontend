@@ -1,0 +1,11 @@
+[package]
+name = "simple-music-dsp"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+libm = "0.2.15"

@@ -31,6 +31,8 @@ import {
   createMediaIndexMetadataWritebackResolver,
   createMediaIndexTaskCompleteResolver,
   createMediaIndexTaskSubmitResolver,
+  createMusicStructureAnalysisRequest,
+  createMusicStructureAnalysisResolver,
   getResourceId,
   createJobRuntime,
   createMediaDecodedResolver,
@@ -40,6 +42,7 @@ import {
   createMediaSourceProcessedResolver,
   createRemoteTaskCompletedResolver,
   MEDIA_INDEX_METADATA_WRITEBACK_RESOURCE_TYPE,
+  MUSIC_STRUCTURE_ANALYSIS_RESOURCE_TYPE,
   MEDIA_READY_RESOURCE_TYPE,
   createTimelineItemReadyRequest,
   createTimelineItemReadyResolver,
@@ -149,6 +152,11 @@ export const useUnifiedStore = defineStore('unified', () => {
   jobRuntime.registerResolver(createMediaDecodedResolver(unifiedMediaModule))
   jobRuntime.registerResolver(createMediaSourceProcessedResolver(unifiedMediaModule))
   jobRuntime.registerResolver(createMediaReadyResolver(unifiedMediaModule))
+  jobRuntime.registerResolver(
+    createMusicStructureAnalysisResolver({
+      getMediaItem: unifiedMediaModule.getMediaItem,
+    }),
+  )
   jobRuntime.registerResolver(
     createVideoSceneSegmentsResolver({
       getMediaItem: unifiedMediaModule.getMediaItem,
@@ -317,6 +325,12 @@ export const useUnifiedStore = defineStore('unified', () => {
     }
 
     return jobRuntime.ensure(createMediaIndexMetadataWritebackRequest(mediaId))
+  }
+  function ensureMusicStructureAnalysis(mediaId: string, force = false) {
+    return jobRuntime.ensure(createMusicStructureAnalysisRequest(mediaId, { force }))
+  }
+  function cancelMusicStructureAnalysis(mediaId: string) {
+    return jobRuntime.cancel(getResourceId(MUSIC_STRUCTURE_ANALYSIS_RESOURCE_TYPE, mediaId))
   }
   function ensureTimelineItemReady(timelineItemId: string) {
     return jobRuntime.ensure(createTimelineItemReadyRequest(timelineItemId))
@@ -502,6 +516,8 @@ export const useUnifiedStore = defineStore('unified', () => {
     ensureMediaReady,
     ensureAIGeneratedMedia,
     ensureMediaIndexing,
+    ensureMusicStructureAnalysis,
+    cancelMusicStructureAnalysis,
     ensureTimelineItemReady,
     ensureASRSubtitles,
     ensureTimelineItemResolved,

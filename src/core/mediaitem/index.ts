@@ -10,6 +10,8 @@ export type {
   MediaTypeOrUnknown,
   UnifiedMediaItemData,
   UnifiedMediaItemMetadata,
+  MusicAnalysisMetadata,
+  MusicAnalysisSegment,
   ReadyMediaItem,
   ProcessingMediaItem,
   ErrorMediaItem,

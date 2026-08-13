@@ -61,6 +61,8 @@ export {
   // 基础类型定义
   type UnifiedMediaItemData,
   type UnifiedMediaItemMetadata,
+  type MusicAnalysisMetadata,
+  type MusicAnalysisSegment,
   type MediaStatus,
   type MediaType,
   type MediaTypeOrUnknown,

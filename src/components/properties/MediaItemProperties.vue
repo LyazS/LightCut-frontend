@@ -74,6 +74,8 @@
       </div>
     </div>
 
+    <MusicAnalysisPropertiesSection :media-item="mediaItem" />
+
     <div v-if="indexingTitle || indexingSummary || indexingStatus" class="properties-section">
       <h3 class="section-title">{{ t('properties.mediaItem.indexingInfo') }}</h3>
       <div v-if="indexingStatus" class="info-row">
@@ -92,13 +94,19 @@
         <span class="info-label">{{ t('properties.mediaItem.failedSegmentCount') }}</span>
         <span class="info-value">{{ failedSegmentCount }}</span>
       </div>
-      <div v-if="isVideoIndexing && (indexingTitle || indexingSummary)" class="segment-summary-list">
+      <div
+        v-if="isVideoIndexing && (indexingTitle || indexingSummary)"
+        class="segment-summary-list"
+      >
         <div class="segment-summary-card">
           <div v-if="indexingTitle" class="segment-summary-title">{{ indexingTitle }}</div>
           <div v-if="indexingSummary" class="segment-summary-text">{{ indexingSummary }}</div>
         </div>
       </div>
-      <div v-if="isVideoIndexing && indexingSegmentSummaries.length > 0" class="segment-summary-list">
+      <div
+        v-if="isVideoIndexing && indexingSegmentSummaries.length > 0"
+        class="segment-summary-list"
+      >
         <div
           v-for="segment in indexingSegmentSummaries"
           :key="`${segment.segmentIndex ?? 'image'}-${segment.startTimecode || ''}-${segment.endTimecode || ''}-${segment.title || ''}`"
@@ -119,7 +127,10 @@
           <div v-if="segment.summary" class="segment-summary-text">{{ segment.summary }}</div>
         </div>
       </div>
-      <div v-if="!isVideoIndexing && (indexingTitle || indexingSummary)" class="segment-summary-list">
+      <div
+        v-if="!isVideoIndexing && (indexingTitle || indexingSummary)"
+        class="segment-summary-list"
+      >
         <div class="segment-summary-card">
           <div v-if="indexingTitle" class="segment-summary-title">{{ indexingTitle }}</div>
           <div v-if="indexingSummary" class="segment-summary-text">{{ indexingSummary }}</div>
@@ -139,30 +150,19 @@
         {{ t('properties.mediaItem.retry') }}
       </n-button>
 
-      <n-button
-        v-if="canCancelMedia"
-        type="error"
-        size="small"
-        @click="handleCancel"
-      >
+      <n-button v-if="canCancelMedia" type="error" size="small" @click="handleCancel">
         <template #icon>
           <component :is="IconComponents.CLOSE" size="16px" />
         </template>
         {{ t('properties.mediaItem.cancel') }}
       </n-button>
 
-      <n-button
-        v-if="canStartIndexing"
-        type="primary"
-        size="small"
-        @click="handleStartIndexing"
-      >
+      <n-button v-if="canStartIndexing" type="primary" size="small" @click="handleStartIndexing">
         <template #icon>
           <component :is="IconComponents.SEARCH" size="16px" />
         </template>
         {{ t('media.startIndexing') }}
       </n-button>
-
     </div>
   </div>
 </template>
@@ -177,6 +177,7 @@ import { IconComponents } from '@/constants/iconComponents'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { resetAIGeneratedMediaForRetry } from '@/core/jobs'
+import MusicAnalysisPropertiesSection from '@/components/properties/MusicAnalysisPropertiesSection.vue'
 
 interface Props {
   mediaItem: UnifiedMediaItemData
@@ -275,14 +276,12 @@ const isVideoIndexing = computed(() => indexingMediaKind.value !== 'image')
 const indexedAt = computed(() => props.mediaItem.metadata?.indexing?.indexedAt || '')
 const segmentCount = computed(() => {
   const indexing = props.mediaItem.metadata?.indexing
-  return indexing?.mediaKind === 'video' ? indexing.segmentCount ?? null : null
+  return indexing?.mediaKind === 'video' ? (indexing.segmentCount ?? null) : null
 })
-const failedSegmentCount = computed(
-  () => {
-    const indexing = props.mediaItem.metadata?.indexing
-    return indexing?.mediaKind === 'video' ? indexing.failedSegmentCount ?? null : null
-  },
-)
+const failedSegmentCount = computed(() => {
+  const indexing = props.mediaItem.metadata?.indexing
+  return indexing?.mediaKind === 'video' ? (indexing.failedSegmentCount ?? null) : null
+})
 const indexingSegmentSummaries = computed(() => {
   const indexing = props.mediaItem.metadata?.indexing
   return indexing?.mediaKind === 'video' ? indexing.segmentSummaries || [] : []
@@ -343,15 +342,15 @@ const canRetry = computed(() => {
 
 const canCancelMedia = computed(() => {
   return (
-    ['pending', 'asyncprocessing', 'decoding'].includes(props.mediaItem.mediaStatus)
-    && Boolean(unifiedStore.findMediaProcessingTaskView(props.mediaItem.id))
+    ['pending', 'asyncprocessing', 'decoding'].includes(props.mediaItem.mediaStatus) &&
+    Boolean(unifiedStore.findMediaProcessingTaskView(props.mediaItem.id))
   )
 })
 
 const canStartIndexing = computed(() => {
   return (
-    (props.mediaItem.mediaType === 'video' || props.mediaItem.mediaType === 'image')
-    && props.mediaItem.mediaStatus === 'ready'
+    (props.mediaItem.mediaType === 'video' || props.mediaItem.mediaType === 'image') &&
+    props.mediaItem.mediaStatus === 'ready'
   )
 })
 
@@ -476,7 +475,6 @@ async function handleStartIndexing(): Promise<void> {
     )
   }
 }
-
 </script>
 
 <style scoped>

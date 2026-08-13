@@ -41,6 +41,14 @@ export {
   type MediaReadyResult,
 } from './resolvers/MediaReadyResolver'
 export {
+  MUSIC_STRUCTURE_ANALYSIS_RESOURCE_TYPE,
+  MusicStructureAnalysisResolver,
+  createMusicStructureAnalysisRequest,
+  createMusicStructureAnalysisResolver,
+  type MusicStructureAnalysisInput,
+  type MusicStructureAnalysisResult,
+} from './resolvers/MusicStructureAnalysisResolver'
+export {
   canResumeMediaIndexingFromRemote,
   createVideoSceneSegmentsRequest,
   createVideoSegmentExportsRequest,

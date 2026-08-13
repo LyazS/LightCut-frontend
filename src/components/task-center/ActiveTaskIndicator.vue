@@ -34,6 +34,7 @@ const ACTIVE_STATUSES = new Set(['idle', 'queued', 'running'] as const)
 const VISIBLE_ROOT_TYPES = new Set([
   'media-ready',
   'media-index-metadata-writeback',
+  'music-structure-analysis',
   'ai-generated-media',
   'asr-subtitles',
   'effect-template-ready',
@@ -85,6 +86,8 @@ function formatTaskTitle(task: TaskView) {
       return `${t('editor.taskCenter.titles.aiGeneratedMedia')}：${name}`
     case 'media-index-metadata-writeback':
       return `${t('editor.taskCenter.titles.mediaIndexing')}：${name}`
+    case 'music-structure-analysis':
+      return `${t('media.musicAnalysisTaskTitle')}：${name}`
     case 'asr-subtitles':
       return `${t('editor.taskCenter.titles.asrSubtitles')}：${name}`
     case 'effect-template-ready':
@@ -115,6 +118,7 @@ function resolveTaskObjectName(task: TaskView) {
   switch (getTaskType(task)) {
     case 'media-ready':
     case 'media-index-metadata-writeback':
+    case 'music-structure-analysis':
     case 'ai-generated-media':
       return unifiedStore.getMediaItem(key)?.name || key
     case 'effect-template-ready':
@@ -189,7 +193,10 @@ function statusPriority(status: ActiveTaskStatus) {
   background: color-mix(in srgb, var(--color-bg-quaternary) 88%, transparent);
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .task-indicator:hover {

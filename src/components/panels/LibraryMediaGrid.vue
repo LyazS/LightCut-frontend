@@ -295,6 +295,10 @@ import LibraryBreadcrumb from './LibraryBreadcrumb.vue'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { resetAIGeneratedMediaForRetry } from '@/core/jobs'
 import {
+  MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
+  MUSIC_ANALYSIS_MIN_DURATION_SECONDS,
+} from '@/core/utils/music-analysis'
+import {
   captureDroppedImportRoots,
   createExternalMediaImportService,
   type DirectoryImportSummary,
@@ -773,6 +777,22 @@ const currentMenuItems = computed((): MenuItem[] => {
               label: t('media.startIndexing'),
               icon: IconComponents.SEARCH,
               onClick: handleStartMediaIndexing,
+            },
+          ] satisfies MenuItem[])
+        : []),
+      ...(canStartMusicStructureAnalysis(target)
+        ? ([
+            { type: 'separator' as const },
+            {
+              label: t('media.musicAnalysis'),
+              icon: IconComponents.MUSIC,
+              onClick: handleStartMusicStructureAnalysis,
+            },
+            {
+              label: t('media.musicAnalysisCancel'),
+              icon: IconComponents.CLOSE,
+              onClick: handleCancelMusicStructureAnalysis,
+              disabled: !canCancelMusicStructureAnalysis(target),
             },
           ] satisfies MenuItem[])
         : []),
@@ -1733,6 +1753,81 @@ async function handleStartMediaIndexing(): Promise<void> {
         error: error instanceof Error ? error.message : t('media.unknown'),
       }),
     )
+  }
+}
+
+function getMusicAnalysisDurationSeconds(mediaItem: UnifiedMediaItemData): number | null {
+  const duration = mediaItem.runtime.bunny?.bunnyMedia?.duration
+  return typeof duration === 'number' && Number.isFinite(duration) ? duration : null
+}
+
+function canStartMusicStructureAnalysis(item: DisplayItem): boolean {
+  if (item.type !== 'asset') return false
+
+  const mediaItem = getMediaItem(item.id)
+  if (
+    !mediaItem ||
+    mediaItem.mediaStatus !== 'ready' ||
+    (mediaItem.mediaType !== 'audio' && mediaItem.mediaType !== 'video')
+  ) {
+    return false
+  }
+
+  const duration = getMusicAnalysisDurationSeconds(mediaItem)
+  return (
+    duration !== null &&
+    Boolean(mediaItem.runtime.bunny?.bunnyMedia?.getAudioTrackInfo()) &&
+    duration >= MUSIC_ANALYSIS_MIN_DURATION_SECONDS &&
+    duration <= MUSIC_ANALYSIS_MAX_DURATION_SECONDS
+  )
+}
+
+function canCancelMusicStructureAnalysis(item: DisplayItem): boolean {
+  if (item.type !== 'asset') return false
+
+  const task = unifiedStore.jobTaskViews.find(
+    (candidate) =>
+      candidate.rootResourceId === `music-structure-analysis:${item.id}` &&
+      candidate.actions.canCancel,
+  )
+  return Boolean(task)
+}
+
+async function handleStartMusicStructureAnalysis(): Promise<void> {
+  if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'asset') return
+
+  const mediaItem = getMediaItem(contextMenuTarget.value.id)
+  if (!mediaItem || !canStartMusicStructureAnalysis(contextMenuTarget.value)) return
+
+  showContextMenu.value = false
+  unifiedStore.messageSuccess(t('media.musicAnalysisStarted', { name: mediaItem.name }))
+  try {
+    await unifiedStore.ensureMusicStructureAnalysis(mediaItem.id, true)
+    unifiedStore.messageSuccess(t('media.musicAnalysisSuccess', { name: mediaItem.name }))
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    console.error('音乐结构分析失败:', error)
+    unifiedStore.messageError(
+      t('media.musicAnalysisFailed', {
+        name: mediaItem.name,
+        error: error instanceof Error ? error.message : t('media.unknown'),
+      }),
+    )
+  }
+}
+
+async function handleCancelMusicStructureAnalysis(): Promise<void> {
+  if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'asset') return
+
+  const mediaItem = getMediaItem(contextMenuTarget.value.id)
+  if (!mediaItem) return
+
+  showContextMenu.value = false
+  const cancelled = await unifiedStore.cancelMusicStructureAnalysis(mediaItem.id)
+  if (cancelled) {
+    unifiedStore.messageSuccess(t('media.musicAnalysisCancelSuccess', { name: mediaItem.name }))
+  } else {
+    unifiedStore.messageWarning(t('media.musicAnalysisCancelFailed', { name: mediaItem.name }))
   }
 }
 

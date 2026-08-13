@@ -7,6 +7,8 @@ import type {
 import type {
   MediaStatus,
   MediaTypeOrUnknown,
+  MusicAnalysisMetadata,
+  MusicAnalysisSegment,
   UnifiedImageMediaIndexMetadata,
   UnifiedVideoIndexSegmentSummary,
   UnifiedMediaItemMetadata,
@@ -76,18 +78,22 @@ function isUnifiedMediaIndexSegmentSummary(
     return false
   }
 
-  return isInteger(value.segmentIndex)
-    && typeof value.startTimecode === 'string'
-    && typeof value.endTimecode === 'string'
-    && isOptionalString(value.title)
-    && isOptionalString(value.summary)
+  return (
+    isInteger(value.segmentIndex) &&
+    typeof value.startTimecode === 'string' &&
+    typeof value.endTimecode === 'string' &&
+    isOptionalString(value.title) &&
+    isOptionalString(value.summary)
+  )
 }
 
 function isOptionalUnifiedMediaIndexSegmentSummaryArray(
   value: unknown,
 ): value is UnifiedVideoIndexSegmentSummary[] | undefined {
-  return value === undefined
-    || (Array.isArray(value) && value.every((item) => isUnifiedMediaIndexSegmentSummary(item)))
+  return (
+    value === undefined ||
+    (Array.isArray(value) && value.every((item) => isUnifiedMediaIndexSegmentSummary(item)))
+  )
 }
 
 function isUnifiedMediaIndexMetadata(
@@ -106,7 +112,11 @@ function isUnifiedMediaIndexMetadata(
     status === 'partial_failed' ||
     status === 'failed'
 
-  if (!validStatus || !isOptionalString(value.indexedAt) || !isOptionalString(value.lastIndexTaskId)) {
+  if (
+    !validStatus ||
+    !isOptionalString(value.indexedAt) ||
+    !isOptionalString(value.lastIndexTaskId)
+  ) {
     return false
   }
 
@@ -115,16 +125,13 @@ function isUnifiedMediaIndexMetadata(
       return false
     }
     const summary = value.summary as UnifiedImageMediaIndexMetadata['summary'] | undefined
-    return isOptionalInteger(value.segmentCount)
-      && isOptionalInteger(value.failedSegmentCount)
-      && (
-        summary === undefined
-        || (
-          isOptionalString(summary.title)
-          && isOptionalString(summary.summary)
-        )
-      )
-      && isOptionalUnifiedMediaIndexSegmentSummaryArray(value.segmentSummaries)
+    return (
+      isOptionalInteger(value.segmentCount) &&
+      isOptionalInteger(value.failedSegmentCount) &&
+      (summary === undefined ||
+        (isOptionalString(summary.title) && isOptionalString(summary.summary))) &&
+      isOptionalUnifiedMediaIndexSegmentSummaryArray(value.segmentSummaries)
+    )
   }
 
   if (value.mediaKind === 'image') {
@@ -132,14 +139,58 @@ function isUnifiedMediaIndexMetadata(
       return false
     }
     const summary = value.summary as UnifiedImageMediaIndexMetadata['summary'] | undefined
-    return summary === undefined
-      || (
-        isOptionalString(summary.title)
-        && isOptionalString(summary.summary)
-      )
+    return (
+      summary === undefined ||
+      (isOptionalString(summary.title) && isOptionalString(summary.summary))
+    )
   }
 
   return false
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every((item) => isFiniteNumber(item))
+}
+
+function isMusicAnalysisSegment(value: unknown): value is MusicAnalysisSegment {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    isFiniteNumber(value.start) &&
+    isFiniteNumber(value.end) &&
+    value.start >= 0 &&
+    value.end >= value.start &&
+    typeof value.label === 'string'
+  )
+}
+
+function isMusicAnalysisMetadata(value: unknown): value is MusicAnalysisMetadata {
+  if (!isRecord(value) || !isRecord(value.input)) {
+    return false
+  }
+
+  return (
+    value.schemaVersion === 1 &&
+    typeof value.pipelineVersion === 'string' &&
+    typeof value.analyzedAt === 'string' &&
+    isFiniteNumber(value.input.durationSeconds) &&
+    value.input.durationSeconds > 0 &&
+    value.input.sampleRate === 44_100 &&
+    (value.bpm === null || isFiniteNumber(value.bpm)) &&
+    isInteger(value.meter) &&
+    value.meter > 0 &&
+    isNumberArray(value.beats) &&
+    isNumberArray(value.downbeats) &&
+    isNumberArray(value.beatPositions) &&
+    Array.isArray(value.segments) &&
+    value.segments.every((item) => isMusicAnalysisSegment(item))
+  )
 }
 
 function isOptionalNumber(value: unknown): value is number | undefined {
@@ -151,8 +202,15 @@ function isMediaTypeOrUnknown(value: unknown): value is MediaTypeOrUnknown {
 }
 
 function isMediaStatus(value: unknown): value is MediaStatus {
-  return ['pending', 'asyncprocessing', 'decoding', 'ready', 'error', 'cancelled', 'missing']
-    .includes(String(value))
+  return [
+    'pending',
+    'asyncprocessing',
+    'decoding',
+    'ready',
+    'error',
+    'cancelled',
+    'missing',
+  ].includes(String(value))
 }
 
 function isEffectType(value: unknown): value is EffectType {
@@ -164,7 +222,10 @@ function isUnifiedMediaItemMetadata(value: unknown): value is UnifiedMediaItemMe
     return false
   }
 
-  return (value.indexing === undefined || isUnifiedMediaIndexMetadata(value.indexing))
+  return (
+    (value.indexing === undefined || isUnifiedMediaIndexMetadata(value.indexing)) &&
+    (value.musicAnalysis === undefined || isMusicAnalysisMetadata(value.musicAnalysis))
+  )
 }
 
 function isBaseEffectTemplateSourceData(value: unknown): value is BaseEffectTemplateSourceData {
@@ -172,10 +233,12 @@ function isBaseEffectTemplateSourceData(value: unknown): value is BaseEffectTemp
     return false
   }
 
-  return value.type === 'effect-template'
-    && typeof value.templateId === 'string'
-    && isOptionalString(value.packageVersion)
-    && isOptionalString(value.catalogVersion)
+  return (
+    value.type === 'effect-template' &&
+    typeof value.templateId === 'string' &&
+    isOptionalString(value.packageVersion) &&
+    isOptionalString(value.catalogVersion)
+  )
 }
 
 function isMediaPersistedSourceData(value: unknown): value is BaseDataSourcePersistedData {
@@ -187,22 +250,28 @@ function isMediaPersistedSourceData(value: unknown): value is BaseDataSourcePers
     case 'user-selected':
       return true
     case 'ai-generation':
-      return typeof value.aiTaskId === 'string'
-        && isRecord(value.requestParams)
-        && typeof value.taskStatus === 'string'
-        && (value.resultData === undefined || isRecord(value.resultData))
+      return (
+        typeof value.aiTaskId === 'string' &&
+        isRecord(value.requestParams) &&
+        typeof value.taskStatus === 'string' &&
+        (value.resultData === undefined || isRecord(value.resultData))
+      )
     case 'bizyair':
-      return typeof value.bizyairTaskId === 'string'
-        && isRecord(value.requestParams)
-        && typeof value.taskStatus === 'string'
-        && (value.resultData === undefined || isRecord(value.resultData))
+      return (
+        typeof value.bizyairTaskId === 'string' &&
+        isRecord(value.requestParams) &&
+        typeof value.taskStatus === 'string' &&
+        (value.resultData === undefined || isRecord(value.resultData))
+      )
     case 'asr':
-      return typeof value.asrTaskId === 'string'
-        && isRecord(value.requestConfig)
-        && typeof value.taskStatus === 'string'
-        && (value.resultData === undefined || isRecord(value.resultData))
-        && isOptionalString(value.sourceTimelineItemId)
-        && isOptionalString(value.placeholderTimelineItemId)
+      return (
+        typeof value.asrTaskId === 'string' &&
+        isRecord(value.requestConfig) &&
+        typeof value.taskStatus === 'string' &&
+        (value.resultData === undefined || isRecord(value.resultData)) &&
+        isOptionalString(value.sourceTimelineItemId) &&
+        isOptionalString(value.placeholderTimelineItemId)
+      )
     default:
       return false
   }
@@ -213,11 +282,13 @@ function isBaseLibraryAssetMetaFile(value: unknown): value is BaseLibraryAssetMe
     return false
   }
 
-  return typeof value.version === 'string'
-    && typeof value.id === 'string'
-    && typeof value.name === 'string'
-    && typeof value.createdAt === 'string'
-    && (value.assetKind === 'media' || value.assetKind === 'effect-template')
+  return (
+    typeof value.version === 'string' &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.createdAt === 'string' &&
+    (value.assetKind === 'media' || value.assetKind === 'effect-template')
+  )
 }
 
 export function isMediaLibraryAssetMetaFileValue(
@@ -229,12 +300,14 @@ export function isMediaLibraryAssetMetaFileValue(
 
   const candidate = value as unknown as Record<string, unknown>
 
-  return isMediaPersistedSourceData(candidate.source)
-    && typeof candidate.parentDirectoryId === 'string'
-    && isMediaTypeOrUnknown(candidate.mediaType)
-    && (candidate.mediaStatus === undefined || isMediaStatus(candidate.mediaStatus))
-    && isOptionalNumber(candidate.duration)
-    && (candidate.metadata === undefined || isUnifiedMediaItemMetadata(candidate.metadata))
+  return (
+    isMediaPersistedSourceData(candidate.source) &&
+    typeof candidate.parentDirectoryId === 'string' &&
+    isMediaTypeOrUnknown(candidate.mediaType) &&
+    (candidate.mediaStatus === undefined || isMediaStatus(candidate.mediaStatus)) &&
+    isOptionalNumber(candidate.duration) &&
+    (candidate.metadata === undefined || isUnifiedMediaItemMetadata(candidate.metadata))
+  )
 }
 
 export function isEffectTemplateLibraryAssetMetaFileValue(
@@ -246,9 +319,11 @@ export function isEffectTemplateLibraryAssetMetaFileValue(
 
   const candidate = value as unknown as Record<string, unknown>
 
-  return isBaseEffectTemplateSourceData(candidate.source)
-    && isEffectType(candidate.effectType)
-    && isMediaStatus(candidate.templateStatus)
+  return (
+    isBaseEffectTemplateSourceData(candidate.source) &&
+    isEffectType(candidate.effectType) &&
+    isMediaStatus(candidate.templateStatus)
+  )
 }
 
 export function parseLibraryAssetMetaFile(value: unknown): LibraryAssetMetaFile {
