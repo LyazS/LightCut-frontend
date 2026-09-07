@@ -1,4 +1,5 @@
 import dspWasmUrl from './dsp-engine.wasm?url'
+import type { AcousticEvent } from './types'
 
 export const DEMUCS_SEGMENT_SAMPLES = 343_980
 export const DEMUCS_STFT_LENGTH = 2 * 2_048 * 336 * 2
@@ -7,6 +8,7 @@ export const DEMUCS_TIME_STEMS_LENGTH = 4 * 2 * DEMUCS_SEGMENT_SAMPLES
 
 const DEMUCS_OVERLAP = 0.25
 const FEATURE_BANDS = 81
+const ACOUSTIC_RECORD_WIDTH = 7
 
 interface DspWasmExports {
   memory: WebAssembly.Memory
@@ -23,11 +25,14 @@ interface DspWasmExports {
   engine_decoded_positions_ptr(): number
   engine_decoded_count(): number
   engine_decoded_meter(): number
+  engine_acoustic_events_ptr(): number
+  engine_acoustic_events_count(): number
   engine_normalize(): number
   engine_prepare_segment(offset: number, currentLength: number): number
   engine_combine_segment(offset: number, currentLength: number): number
   engine_extract_features(): number
   engine_decode_downbeats(frameCount: number): number
+  engine_detect_acoustics(): number
 }
 
 let runtime: Promise<DspWasmExports> | undefined
@@ -42,6 +47,13 @@ async function loadRuntime(): Promise<DspWasmExports> {
       const exports = instance.exports as unknown as DspWasmExports
       if (!(exports.memory instanceof WebAssembly.Memory)) {
         throw new Error('音乐分析 DSP Wasm 未导出内存')
+      }
+      if (
+        typeof exports.engine_detect_acoustics !== 'function' ||
+        typeof exports.engine_acoustic_events_ptr !== 'function' ||
+        typeof exports.engine_acoustic_events_count !== 'function'
+      ) {
+        throw new Error('音乐分析 DSP Wasm 未包含声学事件导出，请重新构建')
       }
       return exports
     })()
@@ -159,6 +171,32 @@ export class WasmDspEngine {
     }
   }
 
+  detectAcousticEvents(): AcousticEvent[] {
+    this.assertActive()
+    requireSuccess(this.wasm.engine_detect_acoustics(), '检测声学事件')
+    const count = this.wasm.engine_acoustic_events_count()
+    if (count === 0) return []
+
+    const values = this.view(
+      this.wasm.engine_acoustic_events_ptr(),
+      count * ACOUSTIC_RECORD_WIDTH,
+    )
+    const events: AcousticEvent[] = []
+    for (let index = 0; index < count; index += 1) {
+      const offset = index * ACOUSTIC_RECORD_WIDTH
+      const time = values[offset]!
+      const score = values[offset + 1]!
+      const a = values[offset + 2]!
+      const b = values[offset + 3]!
+      const c = values[offset + 4]!
+      const d = values[offset + 5]!
+      const kind = Math.round(values[offset + 6]!)
+      const event = acousticDefinition(kind, time, score, a, b, c, d)
+      if (event) events.push(event)
+    }
+    return events
+  }
+
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
@@ -193,4 +231,84 @@ export class WasmDspEngine {
 
 export function featureShape(length: number): [number, number, number, number] {
   return [1, 4, Math.ceil(length / 441), FEATURE_BANDS]
+}
+
+function acousticDefinition(
+  kind: number,
+  time: number,
+  score: number,
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+): AcousticEvent | null {
+  const common = {
+    time: Math.round(time * 1000) / 1000,
+    score: Math.round(score * 1000) / 1000,
+    detector: 'lightcut-acoustic-wasm-v1',
+  }
+
+  if (kind >= 0 && kind <= 2) {
+    const labels = ['energy_rise', 'energy_fall', 'energy_peak'] as const
+    const eventLabel = labels[kind]!
+    return {
+      ...common,
+      source: 'energy_change',
+      eventLabel,
+      signals: {
+        energyDb: a,
+        energyDeltaDb: b,
+        energyTrend: eventLabel === 'energy_rise' ? 'rising' : eventLabel === 'energy_fall' ? 'falling' : 'peak',
+      },
+    }
+  }
+
+  if (kind >= 3 && kind <= 5) {
+    const labels = ['onset_event', 'onset_entry', 'onset_exit'] as const
+    const eventLabel = labels[kind - 3]!
+    return {
+      ...common,
+      source: 'onset_change',
+      eventLabel,
+      signals: {
+        onsetStrength: a,
+        spectralFlux: b,
+        melFlux: c,
+        hfcStrength: d,
+        onsetDirection: eventLabel === 'onset_entry' ? 'entering' : eventLabel === 'onset_exit' ? 'exiting' : 'event',
+      },
+    }
+  }
+
+  if (kind === 6 || kind === 7) {
+    return {
+      ...common,
+      source: 'silence',
+      eventLabel: kind === 6 ? 'silence_enter' : 'silence_exit',
+      signals: {
+        silenceDb: a,
+        silenceDurationMs: b,
+        silenceThresholdDb: c,
+        silenceKind: d === 0 ? 'hard_silence' : 'near_silence',
+        direction: kind === 6 ? 'entering' : 'exiting',
+      },
+    }
+  }
+
+  if (kind >= 8 && kind <= 11) {
+    const labels = ['pitch_rise', 'pitch_fall', 'pitch_entry', 'pitch_exit'] as const
+    return {
+      ...common,
+      source: 'pitch_change',
+      eventLabel: labels[kind - 8]!,
+      signals: {
+        f0Hz: a,
+        pitchDeltaSemitones: b,
+        pitchConfidence: c,
+        voiced: d > 0.5,
+      },
+    }
+  }
+
+  return null
 }

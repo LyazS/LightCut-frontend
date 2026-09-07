@@ -170,13 +170,29 @@ function isMusicAnalysisSegment(value: unknown): value is MusicAnalysisSegment {
   )
 }
 
+function isMusicAnalysisAnchor(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    typeof value.id === 'string' &&
+    isFiniteNumber(value.time) &&
+    value.time >= 0 &&
+    typeof value.eventLabel === 'string' &&
+    Array.isArray(value.roles) &&
+    value.roles.every((role) => typeof role === 'string') &&
+    isFiniteNumber(value.strength)
+  )
+}
+
 function isMusicAnalysisMetadata(value: unknown): value is MusicAnalysisMetadata {
   if (!isRecord(value) || !isRecord(value.input)) {
     return false
   }
 
   return (
-    value.schemaVersion === 1 &&
+    (value.schemaVersion === 1 || value.schemaVersion === 2) &&
     typeof value.pipelineVersion === 'string' &&
     typeof value.analyzedAt === 'string' &&
     isFiniteNumber(value.input.durationSeconds) &&
@@ -189,7 +205,9 @@ function isMusicAnalysisMetadata(value: unknown): value is MusicAnalysisMetadata
     isNumberArray(value.downbeats) &&
     isNumberArray(value.beatPositions) &&
     Array.isArray(value.segments) &&
-    value.segments.every((item) => isMusicAnalysisSegment(item))
+    value.segments.every((item) => isMusicAnalysisSegment(item)) &&
+    (value.editingAnchors === undefined ||
+      (Array.isArray(value.editingAnchors) && value.editingAnchors.every(isMusicAnalysisAnchor)))
   )
 }
 

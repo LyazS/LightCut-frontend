@@ -331,8 +331,9 @@ function getKeyframeMarkerStyles(pixelPosition: number): Record<string, string> 
 const visibleMarkers = computed(() => {
   const renderFrame = clipRenderFrame.value
   const clipWidth = renderFrame.widthPixels
+  const mediaItem = unifiedStore.getMediaItem(props.data.mediaItemId)
 
-  return getVisibleTimelineMarkers(props.data)
+  return getVisibleTimelineMarkers(props.data, mediaItem)
     .map((offsetFrames) => {
       const absoluteFrame = timelineMarkerToAbsoluteFrame(props.data, offsetFrames)
       const pixelPosition = renderFrame.frameToLocalPixel(absoluteFrame)

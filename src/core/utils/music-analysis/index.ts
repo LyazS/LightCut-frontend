@@ -6,6 +6,8 @@ export {
   MUSIC_ANALYSIS_PIPELINE_VERSION,
   MUSIC_ANALYSIS_SAMPLE_RATE,
   type MusicAnalysisDetectorConfig,
+  type AcousticEvent,
+  type MusicAnalysisAnchor,
   type MusicAnalysisProgressEvent,
   type MusicAnalysisResult,
   type MusicAnalysisStage,

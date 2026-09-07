@@ -29,6 +29,7 @@ export { TrimTimelineItemCommand } from './TrimTimelineItemCommand'
 export type { TrimTimelineItemSide } from './TrimTimelineItemCommand'
 export { UpdateTimelineMarkersCommand } from './UpdateTimelineMarkersCommand'
 export { UpdateAIMarksCommand } from './UpdateAIMarksCommand'
+export { UpdateTimelineAnchorSourceCommand } from './UpdateTimelineAnchorSourceCommand'
 export { UpdateMusicStructureOverlayCommand } from './UpdateMusicStructureOverlayCommand'
 export { SelectTimelineSelectionsCommand } from './SelectTimelineItemsCommand' // ok
 export { UpdateTransitionConfigCommand } from './UpdateTransitionOutCommand'

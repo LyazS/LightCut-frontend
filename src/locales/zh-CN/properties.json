@@ -267,6 +267,45 @@
         "analyzing": "正在分析音乐结构",
         "analyzedAt": "分析时间",
         "emptySegments": "未识别出明确的音乐段落",
+        "anchors": {
+          "title": "剪辑锚点",
+          "count": "{count} 个",
+          "strength": {
+            "low": "低强度",
+            "medium": "中强度",
+            "high": "高强度"
+          },
+          "eventLabels": {
+            "anchor": "音乐锚点",
+            "sectionEntry": "段落进入",
+            "sectionExit": "段落结束",
+            "downbeat": "强拍",
+            "beat": "节拍",
+            "energyRise": "能量上升",
+            "energyFall": "能量下降",
+            "energyPeak": "能量峰值",
+            "onsetEvent": "起音变化",
+            "onsetEntry": "起音进入",
+            "onsetExit": "起音退出",
+            "silenceEnter": "进入静音",
+            "silenceExit": "离开静音",
+            "pitchRise": "音高上行",
+            "pitchFall": "音高下行",
+            "pitchEntry": "音高进入",
+            "pitchExit": "音高退出"
+          },
+          "roleLabels": {
+            "sectionEntry": "段落进入",
+            "sectionExit": "段落结束",
+            "buildUp": "渐强",
+            "impact": "冲击",
+            "instrumentChange": "音色变化",
+            "pause": "停顿",
+            "release": "释放",
+            "melodicTurn": "旋律转折",
+            "rhythmScaffold": "节拍骨架"
+          }
+        },
         "segmentLabels": {
           "start": "开始",
           "end": "结束",

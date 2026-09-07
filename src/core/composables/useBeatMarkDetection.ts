@@ -127,6 +127,8 @@ export function useBeatMarkDetection() {
         return
       }
 
+      await unifiedStore.setTimelineAnchorSourceWithHistory(timelineItemId, 'beat-this')
+
       if (marks.length === 0) {
         unifiedStore.messageWarning(t('timeline.beatDetection.noCompleteBars'))
       } else {

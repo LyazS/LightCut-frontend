@@ -267,6 +267,7 @@ import { ref, computed, nextTick, onBeforeUnmount, onMounted, watch, type Compon
 import { NScrollbar, type ScrollbarInst } from 'naive-ui'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useMarqueeSelection } from '@/core/composables/useMarqueeSelection'
+import { useMusicStructureAnalysis } from '@/core/composables/useMusicStructureAnalysis'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { DisplayItem, VirtualDirectory, ClipboardItem, SortBy } from '@/core/directory/types'
 import {
@@ -307,6 +308,7 @@ import {
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
+const { analyzeMusicStructure } = useMusicStructureAnalysis()
 const fileNameTooltip = ref({
   visible: false,
   name: '',
@@ -1800,20 +1802,7 @@ async function handleStartMusicStructureAnalysis(): Promise<void> {
   if (!mediaItem || !canStartMusicStructureAnalysis(contextMenuTarget.value)) return
 
   showContextMenu.value = false
-  unifiedStore.messageSuccess(t('media.musicAnalysisStarted', { name: mediaItem.name }))
-  try {
-    await unifiedStore.ensureMusicStructureAnalysis(mediaItem.id, true)
-    unifiedStore.messageSuccess(t('media.musicAnalysisSuccess', { name: mediaItem.name }))
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return
-    console.error('音乐结构分析失败:', error)
-    unifiedStore.messageError(
-      t('media.musicAnalysisFailed', {
-        name: mediaItem.name,
-        error: error instanceof Error ? error.message : t('media.unknown'),
-      }),
-    )
-  }
+  await analyzeMusicStructure(mediaItem.id, true)
 }
 
 async function handleCancelMusicStructureAnalysis(): Promise<void> {

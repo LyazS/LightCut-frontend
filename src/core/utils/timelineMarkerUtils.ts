@@ -2,10 +2,14 @@ import type {
   AIMark,
   AIMarks,
   AIMarksGeneratedFor,
+  TimelineAnchorSource,
   TimelineMarker,
   UnifiedTimelineItemData,
 } from '@/core/timelineitem/model/timelineItem'
+import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
+import { RENDERER_FPS } from '@/core/mediabunny/constant'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
+import type { MusicAnalysisAnchor } from '@/core/utils/music-analysis/types'
 
 export type AIMarksStatus = 'available' | 'partial' | 'stale' | 'notGenerated' | 'unsupported'
 
@@ -22,6 +26,12 @@ export interface ResolvedAIMark extends AIMark {
 export interface ResolvedAIMarks {
   status: AIMarksStatus
   marks: ResolvedAIMark[]
+}
+
+export interface ResolvedMusicAnalysisAnchor extends MusicAnalysisAnchor {
+  /** 当前片段中的时间轴本地偏移量，由分析时间换算而来。 */
+  offsetFrames: number
+  sourceFrame: number
 }
 
 function getTimelineDuration(timeRange: UnifiedTimeRange): number {
@@ -329,11 +339,96 @@ export function getVisibleAIMarks(item: UnifiedTimelineItemData): ResolvedAIMark
   return resolveAIMarksForTimelineItem(item).marks
 }
 
-/** Returns manual markers and the AI marks selected by the current display mode. */
-export function getVisibleTimelineMarkers(item: UnifiedTimelineItemData): number[] {
+function isTimelineAnchorSource(value: unknown): value is TimelineAnchorSource {
+  return value === 'none' || value === 'music-structure' || value === 'beat-this'
+}
+
+/**
+ * The explicit selection is authoritative. Older projects retain their former AI-beat
+ * behavior until the user chooses a new automatic anchor source.
+ */
+export function getTimelineAnchorSource(
+  item: UnifiedTimelineItemData,
+  mediaItem?: UnifiedMediaItemData,
+): TimelineAnchorSource {
+  if (isTimelineAnchorSource(item.anchorSource)) {
+    return item.anchorSource
+  }
+
+  if (
+    item.musicStructureOverlay?.visible &&
+    mediaItem?.metadata?.musicAnalysis?.editingAnchors?.length
+  ) {
+    return 'music-structure'
+  }
+
+  return getVisibleAIMarks(item).length > 0 ? 'beat-this' : 'none'
+}
+
+function isMusicAnalysisAnchor(value: unknown): value is MusicAnalysisAnchor {
+  if (!value || typeof value !== 'object') return false
+  const anchor = value as Partial<MusicAnalysisAnchor>
+  return (
+    typeof anchor.id === 'string' &&
+    typeof anchor.time === 'number' &&
+    Number.isFinite(anchor.time) &&
+    anchor.time >= 0 &&
+    typeof anchor.eventLabel === 'string' &&
+    Array.isArray(anchor.roles) &&
+    anchor.roles.every((role) => typeof role === 'string') &&
+    typeof anchor.strength === 'number' &&
+    Number.isFinite(anchor.strength)
+  )
+}
+
+/** Resolves persisted music-analysis anchors to the current clip's timeline offsets. */
+export function resolveMusicAnalysisAnchorsForTimelineItem(
+  item: UnifiedTimelineItemData,
+  mediaItem?: UnifiedMediaItemData,
+): ResolvedMusicAnalysisAnchor[] {
+  if (
+    !isSourceBackedMediaType(item) ||
+    item.timelineStatus !== 'ready' ||
+    !item.mediaItemId ||
+    !mediaItem ||
+    mediaItem.id !== item.mediaItemId
+  ) {
+    return []
+  }
+
+  const anchorByOffset = new Map<number, ResolvedMusicAnalysisAnchor>()
+  for (const anchor of mediaItem.metadata?.musicAnalysis?.editingAnchors ?? []) {
+    if (!isMusicAnalysisAnchor(anchor)) continue
+
+    const sourceFrame = Math.round(anchor.time * RENDERER_FPS)
+    const offsetFrames = sourceFrameToTimelineOffset(item.timeRange, sourceFrame)
+    if (offsetFrames === undefined) continue
+
+    const existing = anchorByOffset.get(offsetFrames)
+    if (!existing || anchor.strength > existing.strength) {
+      anchorByOffset.set(offsetFrames, { ...anchor, sourceFrame, offsetFrames })
+    }
+  }
+
+  return Array.from(anchorByOffset.values()).sort((left, right) => left.offsetFrames - right.offsetFrames)
+}
+
+/** Returns manual markers plus the selected automatic anchor source. */
+export function getVisibleTimelineMarkers(
+  item: UnifiedTimelineItemData,
+  mediaItem?: UnifiedMediaItemData,
+): number[] {
+  const source = getTimelineAnchorSource(item, mediaItem)
+  const automaticOffsets =
+    source === 'music-structure'
+      ? resolveMusicAnalysisAnchorsForTimelineItem(item, mediaItem).map((anchor) => anchor.offsetFrames)
+      : source === 'beat-this'
+        ? getVisibleAIMarks(item).map((mark) => mark.offsetFrames)
+        : []
+
   return normalizeTimelineMarkerOffsets([
     ...getVisibleManualTimelineMarkers(item),
-    ...getVisibleAIMarks(item).map((mark) => mark.offsetFrames),
+    ...automaticOffsets,
   ])
 }
 

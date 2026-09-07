@@ -1,4 +1,5 @@
-import type { MusicAnalysisResult } from './types'
+import { buildMusicAnalysisAnchors } from './anchors'
+import type { AcousticEvent, MusicAnalysisResult } from './types'
 
 interface DecodedBeats {
   beats: number[]
@@ -141,6 +142,7 @@ export function analyzeLogits(
   sectionLogits: Float32Array,
   functionLogits: Float32Array,
   decodeDownbeats: DownbeatDecoder,
+  acousticEvents: AcousticEvent[] = [],
 ): MusicAnalysisResult {
   const length = beatLogits.length
   const activations = new Float32Array(length * 2)
@@ -154,7 +156,7 @@ export function analyzeLogits(
     activations[index * 2 + 1] = downbeat / total
   }
   const decoded = decodeDownbeats(activations)
-  return {
+  const baseResult: MusicAnalysisResult = {
     input: {
       durationSeconds: length / 100,
       sampleRate: 44_100,
@@ -165,5 +167,9 @@ export function analyzeLogits(
     beatPositions: decoded.positions,
     segments: postprocessStructure(sectionLogits, functionLogits),
     meter: decoded.meter,
+  }
+  return {
+    ...baseResult,
+    editingAnchors: buildMusicAnalysisAnchors(baseResult, acousticEvents),
   }
 }

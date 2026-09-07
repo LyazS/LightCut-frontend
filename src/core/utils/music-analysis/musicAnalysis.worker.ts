@@ -351,11 +351,15 @@ async function analyze(file: File, expectedDurationSeconds: number): Promise<Mus
     divideInPlace(functionSum, MUSIC_ANALYSIS_HARMONIX_MODEL_IDS.length)
     throwIfAborted()
     postProgress('decoding-structure', 0.98, '解码节拍、强拍和音乐段落')
+    const acousticEvents = dsp.detectAcousticEvents()
+    throwIfAborted()
+    postProgress('detecting-acoustics', 0.99, `检测声学事件 (${acousticEvents.length})`)
     const result = analyzeLogits(beatSum, downbeatSum, sectionSum, functionSum, (activations) =>
       dsp.decodeDownbeats(activations),
+      acousticEvents,
     )
     result.input.durationSeconds = decoded.duration
-    postProgress('decoding-structure', 1, '音乐结构分析完成')
+    postProgress('building-anchors', 1, `已整理 ${result.editingAnchors?.length ?? 0} 个剪辑锚点`)
     return result
   } finally {
     dsp.dispose()

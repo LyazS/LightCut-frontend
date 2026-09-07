@@ -15,6 +15,16 @@ const FEATURE_HOP: usize = 441;
 const FEATURE_BINS: usize = FEATURE_FRAME / 2;
 const FEATURE_BANDS: usize = 81;
 const MAX_ENGINE_BYTES: u64 = 1_500_000_000;
+#[repr(C)]
+struct AcousticRecord {
+    time: f32,
+    score: f32,
+    signal_a: f32,
+    signal_b: f32,
+    signal_c: f32,
+    signal_d: f32,
+    kind: f32,
+}
 
 struct FilterBank {
     starts: Vec<usize>,
@@ -47,6 +57,7 @@ struct Engine {
     decoded_beats: Vec<f64>,
     decoded_positions: Vec<u8>,
     decoded_meter: u32,
+    acoustic_events: Vec<AcousticRecord>,
 }
 
 impl Engine {
@@ -104,6 +115,7 @@ impl Engine {
             decoded_beats: Vec::with_capacity(feature_frames),
             decoded_positions: Vec::with_capacity(feature_frames),
             decoded_meter: 3,
+            acoustic_events: Vec::new(),
         })
     }
 
@@ -331,6 +343,17 @@ impl Engine {
         self.decoded_meter = decoded.meter;
         true
     }
+
+    fn detect_acoustics(&mut self) {
+        let mut mono = Vec::with_capacity(self.length);
+        for sample in 0..self.length {
+            let value = ((self.input[sample] as f64 * self.std) + self.mean
+                + (self.input[self.length + sample] as f64 * self.std) + self.mean)
+                * 0.5;
+            mono.push(value as f32);
+        }
+        self.acoustic_events = detect_acoustic_events(&mono);
+    }
 }
 
 thread_local! {
@@ -455,6 +478,24 @@ pub extern "C" fn engine_decoded_meter() -> u32 {
 }
 
 #[no_mangle]
+pub extern "C" fn engine_acoustic_events_ptr() -> u32 {
+    ENGINE.with(|slot| {
+        slot.borrow_mut().as_mut().map_or(0, |engine| {
+            engine.acoustic_events.as_mut_ptr() as usize as u32
+        })
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn engine_acoustic_events_count() -> u32 {
+    ENGINE.with(|slot| {
+        slot.borrow()
+            .as_ref()
+            .map_or(0, |engine| engine.acoustic_events.len() as u32)
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn engine_normalize() -> u32 {
     ENGINE.with(|slot| {
         let mut slot = slot.borrow_mut();
@@ -509,6 +550,294 @@ pub extern "C" fn engine_decode_downbeats(frame_count: u32) -> u32 {
         };
         engine.decode_downbeats(frame_count as usize) as u32
     })
+}
+
+#[no_mangle]
+pub extern "C" fn engine_detect_acoustics() -> u32 {
+    ENGINE.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        let Some(engine) = slot.as_mut() else {
+            return 0;
+        };
+        engine.detect_acoustics();
+        1
+    })
+}
+
+fn acoustic_event(time: f64, score: f64, kind: u32, a: f64, b: f64, c: f64, d: f64) -> AcousticRecord {
+    AcousticRecord {
+        time: time.max(0.0) as f32,
+        score: score.clamp(0.0, 1.0) as f32,
+        signal_a: a as f32,
+        signal_b: b as f32,
+        signal_c: c as f32,
+        signal_d: d as f32,
+        kind: kind as f32,
+    }
+}
+
+fn acoustic_event_sort(left: &AcousticRecord, right: &AcousticRecord) -> std::cmp::Ordering {
+    left.time
+        .partial_cmp(&right.time)
+        .unwrap_or(std::cmp::Ordering::Equal)
+        .then_with(|| left.kind.partial_cmp(&right.kind).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+fn frame_sample(signal: &[f32], start: isize, index: usize) -> f64 {
+    let source = start + index as isize;
+    if source < 0 || source >= signal.len() as isize {
+        0.0
+    } else {
+        signal[source as usize] as f64
+    }
+}
+
+fn moving_average(values: &[f64], width: usize) -> Vec<f64> {
+    if values.is_empty() || width <= 1 {
+        return values.to_vec();
+    }
+    let half = width / 2;
+    let mut result = vec![0.0; values.len()];
+    for index in 0..values.len() {
+        let mut total = 0.0;
+        for offset in 0..=half * 2 {
+            let source = (index as isize + offset as isize - half as isize)
+                .clamp(0, values.len() as isize - 1) as usize;
+            total += values[source];
+        }
+        result[index] = total / (half * 2 + 1) as f64;
+    }
+    result
+}
+
+fn robust_unit(values: &[f64]) -> Vec<f64> {
+    if values.is_empty() {
+        return Vec::new();
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    let quantile = |position: f64| -> f64 {
+        sorted[((position * (sorted.len() - 1) as f64).floor() as usize).min(sorted.len() - 1)]
+    };
+    let low = quantile(0.50);
+    let high = quantile(0.95).max(max_value(values));
+    if high - low < 1e-10 {
+        return vec![0.0; values.len()];
+    }
+    values
+        .iter()
+        .map(|value| ((value - low) / (high - low)).clamp(0.0, 1.0))
+        .collect()
+}
+
+fn max_value(values: &[f64]) -> f64 {
+    values
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, |left, right| left.max(right))
+}
+
+fn pick_peaks(values: &[f64], minimum_distance: usize, quantile: f64, threshold: f64) -> Vec<usize> {
+    if values.len() < 3 || max_value(values) <= threshold {
+        return Vec::new();
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal));
+    let quantile_value = sorted[((quantile * (sorted.len() - 1) as f64).floor() as usize).min(sorted.len() - 1)];
+    let median = sorted[sorted.len() / 2];
+    let baseline = moving_average(values, values.len().min(9));
+    let mut candidates: Vec<usize> = (1..values.len() - 1)
+        .filter(|index| {
+            values[*index] >= values[*index - 1]
+                && values[*index] > values[*index + 1]
+                && values[*index] >= threshold.max(quantile_value).max(median)
+        })
+        .collect();
+    candidates.sort_by(|left, right| {
+        values[*right]
+            .partial_cmp(&values[*left])
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| left.cmp(right))
+    });
+    let mut selected = Vec::new();
+    for candidate in candidates {
+        if selected
+            .iter()
+            .all(|previous| candidate.abs_diff(*previous) >= minimum_distance.max(1))
+        {
+            selected.push(candidate);
+        }
+    }
+    selected.sort_unstable();
+    selected.retain(|index| values[*index] >= baseline[*index]);
+    selected
+}
+
+fn detect_acoustic_events(signal: &[f32]) -> Vec<AcousticRecord> {
+    const FRAME: usize = 2_048;
+    const HOP: usize = 512;
+    if signal.is_empty() {
+        return Vec::new();
+    }
+    let frame_count = div_ceil(signal.len(), HOP).max(1);
+    let mut rms_db = Vec::with_capacity(frame_count);
+    let mut spectral_flux = Vec::with_capacity(frame_count);
+    let mut mel_flux = Vec::with_capacity(frame_count);
+    let mut hfc = Vec::with_capacity(frame_count);
+    let mut previous_power = vec![0.0_f64; FRAME / 2 + 1];
+    let window: Vec<f64> = (0..FRAME)
+        .map(|index| 0.5 - 0.5 * libm::cos(2.0 * PI * index as f64 / FRAME as f64))
+        .collect();
+    let mut real = vec![0.0_f32; FRAME];
+    let mut imaginary = vec![0.0_f32; FRAME];
+    for frame in 0..frame_count {
+        real.fill(0.0);
+        imaginary.fill(0.0);
+        let start = frame as isize * HOP as isize - FRAME as isize / 2;
+        let mut squared = 0.0;
+        for index in 0..FRAME {
+            let value = frame_sample(signal, start, index);
+            squared += value * value;
+            real[index] = (value * window[index]) as f32;
+        }
+        fft(&mut real, &mut imaginary, false);
+        let mut flux = 0.0;
+        let mut weighted = 0.0;
+        let mut total = 0.0;
+        let mut bands = [0.0_f64; 4];
+        for bin in 0..=FRAME / 2 {
+            let power = libm::log(1.0 + real[bin] as f64 * real[bin] as f64 + imaginary[bin] as f64 * imaginary[bin] as f64);
+            flux += (power - previous_power[bin]).max(0.0);
+            previous_power[bin] = power;
+            total += power;
+            weighted += power * bin as f64;
+            let band = if bin < 12 { 0 } else if bin < 48 { 1 } else if bin < 180 { 2 } else { 3 };
+            bands[band] += power;
+        }
+        rms_db.push(20.0 * libm::log10(squared.sqrt().max(1e-8) / (FRAME as f64).sqrt()));
+        spectral_flux.push(flux / previous_power.len() as f64);
+        mel_flux.push((bands[1] + bands[2] + bands[3]) / 3.0);
+        hfc.push(if total > 1e-12 { weighted / total } else { 0.0 });
+    }
+
+    let mut events = Vec::new();
+    let smooth = moving_average(&rms_db, 13);
+    let lag = (0.5 * SAMPLE_RATE as f64 / HOP as f64).round() as usize;
+    let delta: Vec<f64> = smooth
+        .iter()
+        .enumerate()
+        .map(|(index, value)| if index < lag { 0.0 } else { *value - smooth[index - lag] })
+        .collect();
+    let rise = robust_unit(&delta.iter().map(|value| value.max(0.0)).collect::<Vec<_>>());
+    let fall = robust_unit(&delta.iter().map(|value| (-value).max(0.0)).collect::<Vec<_>>());
+    let minimum_distance = lag.max(1);
+    for (response, kind) in [(&rise, 0_u32), (&fall, 1_u32)] {
+        for index in pick_peaks(response, minimum_distance, 0.78, 0.12) {
+            events.push(acoustic_event(index as f64 * HOP as f64 / SAMPLE_RATE as f64, 0.45 + 0.55 * response[index], kind, rms_db[index], delta[index], 0.0, 0.0));
+        }
+    }
+    let peak_baseline = moving_average(&smooth, 129);
+    let gate = max_value(&smooth) - 18.0;
+    let peak_response: Vec<f64> = smooth.iter().enumerate().map(|(index, value)| if *value >= gate { (*value - peak_baseline[index]).max(0.0) } else { 0.0 }).collect();
+    let peak_unit = robust_unit(&peak_response);
+    for index in pick_peaks(&peak_response, minimum_distance, 0.75, 0.08) {
+        events.push(acoustic_event(index as f64 * HOP as f64 / SAMPLE_RATE as f64, 0.45 + 0.55 * peak_unit[index], 2, rms_db[index], delta[index], 0.0, 0.0));
+    }
+
+    let spectral_unit = robust_unit(&spectral_flux);
+    let mel_unit = robust_unit(&mel_flux);
+    let hfc_unit = robust_unit(&hfc);
+    let onset: Vec<f64> = spectral_unit.iter().enumerate().map(|(index, value)| 0.7 * value + 0.2 * mel_unit[index] + 0.1 * hfc_unit[index]).collect();
+    for index in pick_peaks(&onset, (0.07 * SAMPLE_RATE as f64 / HOP as f64).round() as usize, 0.82, 0.12) {
+        events.push(acoustic_event(index as f64 * HOP as f64 / SAMPLE_RATE as f64, 0.45 + 0.55 * onset[index], 3, onset[index], spectral_flux[index], mel_flux[index], hfc[index]));
+    }
+    let density = moving_average(&onset, 43);
+    let context_window = (0.75 * SAMPLE_RATE as f64 / HOP as f64).round() as usize;
+    let context_delta: Vec<f64> = (0..density.len()).map(|index| {
+        if index < context_window || index + context_window >= density.len() { return 0.0; }
+        let before: f64 = density[index - context_window..index].iter().sum();
+        let after: f64 = density[index + 1..=index + context_window].iter().sum();
+        after / context_window as f64 - before / context_window as f64
+    }).collect();
+    let onset_entries: Vec<f64> = context_delta.iter().map(|value| value.max(0.0)).collect();
+    let onset_exits: Vec<f64> = context_delta.iter().map(|value| (-value).max(0.0)).collect();
+    for (response, kind) in [(&onset_entries, 4_u32), (&onset_exits, 5_u32)] {
+        let unit = robust_unit(response);
+        for index in pick_peaks(response, (0.4 * SAMPLE_RATE as f64 / HOP as f64).round() as usize, 0.78, 0.1) {
+            events.push(acoustic_event(index as f64 * HOP as f64 / SAMPLE_RATE as f64, 0.4 + 0.6 * unit[index], kind, onset[index], density[index] - context_delta[index] / 2.0, density[index] + context_delta[index] / 2.0, 0.0));
+        }
+    }
+
+    let peak = max_value(&rms_db);
+    let threshold = (-60.0_f64).max((-35.0_f64).min(peak - 38.0));
+    let minimum_silence = (0.16 * SAMPLE_RATE as f64 / HOP as f64).round() as usize;
+    let merge_gap = (0.08 * SAMPLE_RATE as f64 / HOP as f64).round() as usize;
+    let mut intervals: Vec<(usize, usize)> = Vec::new();
+    let mut start: Option<usize> = None;
+    for index in 0..=rms_db.len() {
+        let quiet = index < rms_db.len() && rms_db[index] <= threshold;
+        if quiet && start.is_none() { start = Some(index); }
+        if !quiet {
+            if let Some(left) = start.take() {
+                if index - left >= minimum_silence {
+                    if let Some(previous) = intervals.last_mut() {
+                        if left - previous.1 <= merge_gap { previous.1 = index; continue; }
+                    }
+                    intervals.push((left, index));
+                }
+            }
+        }
+    }
+    for (left, right) in intervals {
+        let mut values = rms_db[left..right].to_vec();
+        values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let median = values[values.len() / 2];
+        let kind = if values[(values.len() * 3 / 4).min(values.len() - 1)] <= -55.0 { 0.0 } else { 1.0 };
+        let duration_ms = (right - left) as f64 * HOP as f64 / SAMPLE_RATE as f64 * 1000.0;
+        let score = 0.45 + 0.2 * (duration_ms / 800.0).min(1.0);
+        events.push(acoustic_event(left as f64 * HOP as f64 / SAMPLE_RATE as f64, score, 6, median, duration_ms, threshold, kind));
+        events.push(acoustic_event((right * HOP) as f64 / SAMPLE_RATE as f64, score, 7, median, duration_ms, threshold, kind));
+    }
+
+    let pitch_frame = 4_096;
+    let pitch_hop = 1_024;
+    let decimation = 4;
+    let pitch_count = div_ceil(signal.len(), pitch_hop).max(1);
+    let min_lag = (SAMPLE_RATE / 1_000 / decimation).max(2);
+    let max_lag = (SAMPLE_RATE / 65 / decimation).min(pitch_frame / decimation - 2);
+    let mut f0 = Vec::with_capacity(pitch_count);
+    let mut confidence = Vec::with_capacity(pitch_count);
+    for frame in 0..pitch_count {
+        let start = frame as isize * pitch_hop as isize - pitch_frame as isize / 2;
+        let count = pitch_frame / decimation;
+        let mut values = vec![0.0; count];
+        let mean = (0..count).map(|index| frame_sample(signal, start, index * decimation)).sum::<f64>() / count as f64;
+        let mut energy = 0.0;
+        for (index, value) in values.iter_mut().enumerate() { *value = frame_sample(signal, start, index * decimation) - mean; energy += *value * *value; }
+        let mut best_lag = min_lag;
+        let mut best = -1.0;
+        for lag_value in min_lag..=max_lag {
+            let mut correlation = 0.0;
+            for index in lag_value..count { correlation += values[index] * values[index - lag_value]; }
+            let normalized = if energy > 1e-8 { correlation / energy } else { 0.0 };
+            if normalized > best { best = normalized; best_lag = lag_value; }
+        }
+        let mut score = best.clamp(0.0, 1.0);
+        if 10.0 * libm::log10((energy / count as f64).max(1e-12)) < -45.0 { score = 0.0; }
+        f0.push(SAMPLE_RATE as f64 / (best_lag * decimation) as f64);
+        confidence.push(score);
+    }
+    let reliable: Vec<bool> = f0.iter().enumerate().map(|(index, value)| confidence[index] >= 0.6 && *value >= 65.0 && *value <= 1_000.0).collect();
+    let mut change = vec![0.0; f0.len()];
+    for index in 4..f0.len() { if reliable[index] && reliable[index - 4] { change[index] = (12.0 * libm::log2(f0[index] / f0[index - 4])).abs(); } }
+    let change_unit = robust_unit(&change);
+    for index in pick_peaks(&change, (0.25 * SAMPLE_RATE as f64 / pitch_hop as f64).round() as usize, 0.70, 1.5) {
+        let delta_pitch = 12.0 * libm::log2(f0[index] / f0[index.saturating_sub(4)]);
+        events.push(acoustic_event(index as f64 * pitch_hop as f64 / SAMPLE_RATE as f64, 0.35 + 0.65 * change_unit[index], if delta_pitch >= 0.0 { 8 } else { 9 }, f0[index], delta_pitch, confidence[index], 1.0));
+    }
+    for index in 1..reliable.len() { if reliable[index] != reliable[index - 1] { events.push(acoustic_event(index as f64 * pitch_hop as f64 / SAMPLE_RATE as f64, 0.45, if reliable[index] { 10 } else { 11 }, f0[index], 0.0, confidence[index], if reliable[index] { 1.0 } else { 0.0 })); } }
+    events.sort_by(acoustic_event_sort);
+    events
 }
 
 fn estimated_bytes(length: usize) -> u64 {

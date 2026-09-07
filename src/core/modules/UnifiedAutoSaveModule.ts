@@ -465,6 +465,8 @@ export function createUnifiedAutoSaveModule(
           timeRange: item.timeRange,
           markers: item.markers,
           aiMarks: item.aiMarks,
+          anchorSource: item.anchorSource,
+          musicStructureOverlay: item.musicStructureOverlay,
           baseRenderConfig: item.baseRenderConfig, // ✅ 监听
           exRenderConfig: item.exRenderConfig, // ✅ 监听
           animation: item.animation, // ✅ 监听

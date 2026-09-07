@@ -118,6 +118,8 @@ export type MediaItemIdType<T extends MediaType> = T extends 'text' ? string | n
 
 export type AIMarkMode = 'none' | 'beat1' | 'beat1234'
 
+export type TimelineAnchorSource = 'none' | 'music-structure' | 'beat-this'
+
 export interface TimelineMarker {
   /** 原始媒体中的绝对帧位置，不随片段编辑而改变。 */
   sourceFrame: number
@@ -181,6 +183,8 @@ export interface UnifiedTimelineItemData<T extends MediaType = MediaType> {
   markers?: TimelineMarker[]
   /** AI 生成的完整节拍标记；未识别时为 undefined。 */
   aiMarks?: AIMarks
+  /** Which automatic anchor family is currently shown alongside manual markers. */
+  anchorSource?: TimelineAnchorSource
   /** 是否在当前音频片段的波形上绘制音乐结构色带。 */
   musicStructureOverlay?: MusicStructureOverlay
   // ==================== 配置（类型安全） ====================

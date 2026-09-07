@@ -3,6 +3,7 @@ import type {
   AIMarkMode,
   AIMarks,
   MusicStructureOverlay,
+  TimelineAnchorSource,
   UnifiedTimelineItemData,
 } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
@@ -41,6 +42,7 @@ import {
   RenameAssetCommand,
   MoveLibraryItemsCommand,
   UpdateAIMarksCommand,
+  UpdateTimelineAnchorSourceCommand,
   UpdateMusicStructureOverlayCommand,
   UpdateTimelineMarkersCommand,
 } from '@/core/modules/commands/timelineCommands'
@@ -601,6 +603,26 @@ export function useHistoryOperations(
     return updateAIMarksWithHistory(timelineItemId, undefined, historyLabels.clearAIMarks())
   }
 
+  async function setTimelineAnchorSourceWithHistory(
+    timelineItemId: string,
+    source: TimelineAnchorSource,
+  ): Promise<boolean> {
+    const timelineItem = getEditableTimelineItemOrWarn(timelineItemId, '修改自动锚点来源')
+    if (!timelineItem || timelineItem.anchorSource === source) {
+      return false
+    }
+
+    await unifiedHistoryModule.executeCommand(
+      new UpdateTimelineAnchorSourceCommand(
+        timelineItemId,
+        timelineItem.anchorSource,
+        source,
+        unifiedTimelineModule,
+      ),
+    )
+    return true
+  }
+
   async function setMusicStructureOverlayVisibleWithHistory(
     timelineItemId: string,
     visible: boolean,
@@ -1042,6 +1064,7 @@ export function useHistoryOperations(
     updateAIMarksWithHistory,
     setAIMarksModeWithHistory,
     clearAIMarksWithHistory,
+    setTimelineAnchorSourceWithHistory,
     setMusicStructureOverlayVisibleWithHistory,
     duplicateTimelineItemWithHistory,
     resizeTimelineItemWithHistory,

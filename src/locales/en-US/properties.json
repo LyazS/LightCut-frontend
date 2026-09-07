@@ -267,6 +267,45 @@
         "analyzing": "Analyzing music structure",
         "analyzedAt": "Analyzed",
         "emptySegments": "No clear music sections were detected",
+        "anchors": {
+          "title": "Editing Anchors",
+          "count": "{count}",
+          "strength": {
+            "low": "Low strength",
+            "medium": "Medium strength",
+            "high": "High strength"
+          },
+          "eventLabels": {
+            "anchor": "Music anchor",
+            "sectionEntry": "Section entry",
+            "sectionExit": "Section exit",
+            "downbeat": "Downbeat",
+            "beat": "Beat",
+            "energyRise": "Energy rise",
+            "energyFall": "Energy fall",
+            "energyPeak": "Energy peak",
+            "onsetEvent": "Onset change",
+            "onsetEntry": "Onset entry",
+            "onsetExit": "Onset exit",
+            "silenceEnter": "Silence entry",
+            "silenceExit": "Silence exit",
+            "pitchRise": "Pitch rise",
+            "pitchFall": "Pitch fall",
+            "pitchEntry": "Pitch entry",
+            "pitchExit": "Pitch exit"
+          },
+          "roleLabels": {
+            "sectionEntry": "Section entry",
+            "sectionExit": "Section exit",
+            "buildUp": "Build up",
+            "impact": "Impact",
+            "instrumentChange": "Instrument change",
+            "pause": "Pause",
+            "release": "Release",
+            "melodicTurn": "Melodic turn",
+            "rhythmScaffold": "Rhythm scaffold"
+          }
+        },
         "segmentLabels": {
           "start": "Start",
           "end": "End",

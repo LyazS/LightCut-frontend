@@ -97,7 +97,7 @@ export class MusicStructureAnalysisResolver
       onProgress: (event) => this.updateProgress(ctx, mediaItem, event),
     })
     const musicAnalysis: MusicAnalysisMetadata = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       pipelineVersion: MUSIC_ANALYSIS_PIPELINE_VERSION,
       analyzedAt: new Date().toISOString(),
       ...result,
@@ -118,10 +118,6 @@ export class MusicStructureAnalysisResolver
       message: `音乐结构分析完成: ${mediaItem.name}`,
     })
     return { mediaId: mediaItem.id, musicAnalysis }
-  }
-
-  async cancel(ctx: ResolveContext<MusicStructureAnalysisInput>): Promise<void> {
-    void ctx
   }
 
   private getAudioCapableMedia(mediaId: string): UnifiedMediaItemData {

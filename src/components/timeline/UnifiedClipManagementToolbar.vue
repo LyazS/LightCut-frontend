@@ -122,10 +122,12 @@ import { RiFlagFill, RiFlagOffLine } from '@remixicon/vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
 import { useBeatMarkDetection } from '@/core/composables/useBeatMarkDetection'
+import { useMusicStructureAnalysis } from '@/core/composables/useMusicStructureAnalysis'
 import type { AIMarkMode } from '@/core/timelineitem/model/timelineItem'
 import {
   MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
   MUSIC_ANALYSIS_MIN_DURATION_SECONDS,
+  MUSIC_ANALYSIS_PIPELINE_VERSION,
 } from '@/core/utils/music-analysis'
 import { formatFileSize, framesToSeconds } from '@/core/utils/timeUtils'
 import { countOverlappingItems } from '@/core/utils/timeOverlapUtils'
@@ -140,6 +142,7 @@ import { IconComponents, getSnapIcon } from '@/constants/iconComponents'
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 const { isDetectingBeatMarks, detectBeatMarks } = useBeatMarkDetection()
+const { isAnalyzingMusicStructure, analyzeMusicStructure } = useMusicStructureAnalysis()
 
 const timelineItems = computed(() => unifiedStore.timelineItems)
 
@@ -260,7 +263,10 @@ const isAIMarkDetectionReady = computed(() => {
 
 const isAIMarkerButtonDisabled = computed(
   () =>
-    !supportsAIMarkDetection.value || !isAIMarkDetectionReady.value || isDetectingBeatMarks.value,
+    !supportsAIMarkDetection.value ||
+    !isAIMarkDetectionReady.value ||
+    isDetectingBeatMarks.value ||
+    isAnalyzingMusicStructure.value,
 )
 
 const aiMarksStatus = computed(() => {
@@ -270,14 +276,12 @@ const aiMarksStatus = computed(() => {
 
 const selectedMusicAnalysis = computed(() => {
   const mediaItemId = selectedTimelineItem.value?.mediaItemId
-  return typeof mediaItemId === 'string'
-    ? unifiedStore.getMediaItem(mediaItemId)?.metadata?.musicAnalysis
-    : undefined
+  const analysis =
+    typeof mediaItemId === 'string'
+      ? unifiedStore.getMediaItem(mediaItemId)?.metadata?.musicAnalysis
+      : undefined
+  return analysis?.pipelineVersion === MUSIC_ANALYSIS_PIPELINE_VERSION ? analysis : undefined
 })
-
-const isMusicStructureOverlayVisible = computed(
-  () => selectedTimelineItem.value?.musicStructureOverlay?.visible === true,
-)
 
 const supportsMusicStructureOverlay = computed(
   () => selectedTimelineItem.value?.mediaType === 'audio',
@@ -303,9 +307,7 @@ const canStartMusicStructureAnalysis = computed(() => {
 const isMusicStructureMenuDisabled = computed(
   () =>
     !supportsMusicStructureOverlay.value ||
-    (!isMusicStructureOverlayVisible.value &&
-      !selectedMusicAnalysis.value &&
-      !canStartMusicStructureAnalysis.value),
+    (!selectedMusicAnalysis.value && !canStartMusicStructureAnalysis.value),
 )
 
 const aiMarkerButtonTooltip = computed(() =>
@@ -332,14 +334,13 @@ async function handleAIMarkModeSelect(value: string | number) {
   if (!selectedId || !isAIMarkMode(value)) return
 
   if (value === 'none') {
-    if (selectedTimelineItem.value?.aiMarks) {
-      await unifiedStore.setAIMarksModeWithHistory(selectedId, value)
-    }
+    await unifiedStore.setTimelineAnchorSourceWithHistory(selectedId, 'none')
     return
   }
 
   if (aiMarksStatus.value === 'available') {
     await unifiedStore.setAIMarksModeWithHistory(selectedId, value)
+    await unifiedStore.setTimelineAnchorSourceWithHistory(selectedId, 'beat-this')
     return
   }
 
@@ -351,38 +352,15 @@ async function handleAIMarkModeSelect(value: string | number) {
 async function toggleSelectedClipMusicStructure(): Promise<void> {
   const timelineItem = selectedTimelineItem.value
   if (!timelineItem || typeof timelineItem.mediaItemId !== 'string') return
-
-  if (timelineItem.musicStructureOverlay?.visible) {
-    await unifiedStore.setMusicStructureOverlayVisibleWithHistory(timelineItem.id, false)
-    return
-  }
-
   if (isMusicStructureMenuDisabled.value) return
+  const analysis = selectedMusicAnalysis.value ?? (await analyzeMusicStructure(timelineItem.mediaItemId))
+  if (!analysis) return
 
-  const wasUpdated = await unifiedStore.setMusicStructureOverlayVisibleWithHistory(
-    timelineItem.id,
-    true,
-  )
-  if (!wasUpdated || selectedMusicAnalysis.value) return
+  const currentTimelineItem = unifiedStore.getTimelineItem(timelineItem.id)
+  if (!currentTimelineItem || currentTimelineItem.mediaItemId !== timelineItem.mediaItemId) return
 
-  const mediaItem = unifiedStore.getMediaItem(timelineItem.mediaItemId)
-  if (!mediaItem) return
-
-  unifiedStore.messageSuccess(t('media.musicAnalysisStarted', { name: mediaItem.name }))
-  try {
-    await unifiedStore.ensureMusicStructureAnalysis(mediaItem.id)
-    unifiedStore.messageSuccess(t('media.musicAnalysisSuccess', { name: mediaItem.name }))
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return
-
-    console.error('音乐结构分析失败:', error)
-    unifiedStore.messageError(
-      t('media.musicAnalysisFailed', {
-        name: mediaItem.name,
-        error: error instanceof Error ? error.message : t('media.unknown'),
-      }),
-    )
-  }
+  await unifiedStore.setTimelineAnchorSourceWithHistory(timelineItem.id, 'music-structure')
+  await unifiedStore.setMusicStructureOverlayVisibleWithHistory(timelineItem.id, true)
 }
 
 const markerOffsetAtPlayhead = computed(() => {

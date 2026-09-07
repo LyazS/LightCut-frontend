@@ -1,6 +1,6 @@
 import type { MusicAnalysisMetadata } from '@/core/mediaitem/types'
 
-export const MUSIC_ANALYSIS_PIPELINE_VERSION = 'allinone-web-v1'
+export const MUSIC_ANALYSIS_PIPELINE_VERSION = 'allinone-web-v2'
 export const MUSIC_ANALYSIS_MIN_DURATION_SECONDS = 76
 export const MUSIC_ANALYSIS_MAX_DURATION_SECONDS = 660
 export const MUSIC_ANALYSIS_SAMPLE_RATE = 44_100
@@ -12,6 +12,31 @@ export type MusicAnalysisStage =
   | 'extracting-features'
   | 'running-ensemble'
   | 'decoding-structure'
+  | 'detecting-acoustics'
+  | 'building-anchors'
+
+export type AcousticSource =
+  | 'energy_change'
+  | 'onset_change'
+  | 'silence'
+  | 'pitch_change'
+
+export interface AcousticEvent {
+  time: number
+  source: AcousticSource
+  eventLabel: string
+  score: number
+  signals: Record<string, number | string | boolean>
+  detector: string
+}
+
+export interface MusicAnalysisAnchor {
+  id: string
+  time: number
+  eventLabel: string
+  roles: string[]
+  strength: number
+}
 
 export interface MusicAnalysisProgressEvent {
   stage: MusicAnalysisStage

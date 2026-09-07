@@ -8,6 +8,7 @@ import type { Raw } from 'vue'
 import type { UnifiedDataSourceData } from '@/core/datasource/core/DataSourceTypes'
 import { BunnyMedia } from '../mediabunny/bunny-media'
 import type { AudioWaveformLOD } from '../audiowaveform/types'
+import type { MusicAnalysisAnchor } from '../utils/music-analysis/types'
 // ==================== 类型定义 ====================
 
 /**
@@ -95,7 +96,7 @@ export interface MusicAnalysisSegment {
  * belong to JobRuntime; this object only records a completed analysis.
  */
 export interface MusicAnalysisMetadata {
-  schemaVersion: 1
+  schemaVersion: 1 | 2
   pipelineVersion: string
   analyzedAt: string
   input: {
@@ -108,6 +109,8 @@ export interface MusicAnalysisMetadata {
   downbeats: number[]
   beatPositions: number[]
   segments: MusicAnalysisSegment[]
+  /** Compact, deterministic anchors intended for timeline editing. */
+  editingAnchors?: MusicAnalysisAnchor[]
 }
 
 export type MediaIndexStatus =

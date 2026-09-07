@@ -90,6 +90,68 @@
       <div v-else class="music-analysis-empty-segments">
         {{ t('properties.mediaItem.musicAnalysis.emptySegments') }}
       </div>
+
+      <details
+        v-if="displayAnchors.length > 0"
+        class="music-analysis-anchors"
+        :open="anchorsExpanded"
+        @toggle="handleAnchorToggle"
+      >
+        <summary class="music-analysis-anchors__summary">
+          <span class="music-analysis-anchors__title">
+            {{ t('properties.mediaItem.musicAnalysis.anchors.title') }}
+          </span>
+          <span class="music-analysis-anchors__count">
+            {{
+              t('properties.mediaItem.musicAnalysis.anchors.count', {
+                count: displayAnchors.length,
+              })
+            }}
+          </span>
+          <component
+            :is="IconComponents.DROPDOWN"
+            size="14px"
+            class="music-analysis-anchors__chevron"
+            aria-hidden="true"
+          />
+        </summary>
+        <div class="music-analysis-anchor-list" role="list">
+          <div
+            v-for="anchor in displayAnchors"
+            :key="anchor.id"
+            class="music-analysis-anchor-row"
+            role="listitem"
+          >
+            <time class="music-analysis-anchor-row__time" :datetime="`${anchor.time}s`">
+              {{ formatAnchorTime(anchor.time) }}
+            </time>
+            <div class="music-analysis-anchor-row__content">
+              <span class="music-analysis-anchor-row__event">
+                {{ formatAnchorEventLabel(anchor.eventLabel) }}
+              </span>
+              <span v-if="anchor.roles.length" class="music-analysis-anchor-row__roles">
+                {{ formatAnchorRoles(anchor.roles) }}
+              </span>
+            </div>
+            <span
+              class="music-analysis-anchor-row__strength"
+              :aria-label="anchorStrengthLabel(anchor.strength)"
+              :title="anchorStrengthLabel(anchor.strength)"
+            >
+              <span
+                v-for="bar in 3"
+                :key="bar"
+                class="music-analysis-anchor-row__strength-bar"
+                :class="{
+                  'music-analysis-anchor-row__strength-bar--active':
+                    bar <= anchorStrengthBars(anchor.strength),
+                }"
+                aria-hidden="true"
+              />
+            </span>
+          </div>
+        </div>
+      </details>
     </template>
 
     <div v-else class="music-analysis-not-started">
@@ -112,21 +174,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { NButton } from 'naive-ui'
 import { IconComponents } from '@/constants/iconComponents'
 import { useAppI18n } from '@/core/composables/useI18n'
+import { useMusicStructureAnalysis } from '@/core/composables/useMusicStructureAnalysis'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { MUSIC_STRUCTURE_ANALYSIS_RESOURCE_TYPE, type TaskView } from '@/core/jobs'
-import type {
-  MusicAnalysisMetadata,
-  MusicAnalysisSegment,
-  UnifiedMediaItemData,
-} from '@/core/mediaitem/types'
+import type { MusicAnalysisMetadata, UnifiedMediaItemData } from '@/core/mediaitem/types'
 import {
   getMusicAnalysisSegmentColorKey,
   MUSIC_ANALYSIS_MAX_DURATION_SECONDS,
   MUSIC_ANALYSIS_MIN_DURATION_SECONDS,
+  type MusicAnalysisAnchor,
 } from '@/core/utils/music-analysis'
 
 interface Props {
@@ -136,10 +196,12 @@ interface Props {
 const props = defineProps<Props>()
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
+const { analyzeMusicStructure } = useMusicStructureAnalysis()
 
 const analysis = computed<MusicAnalysisMetadata | undefined>(
   () => props.mediaItem.metadata?.musicAnalysis,
 )
+const anchorsExpanded = ref(false)
 const hasAnalysis = computed(() => Boolean(analysis.value))
 const musicAnalysisTask = computed<TaskView | undefined>(() =>
   unifiedStore.jobTaskViews.find(
@@ -173,6 +235,27 @@ const displaySegments = computed(() =>
       Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start,
   ),
 )
+const displayAnchors = computed<MusicAnalysisAnchor[]>(() =>
+  (analysis.value?.editingAnchors ?? [])
+    .filter(
+      (anchor) =>
+        typeof anchor.id === 'string' &&
+        Number.isFinite(anchor.time) &&
+        anchor.time >= 0 &&
+        typeof anchor.eventLabel === 'string' &&
+        Array.isArray(anchor.roles) &&
+        Number.isFinite(anchor.strength),
+    )
+    .slice()
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id)),
+)
+
+watch(
+  () => props.mediaItem.id,
+  () => {
+    anchorsExpanded.value = false
+  },
+)
 const progressPercent = computed<number | null>(() => {
   const progress = musicAnalysisTask.value?.progress
   if (typeof progress !== 'number' || !Number.isFinite(progress)) return null
@@ -201,6 +284,20 @@ function formatMusicTime(seconds: number): string {
   return hours > 0 ? `${hours.toString().padStart(2, '0')}:${minuteSecond}` : minuteSecond
 }
 
+function formatAnchorTime(seconds: number): string {
+  const totalCentiseconds = Math.max(0, Math.round(seconds * 100))
+  const hours = Math.floor(totalCentiseconds / 360_000)
+  const minutes = Math.floor((totalCentiseconds % 360_000) / 6_000)
+  const remainingCentiseconds = totalCentiseconds % 6_000
+  const wholeSeconds = Math.floor(remainingCentiseconds / 100)
+  const centiseconds = remainingCentiseconds % 100
+  const minuteSecond = `${minutes.toString().padStart(2, '0')}:${wholeSeconds
+    .toString()
+    .padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`
+
+  return hours > 0 ? `${hours.toString().padStart(2, '0')}:${minuteSecond}` : minuteSecond
+}
+
 function formatSegmentLabel(label: string): string {
   const key = MUSIC_ANALYSIS_SEGMENT_LABEL_KEYS[label]
   return key ? t(`properties.mediaItem.musicAnalysis.segmentLabels.${key}`) : label
@@ -210,25 +307,39 @@ function segmentColorClass(label: string): string {
   return `music-analysis-segment--${getMusicAnalysisSegmentColorKey(label)}`
 }
 
+function formatAnchorEventLabel(label: string): string {
+  const key = MUSIC_ANALYSIS_ANCHOR_EVENT_LABEL_KEYS[label]
+  return key ? t(`properties.mediaItem.musicAnalysis.anchors.eventLabels.${key}`) : label
+}
+
+function formatAnchorRoles(roles: string[]): string {
+  return roles
+    .map((role) => {
+      const key = MUSIC_ANALYSIS_ANCHOR_ROLE_LABEL_KEYS[role]
+      return key ? t(`properties.mediaItem.musicAnalysis.anchors.roleLabels.${key}`) : role
+    })
+    .join(' · ')
+}
+
+function anchorStrengthBars(strength: number): number {
+  if (strength >= 0.72) return 3
+  if (strength >= 0.4) return 2
+  return 1
+}
+
+function anchorStrengthLabel(strength: number): string {
+  const level = anchorStrengthBars(strength)
+  const key = level === 3 ? 'high' : level === 2 ? 'medium' : 'low'
+  return t(`properties.mediaItem.musicAnalysis.anchors.strength.${key}`)
+}
+
+function handleAnchorToggle(event: Event): void {
+  anchorsExpanded.value = (event.currentTarget as HTMLDetailsElement).open
+}
+
 async function handleStartAnalysis(force: boolean): Promise<void> {
   if (!canStartAnalysis.value) return
-
-  const mediaItem = props.mediaItem
-  unifiedStore.messageSuccess(t('media.musicAnalysisStarted', { name: mediaItem.name }))
-  try {
-    await unifiedStore.ensureMusicStructureAnalysis(mediaItem.id, force)
-    unifiedStore.messageSuccess(t('media.musicAnalysisSuccess', { name: mediaItem.name }))
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return
-
-    console.error('音乐结构分析失败:', error)
-    unifiedStore.messageError(
-      t('media.musicAnalysisFailed', {
-        name: mediaItem.name,
-        error: error instanceof Error ? error.message : t('media.unknown'),
-      }),
-    )
-  }
+  await analyzeMusicStructure(props.mediaItem.id, force)
 }
 
 async function handleCancelAnalysis(): Promise<void> {
@@ -252,6 +363,38 @@ const MUSIC_ANALYSIS_SEGMENT_LABEL_KEYS: Record<string, string> = {
   solo: 'solo',
   verse: 'verse',
   chorus: 'chorus',
+}
+
+const MUSIC_ANALYSIS_ANCHOR_EVENT_LABEL_KEYS: Record<string, string> = {
+  anchor: 'anchor',
+  section_entry: 'sectionEntry',
+  section_exit: 'sectionExit',
+  downbeat: 'downbeat',
+  beat: 'beat',
+  energy_rise: 'energyRise',
+  energy_fall: 'energyFall',
+  energy_peak: 'energyPeak',
+  onset_event: 'onsetEvent',
+  onset_entry: 'onsetEntry',
+  onset_exit: 'onsetExit',
+  silence_enter: 'silenceEnter',
+  silence_exit: 'silenceExit',
+  pitch_rise: 'pitchRise',
+  pitch_fall: 'pitchFall',
+  pitch_entry: 'pitchEntry',
+  pitch_exit: 'pitchExit',
+}
+
+const MUSIC_ANALYSIS_ANCHOR_ROLE_LABEL_KEYS: Record<string, string> = {
+  section_entry: 'sectionEntry',
+  section_exit: 'sectionExit',
+  build_up: 'buildUp',
+  impact: 'impact',
+  instrument_change: 'instrumentChange',
+  pause: 'pause',
+  release: 'release',
+  melodic_turn: 'melodicTurn',
+  rhythm_scaffold: 'rhythmScaffold',
 }
 </script>
 
@@ -466,6 +609,130 @@ const MUSIC_ANALYSIS_SEGMENT_LABEL_KEYS: Record<string, string> = {
   background: var(--color-bg-quaternary);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+}
+
+.music-analysis-anchors {
+  border-top: 1px solid color-mix(in srgb, var(--color-border-default) 58%, transparent);
+}
+
+.music-analysis-anchors__summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  user-select: none;
+}
+
+.music-analysis-anchors__summary::-webkit-details-marker {
+  display: none;
+}
+
+.music-analysis-anchors__title {
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.music-analysis-anchors__count {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.music-analysis-anchors__chevron {
+  margin-left: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  transition: transform 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.music-analysis-anchors[open] .music-analysis-anchors__chevron {
+  transform: rotate(180deg);
+}
+
+.music-analysis-anchor-list {
+  display: flex;
+  max-height: 248px;
+  overflow-y: auto;
+  flex-direction: column;
+  border-top: 1px solid color-mix(in srgb, var(--color-border-default) 46%, transparent);
+}
+
+.music-analysis-anchor-row {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(0, 1fr) 22px;
+  align-items: center;
+  min-height: 36px;
+  gap: var(--spacing-sm);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border-default) 46%, transparent);
+}
+
+.music-analysis-anchor-row:last-child {
+  border-bottom: none;
+}
+
+.music-analysis-anchor-row__time {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.music-analysis-anchor-row__content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.music-analysis-anchor-row__event,
+.music-analysis-anchor-row__roles {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-analysis-anchor-row__event {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.music-analysis-anchor-row__roles {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.music-analysis-anchor-row__strength {
+  display: flex;
+  height: 14px;
+  align-items: end;
+  justify-content: end;
+  gap: 2px;
+}
+
+.music-analysis-anchor-row__strength-bar {
+  width: 3px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--color-text-secondary) 28%, transparent);
+}
+
+.music-analysis-anchor-row__strength-bar:nth-child(1) {
+  height: 4px;
+}
+
+.music-analysis-anchor-row__strength-bar:nth-child(2) {
+  height: 7px;
+}
+
+.music-analysis-anchor-row__strength-bar:nth-child(3) {
+  height: 10px;
+}
+
+.music-analysis-anchor-row__strength-bar--active {
+  background: var(--color-status-processing);
 }
 
 .music-analysis-not-started {
