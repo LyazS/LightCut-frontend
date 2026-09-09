@@ -81,6 +81,7 @@ export interface MediaGenerationRequest {
 export interface TaskResultData {
   /** 生成的媒体文件 URL */
   url: string
+  music_semantic_result?: Record<string, unknown>
 }
 
 /**

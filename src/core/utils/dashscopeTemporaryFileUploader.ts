@@ -15,7 +15,7 @@ interface UploadPolicyResponse {
   data: UploadPolicyData
 }
 
-export type DashScopeUploadPurpose = 'tagging' | 'embedding' | 'inspection'
+export type DashScopeUploadPurpose = 'tagging' | 'embedding' | 'inspection' | 'music-semantic'
 
 export interface DashScopeUploadResult {
   success: boolean

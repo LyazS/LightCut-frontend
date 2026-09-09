@@ -55,8 +55,22 @@ export function framesToSeconds(frames: number): number {
  * @param seconds 秒数
  * @returns 帧数（向下取整）
  */
-export function secondsToFrames(seconds: number): number {
-  return Math.floor(seconds * TimeConstants.FRAME_RATE)
+export function secondsToFrames(
+  seconds: number,
+  roundingMode: 'floor' | 'ceil' | 'round' = 'floor',
+): number {
+  const frames = seconds * TimeConstants.FRAME_RATE
+  if (roundingMode === 'ceil') return Math.ceil(frames)
+  if (roundingMode === 'round') return Math.round(frames)
+  return Math.floor(frames)
+}
+
+/** Convert persisted floating-point seconds to the shared HH:MM:SS+FF format. */
+export function secondsToTimecode(
+  seconds: number,
+  roundingMode: 'floor' | 'ceil' | 'round' = 'round',
+): string {
+  return framesToTimecode(secondsToFrames(Math.max(0, seconds), roundingMode))
 }
 
 /**

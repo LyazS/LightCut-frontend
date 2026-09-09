@@ -4,7 +4,11 @@
  */
 
 import { QUALITY_MEDIUM } from 'mediabunny'
-import type { AudioMediaConfig, UnifiedTimelineItemData, VideoMediaConfig } from '@/core/timelineitem/model/timelineItem'
+import type {
+  AudioMediaConfig,
+  UnifiedTimelineItemData,
+  VideoMediaConfig,
+} from '@/core/timelineitem/model/timelineItem'
 import { createDefaultTimelineExtraRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { DEFAULT_BLEND_MODE } from '@/core/timelineitem/model/blendMode'
@@ -227,6 +231,103 @@ async function exportAudioMediaItem(
   return new Blob([oriFile], { type: oriFile.type })
 }
 
+async function createAudioExportTimelineItem(
+  mediaItem: UnifiedMediaItemData,
+  startFrame: number,
+  endFrame: number,
+): Promise<UnifiedTimelineItemData<'video' | 'audio'>> {
+  if (mediaItem.mediaType !== 'audio' && mediaItem.mediaType !== 'video') {
+    throw new Error(`不支持从 ${mediaItem.mediaType} 素材导出音频`)
+  }
+
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+  await bunnyMedia.ready
+  const durationInFrames = Number(bunnyMedia.durationN)
+  const clipStartTime = Math.max(0, Math.min(durationInFrames, Math.floor(startFrame)))
+  const clipEndTime = Math.max(clipStartTime, Math.min(durationInFrames, Math.ceil(endFrame)))
+  if (clipEndTime <= clipStartTime) {
+    throw new Error('音频导出范围无效')
+  }
+  return {
+    id: 'temp-audio-export-item',
+    mediaType: mediaItem.mediaType,
+    mediaItemId: mediaItem.id,
+    trackId: 'temp-audio-track',
+    timelineStatus: 'ready',
+    timeRange: {
+      timelineStartTime: 0,
+      timelineEndTime: clipEndTime - clipStartTime,
+      clipStartTime,
+      clipEndTime,
+    },
+    baseRenderConfig:
+      mediaItem.mediaType === 'video'
+        ? {
+            visual: {
+              x: 0,
+              y: 0,
+              width: bunnyMedia.width,
+              height: bunnyMedia.height,
+              rotation: 0,
+              blendIntensity: 1,
+              blendMode: DEFAULT_BLEND_MODE,
+              proportionalScale: true,
+            },
+            audio: { volume: 1, isMuted: false },
+          }
+        : { audio: { volume: 1, isMuted: false } },
+    exRenderConfig: createDefaultTimelineExtraRenderConfig(),
+    runtime: {
+      exRenderConfig: createDefaultTimelineExtraRenderConfig(),
+      isInitialized: true,
+    },
+  }
+}
+
+/** Export an MP3 audio track for either an audio asset or a video asset. */
+export async function exportMediaItemAudio(
+  mediaItem: UnifiedMediaItemData,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  const bunnyMedia = mediaItem.runtime.bunny?.bunnyMedia
+  if (!bunnyMedia) {
+    throw new Error('媒体项目未就绪：bunnyMedia 不存在')
+  }
+  await bunnyMedia.ready
+  const timelineItem = await createAudioExportTimelineItem(
+    mediaItem,
+    0,
+    Number(bunnyMedia.durationN),
+  )
+  return exportAudioTimelineItem(
+    timelineItem,
+    (id) => (id === mediaItem.id ? mediaItem : undefined),
+    onProgress,
+  )
+}
+
+/** Export a frame-aligned MP3 window from an audio or video asset. */
+export async function exportMediaItemAudioWindow(
+  mediaItem: UnifiedMediaItemData,
+  startSeconds: number,
+  endSeconds: number,
+  onProgress?: (progress: number) => void,
+): Promise<Blob> {
+  const timelineItem = await createAudioExportTimelineItem(
+    mediaItem,
+    Math.floor(startSeconds * RENDERER_FPS),
+    Math.ceil(endSeconds * RENDERER_FPS),
+  )
+  return exportAudioTimelineItem(
+    timelineItem,
+    (id) => (id === mediaItem.id ? mediaItem : undefined),
+    onProgress,
+  )
+}
+
 export async function exportMediaItem(options: ExportMediaItemOptions): Promise<Blob> {
   const { mediaItem, onProgress, frameRate, outputWidth, outputHeight } = options
   const sizeOptions =
@@ -437,7 +538,15 @@ async function exportAudioTimelineItem(
 }
 
 export async function exportTimelineItem(options: ExportTimelineItemOptions): Promise<Blob> {
-  const { timelineItem, onProgress, getMediaItem, frameRate, exportType, outputWidth, outputHeight } = options
+  const {
+    timelineItem,
+    onProgress,
+    getMediaItem,
+    frameRate,
+    exportType,
+    outputWidth,
+    outputHeight,
+  } = options
 
   if (timelineItem.mediaType === 'image') {
     return await exportImageTimelineItem(timelineItem, getMediaItem, onProgress)
@@ -451,16 +560,10 @@ export async function exportTimelineItem(options: ExportTimelineItemOptions): Pr
         onProgress,
       )
     }
-    return await exportVideoTimelineItem(
-      timelineItem,
-      getMediaItem,
-      onProgress,
-      frameRate,
-      {
-        outputWidth,
-        outputHeight,
-      },
-    )
+    return await exportVideoTimelineItem(timelineItem, getMediaItem, onProgress, frameRate, {
+      outputWidth,
+      outputHeight,
+    })
   }
 
   if (timelineItem.mediaType === 'audio') {
@@ -484,7 +587,14 @@ export interface ExportVideoFramesOptions {
 }
 
 export async function exportVideoFrames(options: ExportVideoFramesOptions): Promise<Blob[]> {
-  const { timelineItem, getMediaItem, timestampsMs, outputWidth, outputHeight, format = 'png' } = options
+  const {
+    timelineItem,
+    getMediaItem,
+    timestampsMs,
+    outputWidth,
+    outputHeight,
+    format = 'png',
+  } = options
 
   const mediaItem = getMediaItem(timelineItem.mediaItemId)
   if (!mediaItem || mediaItem.mediaType !== 'video') {

@@ -49,6 +49,24 @@ export {
   type MusicStructureAnalysisResult,
 } from './resolvers/MusicStructureAnalysisResolver'
 export {
+  MUSIC_SEMANTIC_TASK_SUBMIT_RESOURCE_TYPE,
+  MUSIC_SEMANTIC_TASK_COMPLETE_RESOURCE_TYPE,
+  MUSIC_SEMANTIC_METADATA_WRITEBACK_RESOURCE_TYPE,
+  createMusicSemanticTaskSubmitRequest,
+  createMusicSemanticTaskCompleteRequest,
+  createMusicSemanticMetadataWritebackRequest,
+  canResumeMusicSemanticFromRemote,
+  shouldRecoverMusicSemantic,
+  setMusicSemanticMetadata,
+  persistMusicSemantic,
+  type MusicSemanticModule,
+  type MusicSemanticTaskSubmitResult,
+  type MusicSemanticTaskCompleteResult,
+} from './resolvers/musicSemanticShared'
+export { MusicSemanticTaskSubmitResolver, createMusicSemanticTaskSubmitResolver } from './resolvers/MusicSemanticTaskSubmitResolver'
+export { MusicSemanticTaskCompleteResolver, createMusicSemanticTaskCompleteResolver } from './resolvers/MusicSemanticTaskCompleteResolver'
+export { MusicSemanticMetadataWritebackResolver, createMusicSemanticMetadataWritebackResolver } from './resolvers/MusicSemanticMetadataWritebackResolver'
+export {
   canResumeMediaIndexingFromRemote,
   createVideoSceneSegmentsRequest,
   createVideoSegmentExportsRequest,

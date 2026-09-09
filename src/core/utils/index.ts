@@ -49,6 +49,7 @@ export {
   // 时间码转换函数
   framesToSeconds,
   secondsToFrames,
+  secondsToTimecode,
   framesToMicroseconds,
   microsecondsToFrames,
   framesToTimecode,

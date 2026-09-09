@@ -35,6 +35,7 @@ const VISIBLE_ROOT_TYPES = new Set([
   'media-ready',
   'media-index-metadata-writeback',
   'music-structure-analysis',
+  'music-semantic-metadata-writeback',
   'ai-generated-media',
   'asr-subtitles',
   'effect-template-ready',
@@ -88,6 +89,8 @@ function formatTaskTitle(task: TaskView) {
       return `${t('editor.taskCenter.titles.mediaIndexing')}：${name}`
     case 'music-structure-analysis':
       return `${t('media.musicAnalysisTaskTitle')}：${name}`
+    case 'music-semantic-metadata-writeback':
+      return `${t('editor.taskCenter.titles.musicSemantic')}：${name}`
     case 'asr-subtitles':
       return `${t('editor.taskCenter.titles.asrSubtitles')}：${name}`
     case 'effect-template-ready':
@@ -119,6 +122,7 @@ function resolveTaskObjectName(task: TaskView) {
     case 'media-ready':
     case 'media-index-metadata-writeback':
     case 'music-structure-analysis':
+    case 'music-semantic-metadata-writeback':
     case 'ai-generated-media':
       return unifiedStore.getMediaItem(key)?.name || key
     case 'effect-template-ready':

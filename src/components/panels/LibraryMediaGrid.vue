@@ -798,6 +798,22 @@ const currentMenuItems = computed((): MenuItem[] => {
             },
           ] satisfies MenuItem[])
         : []),
+      ...(canStartMusicSemanticAnalysis(target)
+        ? ([
+            { type: 'separator' as const },
+            {
+              label: t('media.musicSemanticAnalysis'),
+              icon: IconComponents.MUSIC,
+              onClick: handleStartMusicSemanticAnalysis,
+            },
+            {
+              label: t('media.musicSemanticAnalysisCancel'),
+              icon: IconComponents.CLOSE,
+              onClick: handleCancelMusicSemanticAnalysis,
+              disabled: !canCancelMusicSemanticAnalysis(target),
+            },
+          ] satisfies MenuItem[])
+        : []),
       ...(getMediaItem(target.id)
         ? ([
             { type: 'separator' as const },
@@ -1818,6 +1834,34 @@ async function handleCancelMusicStructureAnalysis(): Promise<void> {
   } else {
     unifiedStore.messageWarning(t('media.musicAnalysisCancelFailed', { name: mediaItem.name }))
   }
+}
+
+function canStartMusicSemanticAnalysis(item: DisplayItem): boolean {
+  if (item.type !== 'asset') return false
+  const mediaItem = getMediaItem(item.id)
+  return Boolean(mediaItem && (mediaItem.mediaType === 'audio' || mediaItem.mediaType === 'video'))
+}
+
+function canCancelMusicSemanticAnalysis(item: DisplayItem): boolean {
+  if (item.type !== 'asset') return false
+  const mediaItem = getMediaItem(item.id)
+  return mediaItem?.metadata?.musicSemantic?.status === 'pending'
+}
+
+async function handleStartMusicSemanticAnalysis(): Promise<void> {
+  if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'asset') return
+  showContextMenu.value = false
+  await unifiedStore.ensureMusicSemanticAnalysis(contextMenuTarget.value.id).catch((error) => {
+    unifiedStore.messageError(
+      error instanceof Error ? error.message : t('media.musicSemanticAnalysisFailed'),
+    )
+  })
+}
+
+async function handleCancelMusicSemanticAnalysis(): Promise<void> {
+  if (!contextMenuTarget.value || contextMenuTarget.value.type !== 'asset') return
+  showContextMenu.value = false
+  await unifiedStore.cancelMusicSemanticAnalysis(contextMenuTarget.value.id)
 }
 
 /**

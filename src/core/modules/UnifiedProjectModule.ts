@@ -18,7 +18,7 @@ import {
   parseEffectPackageId,
   type EffectPackageIdentity,
 } from '@/core/effect-template/commonTypes'
-import { shouldRecoverMediaIndexing } from '@/core/jobs'
+import { shouldRecoverMediaIndexing, shouldRecoverMusicSemantic } from '@/core/jobs'
 import { useProjectThumbnailService } from '@/core/composables/useProjectThumbnailService'
 import { framesToSeconds } from '@/core/utils/timeUtils'
 import { useAppI18n } from '@/core/composables/useI18n'
@@ -66,13 +66,16 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
   const loadingProgress = ref(0) // 0-100
   const loadingStage = ref('') // 当前加载阶段
   const loadingDetails = ref('') // 详细信息
-  
+
   let ensureMediaReadyForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
   let ensureAIGeneratedMediaForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
   let ensureMediaIndexingForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
-  let _ensureEffectTemplateReadyForProjectLoad: ((assetId: string) => Promise<unknown>) | null = null
-  let ensureTimelineItemResolvedForProjectLoad: ((timelineItemId: string) => Promise<unknown>) | null =
+  let ensureMusicSemanticForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
+  let _ensureEffectTemplateReadyForProjectLoad: ((assetId: string) => Promise<unknown>) | null =
     null
+  let ensureTimelineItemResolvedForProjectLoad:
+    | ((timelineItemId: string) => Promise<unknown>)
+    | null = null
 
   // ==================== 计算属性 ====================
   /**
@@ -124,6 +127,10 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
 
   function setMediaIndexingEnsurer(ensurer: (mediaId: string) => Promise<unknown>): void {
     ensureMediaIndexingForProjectLoad = ensurer
+  }
+
+  function setMusicSemanticEnsurer(ensurer: (mediaId: string) => Promise<unknown>): void {
+    ensureMusicSemanticForProjectLoad = ensurer
   }
 
   function setEffectTemplateReadyEnsurer(ensurer: (assetId: string) => Promise<unknown>): void {
@@ -415,7 +422,9 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
         if (activeTab) {
           const activeDir = directoryModule.directories.value.get(activeTab.dirId)
           if (activeDir) {
-            directoryModule.getAssetIdsInDirectory(activeDir.id).forEach((id) => immediateLoadIds.add(id))
+            directoryModule
+              .getAssetIdsInDirectory(activeDir.id)
+              .forEach((id) => immediateLoadIds.add(id))
           }
         }
       }
@@ -485,6 +494,17 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
           continue
         }
 
+        if (
+          isMediaAsset(mediaItem) &&
+          shouldRecoverMusicSemantic(mediaItem.metadata?.musicSemantic)
+        ) {
+          if (ensureMusicSemanticForProjectLoad) {
+            void ensureMusicSemanticForProjectLoad(mediaItem.id).catch((error) => {
+              console.error(`恢复音乐语义任务失败: ${mediaItem.name}`, error)
+            })
+          }
+        }
+
         if (immediateLoadIds.has(mediaItem.id)) {
           if (isMediaAsset(mediaItem) && mediaItem.mediaStatus === 'pending') {
             if (ensureMediaReadyForProjectLoad) {
@@ -502,7 +522,6 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
             immediateCount++
             continue
           }
-
         }
 
         deferredCount++
@@ -755,11 +774,11 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
     setMediaReadyEnsurer,
     setAIGeneratedMediaEnsurer,
     setMediaIndexingEnsurer,
+    setMusicSemanticEnsurer,
     setEffectTemplateReadyEnsurer,
     setTimelineItemResolvedEnsurer,
     updateLoadingProgress,
     resetLoadingState,
-
   }
 }
 
@@ -768,25 +787,29 @@ export type UnifiedProjectModule = ReturnType<typeof createUnifiedProjectModule>
 
 function isRecoverableAIGeneratedMedia(mediaItem: UnifiedMediaItemData): boolean {
   if (mediaItem.source.type === 'ai-generation') {
-    return mediaItem.mediaStatus !== 'error'
-      && mediaItem.mediaStatus !== 'cancelled'
-      && mediaItem.source.taskStatus !== 'FAILED'
-      && mediaItem.source.taskStatus !== 'CANCELLED'
-      && Boolean(
+    return (
+      mediaItem.mediaStatus !== 'error' &&
+      mediaItem.mediaStatus !== 'cancelled' &&
+      mediaItem.source.taskStatus !== 'FAILED' &&
+      mediaItem.source.taskStatus !== 'CANCELLED' &&
+      Boolean(
         mediaItem.source.aiTaskId || mediaItem.source.resultData || mediaItem.source.requestParams,
       )
+    )
   }
 
   if (mediaItem.source.type === 'bizyair') {
-    return mediaItem.mediaStatus !== 'error'
-      && mediaItem.mediaStatus !== 'cancelled'
-      && mediaItem.source.taskStatus !== 'Failed'
-      && mediaItem.source.taskStatus !== 'Canceled'
-      && Boolean(
+    return (
+      mediaItem.mediaStatus !== 'error' &&
+      mediaItem.mediaStatus !== 'cancelled' &&
+      mediaItem.source.taskStatus !== 'Failed' &&
+      mediaItem.source.taskStatus !== 'Canceled' &&
+      Boolean(
         mediaItem.source.bizyairTaskId ||
           mediaItem.source.resultData ||
           mediaItem.source.requestParams,
       )
+    )
   }
 
   return false
