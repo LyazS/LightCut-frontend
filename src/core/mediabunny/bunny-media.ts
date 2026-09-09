@@ -24,6 +24,7 @@ export class BunnyMedia {
   private videoSink: VideoSampleSink | null = null
   private audioSink: AudioBufferSink | null = null
   private audioSampleSink: AudioSampleSink | null = null
+  private audioTrackInfo: { sampleRate: number; channels: number } | null = null
   private oriFile: File | null
 
   // 公开属性
@@ -65,27 +66,41 @@ export class BunnyMedia {
       // 初始化视频轨道
       let videoDuration: number | null = null
       if (this.videoTrack) {
+        const [codec, width, height, rotation] = await Promise.all([
+          this.videoTrack.getCodec(),
+          this.videoTrack.getDisplayWidth(),
+          this.videoTrack.getDisplayHeight(),
+          this.videoTrack.getRotation(),
+        ])
+
         console.log(`🎬 视频轨道信息:`, {
-          codec: this.videoTrack.codec,
-          width: this.videoTrack.displayWidth,
-          height: this.videoTrack.displayHeight,
-          rotation: this.videoTrack.rotation,
+          codec,
+          width,
+          height,
+          rotation,
         })
 
-        this.width = this.videoTrack.displayWidth
-        this.height = this.videoTrack.displayHeight
-        this.clockwiseRotation = this.videoTrack.rotation
+        this.width = width
+        this.height = height
+        this.clockwiseRotation = rotation
         videoDuration = await this.videoTrack.computeDuration()
         this.videoSink = new VideoSampleSink(this.videoTrack)
       }
 
       // 初始化音频轨道
       if (this.audioTrack) {
+        const [codec, channels, sampleRate] = await Promise.all([
+          this.audioTrack.getCodec(),
+          this.audioTrack.getNumberOfChannels(),
+          this.audioTrack.getSampleRate(),
+        ])
+
         console.log(`🎵 音频轨道信息:`, {
-          codec: this.audioTrack.codec,
-          channels: this.audioTrack.numberOfChannels,
-          sampleRate: this.audioTrack.sampleRate,
+          codec,
+          channels,
+          sampleRate,
         })
+        this.audioTrackInfo = { sampleRate, channels }
         this.audioSink = new AudioBufferSink(this.audioTrack)
         this.audioSampleSink = new AudioSampleSink(this.audioTrack)
       }
@@ -157,11 +172,7 @@ export class BunnyMedia {
    * @returns 音频轨道信息对象，如果没有音频轨道则返回null
    */
   getAudioTrackInfo(): { sampleRate: number; channels: number } | null {
-    if (!this.audioTrack) return null
-    return {
-      sampleRate: this.audioTrack.sampleRate,
-      channels: this.audioTrack.numberOfChannels,
-    }
+    return this.audioTrackInfo ? { ...this.audioTrackInfo } : null
   }
 
   /**
@@ -188,6 +199,7 @@ export class BunnyMedia {
 
     // 清理原始文件引用
     this.oriFile = null
+    this.audioTrackInfo = null
 
     console.log('✅ BunnyMedia 资源清理完成')
   }

@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@imengyu/vue3-context-menu": "^1.5.2",
-    "@mediabunny/mp3-encoder": "^1.27.0",
+    "@mediabunny/mp3-encoder": "^1.55.7",
     "@remixicon/vue": "^4.7.0",
     "@types/big.js": "^7.0.0",
     "@types/markdown-it": "^14.1.2",
@@ -31,7 +31,7 @@
     "html-to-image": "^1.11.13",
     "lodash": "^4.17.21",
     "markdown-it": "^14.1.0",
-    "mediabunny": "^1.27.0",
+    "mediabunny": "^1.55.7",
     "nanoid": "^5.1.6",
     "onnxruntime-web": "^1.26.0",
     "p-limit": "^7.2.0",

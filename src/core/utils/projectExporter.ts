@@ -11,10 +11,6 @@ import {
   BufferTarget,
   CanvasSource,
   AudioSampleSource,
-  QUALITY_VERY_LOW,
-  QUALITY_LOW,
-  QUALITY_HIGH,
-  QUALITY_VERY_HIGH,
   type Quality,
   type WrappedAudioBuffer,
 } from 'mediabunny'
@@ -463,13 +459,13 @@ export class ExportManager {
       if (!isAudioOnly) {
         this.canvasSource = new CanvasSource(this.canvas!, {
           codec: 'avc',
-          bitrate: this.config.videoQuality,
+          quality: this.config.videoQuality,
         })
       }
 
       this.audioSource = new AudioSampleSource({
         codec: 'mp3',
-        bitrate: this.config.audioQuality,
+        quality: this.config.audioQuality,
       })
 
       // 阶段 4: 初始化音频渲染器
