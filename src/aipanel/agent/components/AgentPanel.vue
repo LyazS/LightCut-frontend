@@ -9,7 +9,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import MessageList from './MessageList.vue'
 import AgentInput from './AgentInput.vue'
 import SessionHistoryPanel from './SessionHistoryPanel.vue'

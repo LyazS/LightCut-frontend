@@ -179,7 +179,7 @@ export function createUnifiedMediaBunnyModule(
     }
 
     // 清理 bunnyCurFrameMap 中的所有 VideoSample
-    for (const [itemId, frameData] of mBunnyCurFrameMap) {
+    for (const [_itemId, frameData] of mBunnyCurFrameMap) {
       frameData.videoSample.close()
     }
     mBunnyCurFrameMap.clear()
@@ -591,7 +591,7 @@ export function createUnifiedMediaBunnyModule(
     for (const node of mQueuedAudioNodes) {
       try {
         node.stop()
-      } catch (err) {
+      } catch (_err) {
         // 忽略已停止的节点
       }
     }

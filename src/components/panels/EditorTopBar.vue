@@ -142,11 +142,6 @@ import type { Quality } from 'mediabunny'
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 
-// 定义事件
-const emit = defineEmits<{
-  showEditProjectDialog: []
-}>()
-
 // 响应式数据
 const showEditDialog = ref(false)
 const showLoginDialog = ref(false)
@@ -155,7 +150,6 @@ const showExportDialog = ref(false)
 const showProviderConfigDialog = ref(false)
 const currentUser = computed(() => unifiedStore.getCurrentUser())
 const isUserLogin = computed(() => unifiedStore.isLoggedIn)
-const hasBizyAirKey = computed(() => unifiedStore.hasBizyAirApiKey())
 
 // 导出取消函数引用
 let cancelExport: (() => void) | null = null

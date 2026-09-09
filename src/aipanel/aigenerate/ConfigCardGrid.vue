@@ -184,17 +184,6 @@ const getIconForContentType = (configKey: ConfigKey): Component => {
   return iconMap[contentType] || IconComponents.SPARKLING
 }
 
-// 获取内容类型标签
-const getContentTypeLabel = (configKey: ConfigKey): string => {
-  const config = collection[configKey]
-  const labelMap: Record<string, string> = {
-    image: t('aiPanel.image'),
-    video: t('aiPanel.video'),
-    audio: t('aiPanel.audio'),
-  }
-  return labelMap[config.contentType] || config.contentType
-}
-
 // 切换到配置表单视图
 const handleCardClick = (configKey: ConfigKey) => {
   emit('cardClick', configKey)

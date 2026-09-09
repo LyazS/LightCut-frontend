@@ -32,7 +32,7 @@ const renderMarkdown = inject<(content: string) => string>('renderMarkdown', (co
   return content
 })
 
-const props = defineProps<{
+defineProps<{
   messages: AgentMessage[]
 }>()
 </script>

@@ -151,14 +151,6 @@ async function handleUseActivationCode() {
     // 清空输入框
     activationCode.value = ''
 
-    // 更新用户余额信息（通过模块自动更新，这里只需要触发响应式更新）
-    if (props.user) {
-      // 从 store 获取最新的用户信息
-      const currentUser = unifiedStore.currentUser
-      if (currentUser) {
-        props.user.balance = currentUser.balance
-      }
-    }
   } catch (error) {
     // 错误处理已经在 UnifiedUserModule 中完成，这里不需要额外处理
     console.warn('激活码使用失败:', error)

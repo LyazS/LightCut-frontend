@@ -40,7 +40,7 @@ export class AudioSegmentRenderer {
 
     // 为每个 clip 创建缓冲管理器（使用 item.id 作为键）
     this.clipBuffers = new Map()
-    for (const [itemId, clip] of this.clips.entries()) {
+    for (const [itemId] of this.clips.entries()) {
       this.clipBuffers.set(itemId, new PerClipAudioBuffer(itemId))
     }
   }

@@ -22,7 +22,7 @@ function getCurrentProjectId(): string {
     if (projectId) {
       return projectId
     }
-  } catch (e) {
+  } catch {
     // 如果无法获取 store（例如在非 Vue 组件上下文中），使用默认值
     console.warn('[CONFIG_CACHE] 无法从 unifiedStore 获取项目ID，使用默认值')
   }
@@ -237,7 +237,7 @@ export class ConfigCacheManager {
             localStorage.removeItem(key)
             clearedCount++
           }
-        } catch (error) {
+        } catch {
           // 解析失败，删除该缓存
           localStorage.removeItem(key)
           clearedCount++

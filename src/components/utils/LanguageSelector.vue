@@ -20,7 +20,7 @@ import { useAppI18n } from '@/core/composables/useI18n'
 import { IconComponents } from '@/constants/iconComponents'
 import HoverButton from '@/components/base/HoverButton.vue'
 
-const { t, locale, languageOptions, switchLanguage } = useAppI18n()
+const { t, languageOptions, switchLanguage } = useAppI18n()
 
 // 转换为 n-dropdown 的选项格式
 const dropdownOptions = computed(() =>

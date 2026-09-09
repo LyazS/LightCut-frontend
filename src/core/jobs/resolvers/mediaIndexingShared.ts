@@ -14,7 +14,6 @@ import { TaskStatus, TaskStreamEventType } from '@/core/datasource/providers/ai-
 import type { UnifiedTimelineItemData, VideoMediaConfig } from '@/core/timelineitem/model/timelineItem'
 import { createDefaultTimelineExtraRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import { DEFAULT_BLEND_MODE } from '@/core/timelineitem/model/blendMode'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import type { UploadFileExportOptions } from '@/core/utils/bizyairFileUploader'
 import { fetchClient, sleepWithAbortSignal } from '@/utils/fetchClient'
 import type { ResourcePolicy, ResourceRequest } from '../ResourceTypes'

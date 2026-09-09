@@ -80,9 +80,6 @@ function findSplitPoints(
   
   // 当前累积的字符数（用于强制拆分）
   let accumulatedChars = 0
-  // 当前累积的起始 word 索引
-  let segmentStartWordIndex = 0
-
   while (textIndex < text.length && wordIndex < words.length) {
     const currentChar = text[textIndex]
     const currentWord = words[wordIndex]
@@ -107,7 +104,6 @@ function findSplitPoints(
       if (accumulatedChars >= config.minChars) {
         splitPoints.push(wordIndex - 1) // 在前一个 word 之后拆分
         accumulatedChars = 0
-        segmentStartWordIndex = wordIndex
       }
       
       // 跳过标点符号
@@ -118,7 +114,6 @@ function findSplitPoints(
     if (accumulatedChars >= config.maxChars) {
       splitPoints.push(wordIndex)
       accumulatedChars = 0
-      segmentStartWordIndex = wordIndex + 1
     }
   }
 

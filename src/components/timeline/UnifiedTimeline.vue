@@ -311,7 +311,6 @@ import {
   getTrackTypeIcon,
   getVisibilityIcon,
   getMuteIcon,
-  getTrackTypeLabel,
 } from '@/constants/iconComponents'
 import { LayoutConstants } from '@/constants/LayoutConstants'
 // 导入创建的模块
@@ -372,9 +371,6 @@ const {
 
 // 初始化项目操作模块
 const {
-  createTimelineItemFromMediaItem,
-  moveSingleItem,
-  moveMultipleItems,
   handleTimelineItemRemove,
   createTextAtPosition,
 } = useTimelineItemOperations()
@@ -404,16 +400,11 @@ const insertPosition = ref<'before' | 'after' | null>(null)
 // 初始化右键菜单模块
 const {
   showContextMenu,
-  contextMenuType,
-  contextMenuTarget,
   contextMenuOptions,
   currentMenuItems,
   handleContextMenu,
   handleTimelineItemContextMenu,
   handleTransitionContextMenu,
-  removeClip,
-  duplicateClip,
-  renameTrack,
   showAddTrackMenu,
 } = useTimelineContextMenu(
   addNewTrack,
@@ -665,7 +656,7 @@ async function handleTrackDrop(event: DragEvent, targetTrackId: string) {
 /**
  * 处理拖拽离开
  */
-function handleTrackDragLeave(event: DragEvent, trackId: string) {
+function handleTrackDragLeave(event: DragEvent, _trackId: string) {
   const targetElement = event.currentTarget as HTMLElement
   const rect = targetElement.getBoundingClientRect()
   const x = event.clientX

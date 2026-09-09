@@ -3,12 +3,7 @@
  * 基于"核心数据与行为分离"的响应式重构方案
  */
 
-import type {
-  UnifiedMediaItemData,
-  MediaStatus,
-  MediaType,
-  MediaTypeOrUnknown,
-} from './types'
+import type { UnifiedMediaItemData, MediaStatus } from './types'
 import { MediaItemQueries } from './queries'
 
 // ==================== 行为函数模块 ====================
@@ -21,7 +16,7 @@ export { MediaItemQueries as MediaItemQueries } from './queries'
  */
 export const UnifiedMediaItemActions = {
   // 状态转换
-  transitionTo(item: UnifiedMediaItemData, newStatus: MediaStatus, context?: any): boolean {
+  transitionTo(item: UnifiedMediaItemData, newStatus: MediaStatus, _context?: any): boolean {
     if (!MediaItemQueries.canTransitionTo(item, newStatus)) {
       console.warn(`无效状态转换: ${item.mediaStatus} → ${newStatus}`)
       return false

@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { UnifiedProjectConfig, UnifiedProjectTimeline } from '@/core/project/types'
 import type { UnifiedDirectoryConfig } from '@/core/directory/types'
 import { ProjectFileOps } from '@/core/utils'
@@ -6,12 +6,12 @@ import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import { createDefaultTimelineExtraRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
-import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
+import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
 import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import { globalMediaItemLoader } from '@/core/managers/media/MediaItemLoader'
-import { isEffectTemplateAsset, isMediaAsset } from '@/core/asset/types'
+import { isMediaAsset } from '@/core/asset/types'
 import { effectTemplateRegistry } from '@/core/effect-template/EffectTemplateRegistry'
 import {
   buildEffectPackageId,
@@ -70,7 +70,7 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
   let ensureMediaReadyForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
   let ensureAIGeneratedMediaForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
   let ensureMediaIndexingForProjectLoad: ((mediaId: string) => Promise<unknown>) | null = null
-  let ensureEffectTemplateReadyForProjectLoad: ((assetId: string) => Promise<unknown>) | null = null
+  let _ensureEffectTemplateReadyForProjectLoad: ((assetId: string) => Promise<unknown>) | null = null
   let ensureTimelineItemResolvedForProjectLoad: ((timelineItemId: string) => Promise<unknown>) | null =
     null
 
@@ -127,7 +127,7 @@ export function createUnifiedProjectModule(registry: ModuleRegistry) {
   }
 
   function setEffectTemplateReadyEnsurer(ensurer: (assetId: string) => Promise<unknown>): void {
-    ensureEffectTemplateReadyForProjectLoad = ensurer
+    _ensureEffectTemplateReadyForProjectLoad = ensurer
   }
 
   function setTimelineItemResolvedEnsurer(

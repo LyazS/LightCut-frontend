@@ -1,4 +1,4 @@
-import { ref, computed, nextTick, type Ref } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import type { UnifiedTrackType } from '@/core/track/TrackTypes'
 

@@ -1,6 +1,5 @@
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import { TimelineItemMutations } from '@/core/timelineitem/mutations'
-import { framesToTimecode } from '@/core/utils/timeUtils'
 import { createTextTimelineItem } from '@/core/utils/textTimelineUtils'
 import type { ToolDefinition } from '../core/toolTypes'
 import { buildToolError, buildToolSuccess } from './utils/result'

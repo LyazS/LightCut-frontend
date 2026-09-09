@@ -25,13 +25,13 @@ import { getValueByPathWithWrapper } from './pathUtils'
 export function validateAiConfig(
   uiConfig: UIConfig[],
   aiConfig: Record<string, any>,
-  locale: 'zh' | 'en'
+  _locale: 'zh' | 'en',
 ): ValidationResult {
   const errors: FieldValidationError[] = []
 
   // 遍历所有字段配置进行验证
   for (const fieldConfig of uiConfig) {
-    const fieldErrors = validateField(fieldConfig, aiConfig, locale)
+    const fieldErrors = validateField(fieldConfig, aiConfig)
     errors.push(...fieldErrors)
   }
 
@@ -58,7 +58,6 @@ export function validateAiConfig(
 export function validateField(
   fieldConfig: UIConfig,
   aiConfig: Record<string, any>,
-  locale: 'zh' | 'en'
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
   const normalizedPath = normalizePath(fieldConfig.path)
@@ -67,16 +66,16 @@ export function validateField(
   // 根据字段类型执行不同的验证
   switch (fieldConfig.type) {
     case 'textarea-input':
-      errors.push(...validateTextareaField(fieldConfig, value, locale))
+      errors.push(...validateTextareaField(fieldConfig, value))
       break
     case 'file-input':
-      errors.push(...validateFileInputField(fieldConfig, value, locale))
+      errors.push(...validateFileInputField(fieldConfig, value))
       break
     case 'number-input':
-      errors.push(...validateNumberField(fieldConfig, value, locale))
+      errors.push(...validateNumberField(fieldConfig, value))
       break
     case 'select-input':
-      errors.push(...validateSelectField(fieldConfig, value, locale))
+      errors.push(...validateSelectField(fieldConfig, value))
       break
   }
 
@@ -96,7 +95,6 @@ function normalizePath(path: string): string {
 function validateTextareaField(
   config: TextareaInputConfig,
   value: any,
-  locale: 'zh' | 'en'
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
   const stringValue = String(value || '').trim()
@@ -155,7 +153,6 @@ function validateTextareaField(
 function validateFileInputField(
   config: FileInputConfig,
   value: any,
-  locale: 'zh' | 'en'
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
   const fileArray = Array.isArray(value) ? value : []
@@ -196,7 +193,6 @@ function validateFileInputField(
 function validateNumberField(
   config: NumberInputConfig,
   value: any,
-  locale: 'zh' | 'en'
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
   const numValue = Number(value)
@@ -255,7 +251,6 @@ function validateNumberField(
 function validateSelectField(
   config: SelectInputConfig,
   value: any,
-  locale: 'zh' | 'en'
 ): FieldValidationError[] {
   const errors: FieldValidationError[] = []
 

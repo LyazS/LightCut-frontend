@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 import { LayoutConstants } from '@/constants/LayoutConstants'
 import {
   getMaxZoomLevelFrames,
@@ -10,7 +10,6 @@ import {
   calculateMaxVisibleDurationFrames,
   calculateTotalDurationFrames,
 } from '@/core/utils/timelineScaleUtils'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { ModuleRegistry } from './ModuleRegistry'
 import { MODULE_NAMES } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
@@ -111,7 +110,7 @@ export function createUnifiedViewportModule(registry: ModuleRegistry) {
    * @param timelineWidth 时间轴宽度（像素）
    * @param frameRate 帧率
    */
-  function setZoomLevel(newZoomLevel: number, timelineWidth: number = 800, frameRate: number = 30) {
+  function setZoomLevel(newZoomLevel: number, timelineWidth: number = 800, _frameRate: number = 30) {
     const maxZoom = getMaxZoomLevelForTimeline(timelineWidth)
     const minZoom = minZoomLevel.value
     const clampedZoom = Math.max(minZoom, Math.min(newZoomLevel, maxZoom))

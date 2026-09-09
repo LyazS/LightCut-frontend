@@ -1,4 +1,3 @@
-import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 
 /**

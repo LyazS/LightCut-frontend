@@ -21,17 +21,6 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
-/**
- * 视频分辨率接口
- */
-interface VideoResolution {
-  name: string
-  width: number
-  height: number
-  aspectRatio: string
-  category?: string
-}
-
 // 扩展HTMLElement类型以包含自定义属性
 interface ExtendedHTMLElement extends HTMLElement {
   _resizeObserver?: ResizeObserver

@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeMount, onMounted, onUnmounted } from 'vue'
+import { onBeforeMount, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import VideoPreviewEngine from '@/components/panels/VideoPreviewEngine.vue'

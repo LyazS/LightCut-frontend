@@ -40,11 +40,10 @@ export class ScriptExecutor {
     }
 
     return new Promise((resolve) => {
-      let timeoutId: number
       let isResolved = false
 
       // 设置超时处理
-      timeoutId = setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         if (!isResolved) {
           isResolved = true
           this.cleanup()

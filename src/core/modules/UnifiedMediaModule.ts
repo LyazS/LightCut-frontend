@@ -1,17 +1,8 @@
-import { ref, watch, type Raw } from 'vue'
-import {
-  type UnifiedMediaItemData,
-  type MediaStatus,
-  type MediaType,
-  type UnifiedMediaItemMetadata,
-  createUnifiedMediaItemData,
-  MediaItemQueries,
-  UnifiedMediaItemActions,
-} from '@/core'
+import { ref, watch } from 'vue'
+import { type UnifiedMediaItemData, type MediaType, type UnifiedMediaItemMetadata, createUnifiedMediaItemData, MediaItemQueries, UnifiedMediaItemActions } from '@/core'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { ModuleRegistry } from '@/core/modules/ModuleRegistry'
 import { MODULE_NAMES } from '@/core/modules/ModuleRegistry'
-import type { UnifiedProjectModule } from '@/core/modules/UnifiedProjectModule'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import type { UnifiedAutoSaveModule } from '@/core/modules/UnifiedAutoSaveModule'
 import { getDataSourceRegistry } from '@/core/datasource/registry'
@@ -23,10 +14,7 @@ import type {
   MediaLibraryAssetData,
   UnifiedLibraryAssetData,
 } from '@/core/asset/types'
-import {
-  isEffectTemplateAsset,
-  isMediaAsset,
-} from '@/core/asset/types'
+import { isMediaAsset } from '@/core/asset/types'
 import { EffectTemplateManager } from '@/core/effect-template/EffectTemplateManager'
 import { clearChannelKeyframes } from '@/core/utils/unifiedKeyframeUtils'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'

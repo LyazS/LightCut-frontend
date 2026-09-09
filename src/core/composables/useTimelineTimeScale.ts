@@ -1,7 +1,6 @@
 import { ref, computed, type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
-import { framesToTimecode } from '@/core/utils/timeUtils'
 import type { SnapPoint } from '@/types/snap'
 import { useTimelineWheelHandler, TimelineWheelSource } from './useTimelineWheelHandler'
 
@@ -54,8 +53,6 @@ function calculateScaleIntervals(
   zoomLevel: number,
 ): {
   currentLevel: TimeScaleLevel
-  majorIntervalPixels: number
-  minorIntervalPixels: number
 } {
   const pixelsPerFrame = (containerWidth * zoomLevel) / totalDurationFrames
 
@@ -76,13 +73,8 @@ function calculateScaleIntervals(
   }
 
   const currentLevel = TIME_SCALE_LEVELS[bestIndex]
-  const majorIntervalPixels = currentLevel.majorInterval * pixelsPerFrame
-  const minorIntervalPixels = currentLevel.minorInterval * pixelsPerFrame
-
   return {
     currentLevel,
-    majorIntervalPixels,
-    minorIntervalPixels,
   }
 }
 /**
@@ -131,7 +123,7 @@ export function useTimelineTimeScale(scaleContainer: Ref<HTMLElement | undefined
    */
   const timeMarks = computed((): TimeMark[] => {
     const marks: TimeMark[] = []
-    const { currentLevel, majorIntervalPixels, minorIntervalPixels } = scaleIntervals.value
+    const { currentLevel } = scaleIntervals.value
 
     // 计算可见帧数范围 - 使用 timelineWidth（不包含轨道控制区域）
     const { startFrames, endFrames } = calculateVisibleFrameRange(

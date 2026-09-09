@@ -75,11 +75,6 @@ export const FILE_SIZE_LIMITS = {
   image: 256 * 1024 * 1024,
 } as const
 
-type SupportedMimeType =
-  | (typeof SUPPORTED_MEDIA_TYPES.video)[number]
-  | (typeof SUPPORTED_MEDIA_TYPES.audio)[number]
-  | (typeof SUPPORTED_MEDIA_TYPES.image)[number]
-
 function isSupportedMimeInCategory<T extends readonly string[]>(
   mimeType: string,
   supportedTypes: T,

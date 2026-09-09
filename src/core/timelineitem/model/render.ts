@@ -8,18 +8,7 @@ import { isFilterParamPropertyId } from '@/core/property-system/schema/propertyI
 import type { TextStyleConfig } from './textStyle'
 import type { BlendMode } from './blendMode'
 import type { FilterParamColorValue } from '@/core/filter/color'
-import type {
-  MaskCenterValue,
-  MaskConfig,
-  MaskEllipseSizeValue,
-  MaskFeatherValue,
-  MaskIntensityValue,
-  MaskMirrorValue,
-  MaskRectangleCornerRadiusValue,
-  MaskRectangleSizeValue,
-  MaskRotationValue,
-  MaskType,
-} from '../features/mask'
+import type { MaskCenterValue, MaskEllipseSizeValue, MaskFeatherValue, MaskIntensityValue, MaskMirrorValue, MaskRectangleCornerRadiusValue, MaskRectangleSizeValue, MaskRotationValue } from '../features/mask'
 
 export type {
   MaskConfig,
@@ -92,7 +81,7 @@ export interface DynamicFilterParamVec2Value {
   y: number
 }
 
-export interface DynamicFilterParamColorValue extends FilterParamColorValue {}
+export type DynamicFilterParamColorValue = FilterParamColorValue
 
 export type DynamicFilterParamValue =
   | DynamicFilterParamNumberValue
@@ -141,7 +130,7 @@ export type PropertyAnimationValueByGroup<G extends PropertyAnimationGroupId> =
   G extends AnimationGroupId ? AnimationGroupValueMap[G] : DynamicFilterParamValue
 
 export interface AnimateKeyframe<
-  T extends MediaType,
+  _T extends MediaType,
   G extends PropertyAnimationGroupId = AnimationGroupId,
 > {
   position: number

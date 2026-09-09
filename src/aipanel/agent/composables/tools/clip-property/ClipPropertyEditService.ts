@@ -72,8 +72,6 @@ const MASK_ANIMATION_GROUP_IDS = [
   'mask.mirror.length',
 ] as const
 
-type MaskAnimationGroupId = (typeof MASK_ANIMATION_GROUP_IDS)[number]
-
 const PATH_VALIDATORS = {
   'visual.position.x': validateFiniteNumber('visual.position.x'),
   'visual.position.y': validateFiniteNumber('visual.position.y'),

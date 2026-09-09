@@ -4,7 +4,6 @@
  */
 
 import type { UnifiedMediaItemData, MediaStatus } from '@/core/mediaitem/types'
-import { MediaItemQueries } from '@/core/mediaitem/actions'
 
 /**
  * 媒体状态管理器

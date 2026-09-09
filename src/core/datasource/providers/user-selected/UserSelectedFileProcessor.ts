@@ -9,19 +9,11 @@ import {
   type PreparedMediaFile,
 } from '@/core/datasource/core/BaseDataSourceProcessor'
 import type { UserSelectedFileSourceData } from '@/core/datasource/providers/user-selected/UserSelectedFileSource'
-import {
-  SUPPORTED_MEDIA_TYPES,
-  FILE_SIZE_LIMITS,
-  detectFileMediaType,
-  validateFile,
-  type FileValidationResult,
-} from '@/core/utils/mediaTypeDetector'
+import { validateFile } from '@/core/utils/mediaTypeDetector'
 import { RuntimeStateActions } from '@/core/datasource/core/BaseDataSource'
 import { DataSourceHelpers } from '@/core/datasource/core/DataSourceHelpers'
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
-import type { UnifiedMediaItemData, MediaStatus, MediaType } from '@/core/mediaitem/types'
-import { UnifiedMediaItemActions } from '@/core/mediaitem/actions'
-import { sleep } from '@/utils/fetchClient'
+import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
 
 // ==================== 用户选择文件 datasource 执行器 ====================
 

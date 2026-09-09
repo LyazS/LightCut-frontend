@@ -113,7 +113,7 @@ interface BizyAirUploadStrategy {
  * 通过后端代理接口调用 BizyAir API
  */
 class ProxyUploadStrategy implements BizyAirUploadStrategy {
-  async getUploadToken(fileName: string, apiKey?: string): Promise<UploadCredentials> {
+  async getUploadToken(fileName: string, _apiKey?: string): Promise<UploadCredentials> {
     // apiKey 参数被忽略，使用后端配置的 Key
     const queryParams = new URLSearchParams({
       file_name: fileName,
@@ -154,7 +154,7 @@ class ProxyUploadStrategy implements BizyAirUploadStrategy {
     }
   }
 
-  async commitResource(fileName: string, objectKey: string, apiKey?: string): Promise<string> {
+  async commitResource(fileName: string, objectKey: string, _apiKey?: string): Promise<string> {
     // apiKey 参数被忽略，使用后端配置的 Key
     const response = await fetchClient.post<{
       success: boolean
@@ -497,7 +497,7 @@ export class BizyairFileUploader {
     const newConfig = cloneDeep(config)
     const filesToUpload: FileData[] = []
 
-    for (const [key, value] of Object.entries(newConfig)) {
+    for (const value of Object.values(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
         if (value[0] && typeof value[0] === 'object' && value[0].__type__ === 'FileData') {
           filesToUpload.push(...value)
@@ -516,7 +516,7 @@ export class BizyairFileUploader {
       onProgress,
     )
 
-    for (const [index, result] of uploadResults.entries()) {
+    for (const result of uploadResults.values()) {
       if (!result.success) {
         throw new Error(`文件上传失败: ${result.error}`)
       }

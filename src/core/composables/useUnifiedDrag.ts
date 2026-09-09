@@ -190,7 +190,7 @@ export function useUnifiedDrag(
   /**
    * 获取当前拖拽数据
    */
-  function getCurrentDragData(event: DragEvent): UnifiedDragData | null {
+  function getCurrentDragData(_event: DragEvent): UnifiedDragData | null {
     // 直接返回内存中的数据
     return currentDragData
   }

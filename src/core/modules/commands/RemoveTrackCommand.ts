@@ -5,7 +5,7 @@ import type { SimpleCommand } from '@/core/modules/commands/types'
 // 类型导入
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
-import type { UnifiedTrackData, UnifiedTrackType } from '@/core/track/TrackTypes'
+import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
 import { historyLabels } from '@/core/modules/historyLabel'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'

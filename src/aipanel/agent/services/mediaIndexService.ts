@@ -6,7 +6,6 @@ import type { MediaIndexStatus, UnifiedMediaItemData } from '@/core/mediaitem/ty
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import { createDefaultTimelineExtraRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import { DEFAULT_BLEND_MODE } from '@/core/timelineitem/model/blendMode'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import { calculateThumbnailSize, createCanvasWithSize, drawImageOnCanvas } from '@/core/bunnyUtils/thumbUtils'
 import { ThumbnailMode } from '@/constants/ThumbnailConstants'

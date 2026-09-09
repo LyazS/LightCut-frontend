@@ -7,14 +7,7 @@
  * @module BizyAirAPIClient
  */
 
-import type {
-  BizyAirTaskDetail,
-  BizyAirTaskStatus,
-  ProgressCallback,
-  SubmitTaskResponse,
-  TaskDetailResponse,
-  TaskResultResponse,
-} from './types'
+import type { BizyAirTaskDetail, SubmitTaskResponse, TaskDetailResponse, TaskResultResponse } from './types'
 
 // ==================== 常量定义 ====================
 

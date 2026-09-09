@@ -5,7 +5,7 @@
  * 注意：模板组件直接定义props接口，不再使用这里的类型
  */
 
-import type { VNode, Component } from 'vue'
+import type { Component } from 'vue'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'

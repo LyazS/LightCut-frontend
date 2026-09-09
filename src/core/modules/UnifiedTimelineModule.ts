@@ -1,11 +1,6 @@
 import { ref } from 'vue'
 import { cleanupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
-import type {
-  UnifiedTimelineItemData,
-  VisualPropPatch,
-  AudioPropPatch,
-} from '@/core/timelineitem/model/timelineItem'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { ModuleRegistry, MODULE_NAMES } from './ModuleRegistry'

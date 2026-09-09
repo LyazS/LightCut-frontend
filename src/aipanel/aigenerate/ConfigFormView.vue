@@ -173,11 +173,6 @@ const handleGenerate = () => {
   emit('generate')
 }
 
-// 处理调试输出按钮点击
-const handleDebugOutput = () => {
-  emit('debugOutput')
-}
-
 // 处理 AI 配置更新
 const handleAiConfigUpdate = (value: Record<string, any>) => {
   emit('update:aiConfig', value)

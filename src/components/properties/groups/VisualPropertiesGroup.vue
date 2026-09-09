@@ -256,11 +256,6 @@ const {
   commitWidthDeferredUpdate,
   commitHeightDeferredUpdate,
 
-  // 直接更新方法（用于 NumberInput）
-  setVisualXDirectly,
-  setVisualYDirectly,
-  setWidthDirectly,
-  setHeightDirectly,
   fitToCanvas,
   fillCanvas,
   setRotationDirectly,

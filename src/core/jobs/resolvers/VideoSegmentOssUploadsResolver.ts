@@ -1,6 +1,6 @@
 import { DashScopeTemporaryFileUploader } from '@/core/utils/dashscopeTemporaryFileUploader'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
-import { exportMediaItem, exportTimelineItem, exportVideoFrames } from '@/core/utils/mediaExporter'
+import { exportTimelineItem, exportVideoFrames } from '@/core/utils/mediaExporter'
 import type { ResolveContext, ResourceResolver } from '../ResourceResolver'
 import type { ResourceRequest } from '../ResourceTypes'
 import { RENDERER_FPS } from '@/core/mediabunny/constant'

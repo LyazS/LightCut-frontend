@@ -13,7 +13,7 @@ import { RuntimeStateFactory, SourceOrigin } from '@/core/datasource/core/BaseDa
 export * from './types'
 
 // 导入枚举（作为值）和类型
-import { AITaskType, ContentType, TaskStatus, TaskStreamEventType } from './types'
+import { ContentType, TaskStatus } from './types'
 
 import type { MediaGenerationRequest, TaskResultData } from './types'
 

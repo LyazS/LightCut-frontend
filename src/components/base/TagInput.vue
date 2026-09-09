@@ -270,7 +270,7 @@ const setContent = (content: string) => {
         const textNode = document.createTextNode(match[0])
         editorRef.value.appendChild(textNode)
       }
-    } catch (e) {
+    } catch {
       // JSON 解析失败，保留原始文本
       const textNode = document.createTextNode(match[0])
       editorRef.value.appendChild(textNode)

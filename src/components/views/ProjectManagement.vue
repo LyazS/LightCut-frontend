@@ -296,10 +296,6 @@ interface Announcement {
   content: string
 }
 
-interface AnnouncementsConfig {
-  announcements: Announcement[]
-}
-
 const router = useRouter()
 const { t } = useAppI18n()
 

@@ -84,13 +84,12 @@ import UniversalModal from './UniversalModal.vue'
 import ModalFormField from '@/components/base/ModalFormField.vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { useAppI18n } from '@/core/composables/useI18n'
-import type { User } from '@/core/modules/UnifiedUserModule'
 
 const unifiedStore = useUnifiedStore()
 const { t } = useAppI18n()
 
 // 定义props
-const props = defineProps<{
+defineProps<{
   show: boolean
 }>()
 
@@ -111,10 +110,6 @@ const formData = reactive({
 })
 
 // 方法
-function handleOverlayClick() {
-  handleCancel()
-}
-
 function handleCancel() {
   if (!isLoading.value) {
     emit('close')
@@ -170,7 +165,7 @@ async function handleSubmit() {
       emit('close')
     } else {
       // 用户登录
-      const response = await unifiedStore.login(formData.username, formData.password)
+      await unifiedStore.login(formData.username, formData.password)
 
       // 关闭对话框（成功消息已在 UnifiedUserModule 中发出）
       emit('close')

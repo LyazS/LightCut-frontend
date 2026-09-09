@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { type Ref } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { LayoutConstants } from '@/constants/LayoutConstants'
 import {
@@ -9,6 +9,29 @@ import {
   type TimelineItemDragData,
 } from '@/core/types/drag'
 import { effectTemplateHandlerRegistry } from '@/core/effect-template/registry'
+import type { EffectTemplatePreviewData } from '@/core/effect-template/types'
+import type { SnapPositionInput, SnapPositionResult } from './useTimelineSnap'
+
+interface TimelineSnapFunctions {
+  calculateSnapPosition: (input: SnapPositionInput) => SnapPositionResult
+  updateSnapIndicator: (snapResult: SnapPositionResult, clipDuration?: number) => void
+  clearSnapIndicator: () => void
+  calculateMouseXInTimeline: (
+    event: MouseEvent | DragEvent,
+    timelineBody: HTMLElement,
+    trackControlWidth: number,
+  ) => number
+}
+
+interface TimelineDragPreviewFunctions {
+  handleDragPreview: (
+    event: DragEvent,
+    targetTrackId: string,
+    dropTime: number,
+    effectPreview?: EffectTemplatePreviewData | null,
+  ) => void
+  hidePreview: () => void
+}
 
 /**
  * 时间轴拖拽处理 Composable
@@ -16,16 +39,8 @@ import { effectTemplateHandlerRegistry } from '@/core/effect-template/registry'
  */
 export function useTimelineDragHandlers(
   timelineBody: Ref<HTMLElement | undefined>,
-  snapFunctions: {
-    calculateSnapPosition: Function
-    updateSnapIndicator: Function
-    clearSnapIndicator: Function
-    calculateMouseXInTimeline: Function
-  },
-  dragPreviewFunctions: {
-    handleDragPreview: Function
-    hidePreview: Function
-  },
+  snapFunctions: TimelineSnapFunctions,
+  dragPreviewFunctions: TimelineDragPreviewFunctions,
 ) {
   const unifiedStore = useUnifiedStore()
 
@@ -379,7 +394,7 @@ export function useTimelineDragHandlers(
   /**
    * 处理拖拽结束
    */
-  function handleTimelineDragEnd(event: DragEvent) {
+  function handleTimelineDragEnd(_event: DragEvent) {
     hidePreview()
     clearSnapIndicator()
   }

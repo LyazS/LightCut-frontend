@@ -3,24 +3,17 @@
  * 支持混合类型系统的重构版本
  */
 
-import { reactive, markRaw } from 'vue'
+import { reactive } from 'vue'
 import { cloneDeep } from 'lodash'
 import { generateTimelineItemId } from '@/core/utils/idGenerator'
 import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem'
-import type {
-  VideoMediaConfig,
-  ImageMediaConfig,
-  AudioMediaConfig,
-  TextMediaConfig,
-  TimelineBaseRenderConfig,
-} from '@/core/timelineitem/model/timelineItem'
+import type { TimelineBaseRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import type { UnifiedTimelineItemData, TimelineItemStatus } from '@/core/timelineitem/model/timelineItem'
+import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import { createDefaultTimelineExtraRenderConfig } from '@/core/timelineitem/model/timelineItem'
 import type { GetAnimation } from '../model/render'
 import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { MediaItemQueries } from '@/core/mediaitem'
-import { createTextTimelineItem as createTextTimelineItemFromUtils } from '@/core/utils/textTimelineUtils'
 import { setupTimelineItemBunny } from '@/core/bunnyUtils/timelineItemSetup'
 import { normalizeTimelineMarkers } from '@/core/utils/timelineMarkerUtils'
 

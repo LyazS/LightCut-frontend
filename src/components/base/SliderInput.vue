@@ -26,7 +26,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 
 interface SliderSegment {
   /** 分段位置百分比 (0-100) */

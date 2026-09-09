@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch, ref } from 'vue'
+import { computed, watch } from 'vue'
 import type { ContentTemplateProps } from '@/core/types/clipRenderer'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import {

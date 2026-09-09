@@ -3,7 +3,6 @@
  */
 
 import { reactive } from 'vue'
-import { generateUUID4 } from '@/core/utils/idGenerator'
 
 // ==================== 核心数据结构 ====================
 

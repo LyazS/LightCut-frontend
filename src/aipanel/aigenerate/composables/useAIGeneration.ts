@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 import { cloneDeep } from 'lodash'
 import { collection, type ConfigKey } from '../configs'
 import { useAppI18n } from '@/core/composables/useI18n'
@@ -225,7 +225,6 @@ export function useAIGeneration() {
     createSource: (
       requestParams: MediaGenerationRequest,
       taskId: string,
-      _configData: AIGenerateConfig,
     ) => {
       const bizyAirSource = BizyAirSourceFactory.createBizyAirSource(
         {
@@ -268,7 +267,6 @@ export function useAIGeneration() {
     createSource: (
       requestParams: MediaGenerationRequest,
       taskId: string,
-      _configData: AIGenerateConfig,
     ) => {
       const aiSource = AIGenerationSourceFactory.createAIGenerationSource(
         {
@@ -354,7 +352,7 @@ export function useAIGeneration() {
       console.log('🆔 [useAIGeneration] 已获取远程任务 ID:', taskId)
 
       // 6. 创建带 taskId 的 source
-      const result = strategy.createSource(requestParams, taskId, configData)
+      const result = strategy.createSource(requestParams, taskId)
 
       // 7. 创建并添加媒体项
       const mediaItem = await createAndAddMediaItem(result.source, configData)

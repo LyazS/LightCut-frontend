@@ -112,7 +112,7 @@ function createEditSDK() {
         operationCount: operations.length,
       }
       return generateExecutionReport(finalResult)
-    } catch (error: any) {
+    } catch {
       const executionResult: ExecutionResult = {
         success: false,
         logs: allLogs,

@@ -1,16 +1,6 @@
 import type { MediaType } from '@/core/mediaitem'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
-import {
-  normalizeAnimationGroupId,
-  type AnimateKeyframe,
-  type AnimationChannelKey,
-  type AnimationGroupId,
-  type AnimationGroupTrack,
-  type AnimationGroupValueMap,
-  type PropertyAnimationGroupId,
-  type PropertyAnimationValueByGroup,
-  type GetAnimation,
-} from '@/core/timelineitem/model/render'
+import { normalizeAnimationGroupId, type AnimateKeyframe, type AnimationChannelKey, type AnimationGroupTrack, type PropertyAnimationGroupId, type PropertyAnimationValueByGroup, type GetAnimation } from '@/core/timelineitem/model/render'
 import { AnimationRegistry } from './registry'
 import { isFilterParamPropertyId } from '@/core/property-system/schema/propertyIds'
 

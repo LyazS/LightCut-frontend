@@ -1,4 +1,3 @@
-import type { BunnyClip } from '@/core/mediabunny/bunny-clip'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 
 /**
@@ -101,7 +100,7 @@ function calculateColorHistogram(frame: VideoFrame, maxSize: number = 600): Floa
     const g = data[i + 1]
     const b = data[i + 2]
 
-    const [h, s, v] = rgbToHsv(r, g, b)
+    const [h, s] = rgbToHsv(r, g, b)
 
     histH[h]++
     histS[s]++

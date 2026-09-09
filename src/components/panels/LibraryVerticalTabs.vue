@@ -66,7 +66,6 @@ const isExpanded = ref(false)
 // 从 store 获取状态
 const openTabs = computed(() => unifiedStore.openTabs)
 const activeTabId = computed(() => unifiedStore.activeTabId)
-const currentDir = computed(() => unifiedStore.currentDir)
 
 // 标签页拖拽状态
 const tabDragState = ref<Record<string, { isDragOver: boolean; canDrop: boolean }>>({})

@@ -9,7 +9,7 @@ import {
   DataSourceProcessor,
   type PreparedMediaFile,
 } from '@/core/datasource/core/BaseDataSourceProcessor'
-import { RuntimeStateActions, SourceOrigin } from '@/core/datasource/core/BaseDataSource'
+import { RuntimeStateActions } from '@/core/datasource/core/BaseDataSource'
 import { DataSourceHelpers } from '@/core/datasource/core/DataSourceHelpers'
 import { fetchClient, sleepWithAbortSignal } from '@/utils/fetchClient'
 import type { UnifiedMediaItemData, MediaType } from '@/core/mediaitem/types'
@@ -18,16 +18,7 @@ import { useUnifiedStore } from '@/core/unifiedStore'
 
 // 导入类型定义
 import { ContentType, TaskStreamEventType, TaskStatus } from './types'
-import type {
-  TaskStreamEvent,
-  ProgressUpdateEvent,
-  FinalEvent,
-  ErrorEvent,
-  HeartbeatEvent,
-  MediaTypeInfo,
-  PrepareFileResult,
-  TaskResultData,
-} from './types'
+import type { TaskStreamEvent, ProgressUpdateEvent, MediaTypeInfo, PrepareFileResult, TaskResultData } from './types'
 import { type AIGenerationSourceData, mapContentTypeToMediaType } from './AIGenerationSource'
 
 // ==================== 辅助函数 ====================
@@ -248,8 +239,6 @@ export class AIGenerationProcessor extends DataSourceProcessor {
     streamEvent: ProgressUpdateEvent,
   ): boolean {
     const oldStatus = source.taskStatus
-    const hasChanges = false
-
     // 只在进度值真正变化时更新
     if (source.progress !== streamEvent.progress) {
       source.progress = streamEvent.progress

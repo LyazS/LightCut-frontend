@@ -4,7 +4,6 @@
  * 提供LOD生成所需的各种辅助函数
  */
 
-import type { WaveformLODLevel } from './types'
 
 /**
  * 从Float32 PCM数据生成单个LOD层级

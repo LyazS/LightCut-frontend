@@ -51,7 +51,7 @@ const hasApiKey = computed(() => {
 })
 
 // 定义props
-const props = defineProps<{
+defineProps<{
   show: boolean
 }>()
 

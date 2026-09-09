@@ -105,7 +105,7 @@ export function useProjectThumbnailService() {
       const thumbnailBlob = await fileSystemService.readFileAsBlob(thumbnailPath)
 
       return URL.createObjectURL(thumbnailBlob)
-    } catch (error) {
+    } catch (_error) {
       // 静默处理错误，返回 undefined
       return undefined
     }
@@ -127,7 +127,7 @@ export function useProjectThumbnailService() {
         const thumbnailDirPath = fileSystemService.paths.getThumbnailDirPath(projectId)
         await fileSystemService.deleteDirectory(thumbnailDirPath, true)
         console.log(`✅ 已清理项目缩略图: ${projectId}`)
-      } catch (error) {
+      } catch (_error) {
         // 缩略图目录可能不存在，忽略错误
         console.log(`📝 缩略图目录不存在，无需清理: ${projectId}`)
       }

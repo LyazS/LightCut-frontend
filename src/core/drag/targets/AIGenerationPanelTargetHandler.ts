@@ -16,7 +16,6 @@ import type {
 import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedMediaModule } from '@/core/modules/UnifiedMediaModule'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 
 export class AIGenerationPanelTargetHandler implements DropTargetHandler {
   readonly targetType: DropTargetType = TargetType.AI_GENERATION_PANEL

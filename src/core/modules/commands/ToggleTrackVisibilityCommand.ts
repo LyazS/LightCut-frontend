@@ -1,7 +1,5 @@
 import { generateCommandId } from '@/core/utils/idGenerator'
 import type { SimpleCommand } from '@/core/modules/commands/types'
-import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
-import type { MediaType } from '@/core/mediaitem/types'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { historyLabels } from '@/core/modules/historyLabel'
 

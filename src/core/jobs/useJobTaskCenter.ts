@@ -16,7 +16,7 @@ export function useJobTaskCenter(runtime: JobRuntime) {
 
   const taskViews = computed(() => {
     // 让 computed 依赖 revision。ResourceNode 真相仍由 runtime 持有。
-    revision.value
+    void revision.value
     return runtime.getTaskViews()
   })
 

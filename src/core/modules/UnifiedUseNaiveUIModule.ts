@@ -1,5 +1,5 @@
-import { useMessage, useNotification } from 'naive-ui'
-import { createVNode, render, ref, watchEffect, nextTick, h, type VNode, type Component } from 'vue'
+import { useMessage } from 'naive-ui'
+import { createVNode, render, ref, watchEffect, nextTick, h, type VNode } from 'vue'
 import UniversalModal from '@/components/modals/UniversalModal.vue'
 import LoadingModal from '@/components/base/LoadingModal.vue'
 

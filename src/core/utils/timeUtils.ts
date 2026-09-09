@@ -3,7 +3,6 @@
  * 适配自旧架构的 timeUtils，支持统一类型系统
  */
 
-import type { Ref, WritableComputedRef } from 'vue'
 import { TimeConstants } from '@/constants/TimeConstants'
 
 // ==================== 时间码系统常量 ====================
@@ -145,4 +144,3 @@ export function timecodeToFrames(timecode: string): number {
 export function alignFramesToFrame(frames: number): number {
   return Math.floor(frames)
 }
-

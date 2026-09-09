@@ -9,26 +9,6 @@ import type { ToolDefinition } from '../core/toolTypes'
 import { buildToolError, buildToolSuccess } from './utils/result'
 
 /**
- * 轨道基本信息接口
- */
-interface TrackBasicInfo {
-  /** 轨道ID */
-  id: string
-  /** 轨道名称 */
-  name: string
-  /** 轨道类型 */
-  type: 'video' | 'audio' | 'text'
-  /** 轨道顺序 */
-  index: number
-  /** 是否可见 */
-  visible: boolean
-  /** 是否静音 */
-  muted: boolean
-  /** 轨道上的时间轴项目数 */
-  itemCount: number
-}
-
-/**
  * list_tracks 工具执行函数
  *
  * 获取时间轴上所有轨道的基本信息（id、名字、类型），用于快速浏览和筛选轨道。

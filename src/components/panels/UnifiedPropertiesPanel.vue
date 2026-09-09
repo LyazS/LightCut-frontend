@@ -307,15 +307,6 @@ function getLibraryAssetTypeLabel(asset: UnifiedMediaItemData): string {
   return t('properties.mediaTypes.' + (asset.mediaType || 'unknown'))
 }
 
-function formatDate(value: string): string {
-  if (!value) return '-'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return date.toLocaleString()
-}
-
 watch(
   propertyTabs,
   (tabs) => {

@@ -1,6 +1,5 @@
 import { globalMetaFileManager } from '@/core/managers/media/globalMetaFileManager'
 import type { MediaMetaFile } from '@/core/project/metaTypes'
-import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import { createUnifiedMediaItemData } from '@/core/mediaitem/types'
 import { DataSourceFactory } from '@/core/datasource/core/DataSourceTypes'
 import { SourceOrigin } from '@/core/datasource/core/BaseDataSource'

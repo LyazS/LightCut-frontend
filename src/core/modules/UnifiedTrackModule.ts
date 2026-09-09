@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import type { UnifiedTrackData } from '@/core/track/TrackTypes'
 import { createUnifiedTrackData } from '@/core/track/TrackTypes'
-import { isReady } from '@/core/timelineitem/queries'
 import { MODULE_NAMES, ModuleRegistry } from './ModuleRegistry'
 import type { UnifiedTimelineModule } from './UnifiedTimelineModule'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'

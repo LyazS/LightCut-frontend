@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 
 interface PlayheadProps {

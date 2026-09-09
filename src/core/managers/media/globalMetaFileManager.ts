@@ -1,7 +1,7 @@
 import { fileSystemService } from '@/core/managers/filesystem/fileSystemService'
 import { parseLibraryAssetMetaFile, type MediaMetaFile } from '@/core/project/metaTypes'
 import type { UnifiedMediaItemData, MediaStatus } from '@/core/mediaitem/types'
-import { getMediaPath, getMetaPath } from '@/core/utils/mediaPathUtils'
+import { getMediaPath } from '@/core/utils/mediaPathUtils'
 import { extractSourceData } from '@/core/datasource/core/DataSourceTypes'
 import type { UnifiedLibraryAssetData } from '@/core/asset/types'
 import { extractEffectTemplateSourceData, isMediaAsset } from '@/core/asset/types'

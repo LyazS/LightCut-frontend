@@ -5,7 +5,7 @@
  * 确保在不同缩放级别下都能获得最佳的渲染性能和视觉质量
  */
 
-import type { WaveformLODLevel, LODConfig } from './types'
+import type { WaveformLODLevel } from './types'
 import { LOD_CONFIGS } from './types'
 
 /**
@@ -23,7 +23,7 @@ export class AudioWaveformLODSelector {
   selectLODLevel(
     zoomLevel: number,
     pixelsPerFrame?: number,
-    sampleRate: number = 48000
+    _sampleRate: number = 48000
   ): WaveformLODLevel {
     // 基于zoomLevel的简单选择
     for (const config of LOD_CONFIGS) {

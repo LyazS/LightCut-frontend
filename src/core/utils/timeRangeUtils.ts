@@ -4,8 +4,6 @@
  */
 
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
-import type { UnifiedTimeRange } from '@/core/types/timeRange'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
 
 // ==================== 时间范围计算工具 ====================
 

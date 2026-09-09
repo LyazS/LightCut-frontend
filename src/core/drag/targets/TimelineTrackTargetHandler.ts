@@ -3,17 +3,7 @@
  * 接受：素材项目、时间轴项目
  */
 
-import type {
-  DropTargetHandler,
-  DropTargetType,
-  UnifiedDragData,
-  DropTargetInfo,
-  TimelineTrackDropTargetInfo,
-  DragPreviewData,
-  MediaItemDragData,
-  TimelineItemDragData,
-  DropResult,
-} from '@/core/types/drag'
+import type { DropTargetHandler, DropTargetType, UnifiedDragData, DropTargetInfo, TimelineTrackDropTargetInfo, MediaItemDragData, TimelineItemDragData, DropResult } from '@/core/types/drag'
 import { DropTargetType as TargetType, DragSourceType } from '@/core/types/drag'
 import type { UnifiedTimelineModule } from '@/core/modules/UnifiedTimelineModule'
 import type { UnifiedSelectionModule } from '@/core/modules/UnifiedSelectionModule'

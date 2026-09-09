@@ -278,7 +278,7 @@ export class RunningHubFileUploader {
     // 2. 检测需要上传的文件
     const filesToUpload: FileData[] = []
 
-    for (const [key, value] of Object.entries(newConfig)) {
+    for (const value of Object.values(newConfig)) {
       if (Array.isArray(value) && value.length > 0) {
         // 使用 __type__ 字段检测 FileData
         if (value[0] && typeof value[0] === 'object' && value[0].__type__ === 'FileData') {
@@ -300,7 +300,7 @@ export class RunningHubFileUploader {
     )
 
     // 4. 检查上传结果
-    for (const [index, result] of uploadResults.entries()) {
+    for (const result of uploadResults.values()) {
       if (!result.success) {
         throw new Error(`文件上传失败: ${result.error}`)
       }

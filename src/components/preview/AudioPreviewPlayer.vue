@@ -21,7 +21,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useAppI18n } from '@/core/composables/useI18n'
 import type { AudioMediaItem, ReadyMediaItem } from '@/core'
 import { IconComponents } from '@/constants/iconComponents'
 
@@ -31,7 +30,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { t } = useAppI18n()
 
 const audioRef = ref<HTMLAudioElement>()
 const audioUrl = ref<string>('')

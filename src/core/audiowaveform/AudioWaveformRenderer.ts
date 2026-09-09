@@ -110,7 +110,7 @@ export class AudioWaveformRenderer {
     endIndex: number,
     options: WaveformRenderOptions
   ): void {
-    const { width, height, amplitude = 1.0, baselineY, gradient } = options
+    const { width, amplitude = 1.0, baselineY, gradient } = options
     const sampleCount = endIndex - startIndex
     
     if (sampleCount <= 0) {

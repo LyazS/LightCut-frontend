@@ -1,17 +1,10 @@
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed } from 'vue'
 import { fetchClient } from '@/utils/fetchClient'
 import { tokenManager } from '@/utils/tokenManager'
 import { ModuleRegistry, MODULE_NAMES } from '@/core/modules/ModuleRegistry'
 import { useAppI18n } from '@/core/composables/useI18n'
 import type { UnifiedUseNaiveUIModule } from '@/core/modules/UnifiedUseNaiveUIModule'
-import type {
-  User,
-  LoginRequest,
-  LoginResponse,
-  RegisterRequest,
-  RegisterResponse,
-  TokenStorage,
-} from '@/utils/types'
+import type { User, LoginResponse, RegisterResponse } from '@/utils/types'
 import { formatMoneyForDisplay } from '@/utils/money'
 
 // 重新导出类型以供其他模块使用

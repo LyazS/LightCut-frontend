@@ -10,7 +10,7 @@
  * - 初始化双向同步
  */
 
-import type { MediaType, UnifiedMediaItemData } from '@/core/mediaitem/types'
+import type { UnifiedMediaItemData } from '@/core/mediaitem/types'
 import type { UnifiedTimelineItemData } from '@/core/timelineitem/model/timelineItem'
 import { MediaItemQueries } from '@/core/mediaitem'
 import { TimelineItemFactory } from '@/core/timelineitem/runtime/factory'
@@ -36,7 +36,7 @@ export class TimelineItemTransitioner {
    * 转换时间轴项目为 ready 状态（支持文本类型）
    */
   async transitionToReady(options: TransitionOptions): Promise<void> {
-    const { commandId, description } = options
+    const { commandId } = options
     const unifiedStore = useUnifiedStore()
     const timelineItem = unifiedStore.getTimelineItem(this.timelineItemId)
 

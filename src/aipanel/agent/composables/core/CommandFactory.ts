@@ -35,7 +35,6 @@ import { FRAME_RATE } from '@/constants/TimeConstants'
 import type { UnifiedTrackType } from '@/core/track/TrackTypes'
 import type { UnifiedTimeRange } from '@/core/types/timeRange'
 import { DEFAULT_BLEND_MODE } from '@/core/timelineitem/model/blendMode'
-import { TimelineItemQueries } from '@/core/timelineitem/queries'
 import { TimelineItemMutations } from '@/core/timelineitem/mutations'
 
 type OperationParams<T extends OperationConfig['type']> = Extract<

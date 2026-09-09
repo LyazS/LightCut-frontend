@@ -1,4 +1,4 @@
-import { computed, type Ref } from 'vue'
+import { computed } from 'vue'
 import { useUnifiedStore } from '@/core/unifiedStore'
 import { calculateVisibleFrameRange } from '@/core/utils/timelineScaleUtils'
 import { RENDERER_FPS } from '@/core/mediabunny/constant'

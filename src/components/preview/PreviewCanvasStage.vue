@@ -373,7 +373,7 @@ function endPan() {
   window.removeEventListener('mouseup', handleGlobalPanEnd)
 }
 
-function handleGlobalPanEnd(_event: MouseEvent) {
+function handleGlobalPanEnd() {
   if (!panState.value.isPanning) return
   endPan()
 }
@@ -414,7 +414,7 @@ function handleDragMove(event: MouseEvent) {
   setVisualPositionDeferred(nextPosition.x, nextPosition.y)
 }
 
-async function handleDragEnd(_event: MouseEvent) {
+async function handleDragEnd() {
   if (!dragState.value.isDragging) return
 
   await commitVisualPositionDeferredUpdate()
@@ -428,8 +428,8 @@ function handleGlobalMouseMove(event: MouseEvent) {
   handleDragMove(event)
 }
 
-async function handleGlobalMouseUp(event: MouseEvent) {
-  await handleDragEnd(event)
+async function handleGlobalMouseUp() {
+  await handleDragEnd()
 }
 
 function handleScaleStart(event: ScaleStartEventPayload) {
@@ -468,7 +468,7 @@ function handleScaleMove(event: MouseEvent) {
   setVisualSizeDeferred(result.width, result.height, result.x, result.y)
 }
 
-async function handleScaleEnd(_event: MouseEvent) {
+async function handleScaleEnd() {
   if (!scaleState.value.isScaling) return
 
   await commitVisualGeometryDeferredUpdate()
@@ -482,8 +482,8 @@ function handleGlobalScaleMove(event: MouseEvent) {
   handleScaleMove(event)
 }
 
-async function handleGlobalScaleEnd(event: MouseEvent) {
-  await handleScaleEnd(event)
+async function handleGlobalScaleEnd() {
+  await handleScaleEnd()
 }
 
 function handleRotateStart(event: RotateStartEventPayload) {
@@ -522,7 +522,7 @@ function handleRotateMove(event: MouseEvent) {
   setVisualRotationDeferred(newRotation)
 }
 
-async function handleRotateEnd(_event: MouseEvent) {
+async function handleRotateEnd() {
   if (!rotationState.value.isRotating) return
 
   await commitRotationDeferredUpdate()
@@ -536,8 +536,8 @@ function handleGlobalRotateMove(event: MouseEvent) {
   handleRotateMove(event)
 }
 
-async function handleGlobalRotateEnd(event: MouseEvent) {
-  await handleRotateEnd(event)
+async function handleGlobalRotateEnd() {
+  await handleRotateEnd()
 }
 
 function clearSuppressCanvasClickTimer() {

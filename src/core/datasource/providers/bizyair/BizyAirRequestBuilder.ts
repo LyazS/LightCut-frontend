@@ -12,15 +12,6 @@ import type { BizyAirAppConfig, InputMappingItem, ArrayMappingItem, ArrayUrlMapp
 /**
  * 扩展的映射项接口，支持更多配置选项
  */
-interface ExtendedMappingItem extends InputMappingItem {
-  /** 是否跳过 API 映射（不发送到后端） */
-  skip_mapping?: boolean
-  /** 数组元素配置（仅当 type 为 'array' 时） */
-  items?: InputMappingItem[]
-  /** URL 分隔符（仅当 type 为 'arrayurl' 时） */
-  separator?: string
-}
-
 /**
  * 扩展的输入映射接口
  */
