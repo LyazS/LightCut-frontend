@@ -1,6 +1,6 @@
 import * as ort from 'onnxruntime-web/webgpu'
-import localOrtWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
 import { loadCachedOnnxModelBytes } from './modelCache'
+import { modelAssetUrl } from './modelAssetUrl'
 import type {
   OnnxDimensionExpectation,
   OnnxExecutionProvider,
@@ -13,6 +13,7 @@ import type {
 const modelCache = new Map<string, Promise<OnnxModelRunner>>()
 
 const ORT_WASM_FILE_NAME = 'ort-wasm-simd-threaded.asyncify.wasm'
+const ORT_WASM_MODULE_FILE_NAME = 'ort-wasm-simd-threaded.asyncify.mjs'
 const WASM_CDN_FETCH_TIMEOUT_MS = 5_000
 const ortWasmCdnUrls = [
   `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ort.env.versions.web}/dist/${ORT_WASM_FILE_NAME}`,
@@ -144,13 +145,17 @@ async function configureWasmRuntime(): Promise<void> {
 
   wasmConfigurationPromise = (async () => {
     ort.env.wasm.numThreads = 1
+    ort.env.wasm.wasmPaths = {
+      mjs: modelAssetUrl(ORT_WASM_MODULE_FILE_NAME),
+      wasm: modelAssetUrl(ORT_WASM_FILE_NAME),
+    }
 
     try {
       // Download the CDN asset completely before ONNX Runtime starts, so failed mirrors can
       // safely fall back to the same-origin asset without poisoning its one-time initialization.
       ort.env.wasm.wasmBinary = await fetchFirstAvailableWasmBinary(ortWasmCdnUrls)
     } catch {
-      ort.env.wasm.wasmBinary = await fetchWasmBinary(localOrtWasmUrl)
+      ort.env.wasm.wasmBinary = await fetchWasmBinary(modelAssetUrl(ORT_WASM_FILE_NAME))
     }
   })().catch((error) => {
     wasmConfigurationPromise = undefined

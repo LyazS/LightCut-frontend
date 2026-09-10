@@ -1,0 +1,14 @@
+{
+  "name": "lightcut-model-assets-staging",
+  "main": "./model-assets-worker.ts",
+  "compatibility_date": "2026-09-10",
+  "workers_dev": true,
+  "vars": {
+    "CORS_ALLOWED_ORIGINS": "http://localhost:5175,https://lightcut-editor-staging.airzostorm.workers.dev",
+  },
+  "assets": {
+    "directory": "./model-assets",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+  },
+}

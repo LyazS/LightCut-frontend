@@ -32,6 +32,7 @@ package-lock.json
 .ace-tool/
 .omc
 public/model-chunks/
+model-assets/
 src/generated/
 model-sources/music-analysis/*.onnx
 src/core/utils/music-analysis/dsp-engine.wasm

@@ -26,14 +26,13 @@ function isPackage(packageName: string, names: readonly string[]): boolean {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-    removeConsole(), // 移除所有console打印
-  ],
+  plugins: [vue(), vueDevTools(), removeConsole()], // 移除所有console打印
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'onnxruntime-web/webgpu': fileURLToPath(
+        new URL('./node_modules/onnxruntime-web/dist/ort.webgpu.min.mjs', import.meta.url),
+      ),
     },
   },
   build: {

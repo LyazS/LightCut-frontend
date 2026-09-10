@@ -1,5 +1,7 @@
-import dspWasmUrl from './dsp-engine.wasm?url'
+import { modelAssetUrl } from '@/core/onnx/modelAssetUrl'
 import type { AcousticEvent } from './types'
+
+const dspWasmUrl = modelAssetUrl('dsp-engine.wasm')
 
 export const DEMUCS_SEGMENT_SAMPLES = 343_980
 export const DEMUCS_STFT_LENGTH = 2 * 2_048 * 336 * 2
@@ -177,10 +179,7 @@ export class WasmDspEngine {
     const count = this.wasm.engine_acoustic_events_count()
     if (count === 0) return []
 
-    const values = this.view(
-      this.wasm.engine_acoustic_events_ptr(),
-      count * ACOUSTIC_RECORD_WIDTH,
-    )
+    const values = this.view(this.wasm.engine_acoustic_events_ptr(), count * ACOUSTIC_RECORD_WIDTH)
     const events: AcousticEvent[] = []
     for (let index = 0; index < count; index += 1) {
       const offset = index * ACOUSTIC_RECORD_WIDTH
@@ -258,7 +257,12 @@ function acousticDefinition(
       signals: {
         energyDb: a,
         energyDeltaDb: b,
-        energyTrend: eventLabel === 'energy_rise' ? 'rising' : eventLabel === 'energy_fall' ? 'falling' : 'peak',
+        energyTrend:
+          eventLabel === 'energy_rise'
+            ? 'rising'
+            : eventLabel === 'energy_fall'
+              ? 'falling'
+              : 'peak',
       },
     }
   }
@@ -275,7 +279,12 @@ function acousticDefinition(
         spectralFlux: b,
         melFlux: c,
         hfcStrength: d,
-        onsetDirection: eventLabel === 'onset_entry' ? 'entering' : eventLabel === 'onset_exit' ? 'exiting' : 'event',
+        onsetDirection:
+          eventLabel === 'onset_entry'
+            ? 'entering'
+            : eventLabel === 'onset_exit'
+              ? 'exiting'
+              : 'event',
       },
     }
   }

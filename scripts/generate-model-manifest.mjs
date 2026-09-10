@@ -4,9 +4,45 @@ import path from 'node:path'
 
 const projectRoot = process.cwd()
 const modelSourcesDir = path.join(projectRoot, 'model-sources')
-const publicChunkDir = path.join(projectRoot, 'public', 'model-chunks')
+const publicDir = path.join(projectRoot, 'public')
+const publicChunkDir = path.join(publicDir, 'model-chunks')
+const externalModelAssetsDir = path.join(projectRoot, 'model-assets')
+const externalModelAssetBaseUrl = (process.env.VITE_MODEL_ASSET_BASE_URL ?? '')
+  .trim()
+  .replace(/\/+$/, '')
+const modelAssetsDir = externalModelAssetBaseUrl ? externalModelAssetsDir : publicDir
+const modelChunksRootDir = path.join(modelAssetsDir, 'model-chunks')
+const runtimeAssetsDir = externalModelAssetBaseUrl
+  ? modelAssetsDir
+  : path.join(publicDir, 'model-assets')
 const outputFile = path.join(projectRoot, 'src', 'generated', 'model-manifest.ts')
 const MODEL_CHUNK_SIZE = 4 * 1024 * 1024
+const runtimeAssets = [
+  {
+    source: path.join(projectRoot, 'src', 'core', 'utils', 'music-analysis', 'dsp-engine.wasm'),
+    filename: 'dsp-engine.wasm',
+  },
+  {
+    source: path.join(
+      projectRoot,
+      'node_modules',
+      'onnxruntime-web',
+      'dist',
+      'ort-wasm-simd-threaded.asyncify.wasm',
+    ),
+    filename: 'ort-wasm-simd-threaded.asyncify.wasm',
+  },
+  {
+    source: path.join(
+      projectRoot,
+      'node_modules',
+      'onnxruntime-web',
+      'dist',
+      'ort-wasm-simd-threaded.asyncify.mjs',
+    ),
+    filename: 'ort-wasm-simd-threaded.asyncify.mjs',
+  },
+]
 
 async function collectOnnxFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -40,7 +76,7 @@ function formatChunkIndex(index, total) {
 
 async function writeModelChunks(modelId, fileBuffer) {
   const totalChunks = Math.ceil(fileBuffer.byteLength / MODEL_CHUNK_SIZE)
-  const modelChunkDir = path.join(publicChunkDir, modelId)
+  const modelChunkDir = path.join(modelChunksRootDir, modelId)
 
   await fs.mkdir(modelChunkDir, { recursive: true })
 
@@ -56,7 +92,7 @@ async function writeModelChunks(modelId, fileBuffer) {
     await fs.writeFile(chunkFilePath, chunkBuffer)
 
     chunks.push({
-      path: `model-chunks/${modelId}/${chunkFileName}`,
+      path: modelAssetUrl(`model-chunks/${modelId}/${chunkFileName}`),
       size: chunkBuffer.byteLength,
     })
   }
@@ -66,6 +102,20 @@ async function writeModelChunks(modelId, fileBuffer) {
 
 async function cleanGeneratedChunks() {
   await fs.rm(publicChunkDir, { recursive: true, force: true })
+  await fs.rm(externalModelAssetsDir, { recursive: true, force: true })
+}
+
+function modelAssetUrl(pathname) {
+  return externalModelAssetBaseUrl ? `${externalModelAssetBaseUrl}/${pathname}` : pathname
+}
+
+async function writeRuntimeAssets() {
+  await fs.mkdir(runtimeAssetsDir, { recursive: true })
+  await Promise.all(
+    runtimeAssets.map(({ source, filename }) =>
+      fs.copyFile(source, path.join(runtimeAssetsDir, filename)),
+    ),
+  )
 }
 
 async function buildManifest() {
@@ -80,6 +130,7 @@ async function buildManifest() {
   }
 
   await cleanGeneratedChunks()
+  await writeRuntimeAssets()
 
   const modelFiles = await collectOnnxFiles(modelSourcesDir)
 

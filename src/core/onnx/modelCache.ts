@@ -5,6 +5,9 @@ const MODEL_CACHE_PREFIX = '/__onnx_model_cache__'
 const MODEL_CHUNK_RETRY_COUNT = 3
 
 function getPublicUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) {
+    return path
+  }
   const base = import.meta.env.BASE_URL || '/'
   return `${base}${path}`.replace(/\/{2,}/g, '/')
 }
@@ -38,10 +41,7 @@ function reportProgress(
   options?.onProgress?.(progress)
 }
 
-async function fetchChunkResponse(
-  chunkPath: string,
-  signal?: AbortSignal,
-): Promise<Response> {
+async function fetchChunkResponse(chunkPath: string, signal?: AbortSignal): Promise<Response> {
   throwIfAborted(signal)
   const response = await fetch(getPublicUrl(chunkPath), { signal })
   if (!response.ok) {
@@ -86,7 +86,10 @@ async function readChunkResponseAsUint8Array(
       stage: 'downloading-model',
       loadedBytes: chunkProgress.reduce((sum, value) => sum + value, 0),
       totalBytes,
-      progress: totalBytes > 0 ? chunkProgress.reduce((sum, value) => sum + value, 0) / totalBytes : undefined,
+      progress:
+        totalBytes > 0
+          ? chunkProgress.reduce((sum, value) => sum + value, 0) / totalBytes
+          : undefined,
     })
     return new Uint8Array(arrayBuffer)
   }
@@ -161,7 +164,10 @@ async function fetchChunkedModelBytes(
     progress: 0,
   })
 
-  const fetchChunkWithRetry = async (chunkPath: string, chunkIndex: number): Promise<Uint8Array> => {
+  const fetchChunkWithRetry = async (
+    chunkPath: string,
+    chunkIndex: number,
+  ): Promise<Uint8Array> => {
     let lastError: unknown = null
 
     for (let attempt = 1; attempt <= MODEL_CHUNK_RETRY_COUNT; attempt += 1) {
@@ -240,11 +246,14 @@ export async function loadCachedOnnxModelBytes(
   const modelBytes = await loadModelBytesWithoutPersistentCache(config, options)
 
   try {
-    await cache.put(cacheKey, new Response(modelBytes, {
-      headers: {
-        'content-type': 'application/octet-stream',
-      },
-    }))
+    await cache.put(
+      cacheKey,
+      new Response(modelBytes, {
+        headers: {
+          'content-type': 'application/octet-stream',
+        },
+      }),
+    )
     void pruneOldModelVersions(config)
   } catch {
     // Cache writes are optional. Fall back to using the fetched bytes directly.
