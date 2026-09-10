@@ -59,6 +59,10 @@
         {{ errorMessage }}
       </div>
 
+      <div class="success-message" v-if="successMessage">
+        {{ successMessage }}
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="submit-btn" :disabled="isLoading">
           {{
@@ -102,6 +106,7 @@ const emit = defineEmits<{
 const isLoading = ref(false)
 const isRegisterMode = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 
 const formData = reactive({
   username: '',
@@ -122,11 +127,13 @@ function resetForm() {
   formData.password = ''
   formData.confirmPassword = ''
   errorMessage.value = ''
+  successMessage.value = ''
 }
 
 function switchMode() {
   isRegisterMode.value = !isRegisterMode.value
   errorMessage.value = ''
+  successMessage.value = ''
 }
 
 async function handleSubmit() {
@@ -143,7 +150,7 @@ async function handleSubmit() {
       errorMessage.value = t('user.passwordMismatchError')
       return
     }
-    if (formData.password.length < 8 || formData.password.length > 50) {
+    if (formData.password.length < 10 || formData.password.length > 128) {
       errorMessage.value = t('user.passwordLengthError')
       return
     }
@@ -158,11 +165,11 @@ async function handleSubmit() {
 
   try {
     if (isRegisterMode.value) {
-      // 注册用户（注册成功后会自动保存认证信息）
       await unifiedStore.register(formData.username, formData.password)
-
-      // 关闭对话框（成功消息已在 UnifiedUserModule 中发出）
-      emit('close')
+      isRegisterMode.value = false
+      formData.password = ''
+      formData.confirmPassword = ''
+      successMessage.value = t('user.registerThenLogin')
     } else {
       // 用户登录
       await unifiedStore.login(formData.username, formData.password)
@@ -170,9 +177,8 @@ async function handleSubmit() {
       // 关闭对话框（成功消息已在 UnifiedUserModule 中发出）
       emit('close')
     }
-  } catch (error: any) {
-    console.error('登录/注册失败:', error)
-    errorMessage.value = error.message || t('user.loginFailed')
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : t('user.loginFailed')
   } finally {
     isLoading.value = false
   }
@@ -219,6 +225,14 @@ async function handleSubmit() {
   font-size: var(--font-size-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
   background-color: rgba(255, 68, 68, 0.1);
+  border-radius: var(--border-radius-small);
+}
+
+.success-message {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: color-mix(in srgb, var(--color-success) 12%, transparent);
   border-radius: var(--border-radius-small);
 }
 

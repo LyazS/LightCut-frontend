@@ -2,13 +2,15 @@ import type { MoneyString } from '@/utils/money'
 
 // 用户类型定义
 export interface User {
+  id: string
   username: string
   email?: string
   balance: MoneyString
   is_active: boolean
+  role: 'USER' | 'ADMIN'
   is_superuser: boolean
   created_at: string
-  last_login_at?: string
+  last_login_at?: string | null
 }
 
 // 认证相关请求和响应接口
@@ -18,13 +20,9 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  /** 访问令牌的有效期，单位：秒 */
-  refresh_expires_in: number
-  /** 刷新令牌的有效期，单位：秒 */
-  user: User
+  user: Omit<User, 'balance'>
+  expiresAt: string
+  csrfToken: string
 }
 
 export interface RegisterRequest {
@@ -33,13 +31,7 @@ export interface RegisterRequest {
 }
 
 export interface RegisterResponse {
-  access_token: string
-  refresh_token: string
-  expires_in: number
-  /** 访问令牌的有效期，单位：秒 */
-  refresh_expires_in: number
-  /** 刷新令牌的有效期，单位：秒 */
-  user: User
+  user: Omit<User, 'balance'>
   message: string
 }
 
@@ -75,7 +67,7 @@ export interface TokenStorage {
 // 认证事件类型
 export interface AuthEvent {
   type: 'logout' | 'token_refresh' | 'login'
-  data?: any
+  data?: unknown
   timestamp: number
 }
 
@@ -89,7 +81,7 @@ export interface RequestConfig extends RequestInit {
 }
 
 // API响应接口
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T
   status: number
   statusText: string
